@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { runWebSearchJson } from '@/lib/ai'
 import { HttpError, handleApiError } from '@/lib/apiError'
+import { getCurrentUser, getPermissionMap } from '@/lib/permissions'
 
 // Serverless 平台下 AI 联网调用较慢，放宽函数执行上限
 export const maxDuration = 60
@@ -9,6 +10,15 @@ export const maxDuration = 60
 // 输入岗位 JD，联网搜索该岗位最新技术栈/任职要求趋势后，分析「岗位简易画像」（不定数量条目）
 export async function POST(req: Request) {
   try {
+    // 资源功能权限：与「在新增/编辑需求表单内才显示 AI 按钮」一致，要求对 REQUIREMENT 有 CREATE 或 EDIT
+    const user = await getCurrentUser()
+    if (!user) throw new HttpError(401, '未登录')
+    const map = await getPermissionMap(user)
+    const acts = map['REQUIREMENT'] || []
+    if (!user.isAdmin && !acts.includes('CREATE') && !acts.includes('EDIT')) {
+      throw new HttpError(403, '无权使用该功能')
+    }
+
     const { jobDescription, positionName } = await req.json()
     if (!jobDescription || !String(jobDescription).trim()) {
       return NextResponse.json({ error: '请先填写岗位 JD' }, { status: 400 })

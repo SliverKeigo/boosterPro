@@ -1,6 +1,6 @@
 'use client'
 // 客户端权限 hook：拉取当前用户对八个资源的功能权限，供页面控制按钮显隐 / 行级编辑权限。
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 
 export interface MyPermissions {
   isAdmin: boolean
@@ -8,40 +8,86 @@ export interface MyPermissions {
   permissions: Record<string, string[]> // resource → actions
 }
 
-// 模块级缓存：同一会话内多页面共享，避免每次进页面都请求一遍
-// 加 TTL：管理员改了权限组后，在线用户无需重登，最多等待一个 TTL 周期即自动拉到最新权限
+// ─── 模块级 store ────────────────────────────────────────────────────────────
+// 单一缓存 + 订阅通知：所有组件经 useSyncExternalStore 共享同一份快照，
+// TTL 刷新 / 登出清空后，全部订阅者同步收到最新值（修复跨组件不一致）。
+// 加 TTL：管理员改了权限组后，在线用户无需重登，回到前台 / 一个 TTL 周期后即拉到最新权限。
 const TTL = 60_000
 let cache: MyPermissions | null = null
 let cachedAt = 0
+// 订阅者集合：useSyncExternalStore 注册的重渲染回调
+const subscribers = new Set<() => void>()
+// 在途请求：多组件同时过期时复用同一个 fetch，避免重复打 /api/permissions/my
+let inflight: Promise<void> | null = null
 
 // 缓存是否仍在有效期内
 function isFresh(): boolean {
   return cache !== null && Date.now() - cachedAt < TTL
 }
 
+// 通知所有订阅者：cache 引用已变化，触发各组件重渲染
+function notify(): void {
+  subscribers.forEach((cb) => cb())
+}
+
+// 拉取权限。force=true 时无视 TTL 强制刷新；否则 fresh 直接返回。
+// 在途请求去重；成功更新 cache+cachedAt 并通知；失败静默；finally 清空 inflight。
+function load(force = false): Promise<void> {
+  if (!force && isFresh()) return Promise.resolve()
+  if (inflight) return inflight
+  inflight = (async () => {
+    try {
+      const res = await fetch('/api/permissions/my')
+      if (!res.ok) return
+      const json = (await res.json()) as MyPermissions
+      cache = json
+      cachedAt = Date.now()
+      notify()
+    } catch {
+      // 静默失败：不抛出，保留旧缓存，下次回前台 / 过期再试
+    } finally {
+      inflight = null
+    }
+  })()
+  return inflight
+}
+
+// ─── useSyncExternalStore 三件套 ─────────────────────────────────────────────
+function subscribe(cb: () => void): () => void {
+  subscribers.add(cb)
+  return () => {
+    subscribers.delete(cb)
+  }
+}
+
+// 当前快照：cache 仅在真正更新（load 成功 / clear）时换引用，引用稳定可安全返回
+function getSnapshot(): MyPermissions | null {
+  return cache
+}
+
+// SSR / 首屏快照：服务端无缓存
+function getServerSnapshot(): MyPermissions | null {
+  return null
+}
+
 export function useMyPermissions() {
-  // 初始 state 用缓存兜底；若已过期，下方 effect 会重新拉取并刷新 state
-  const [perm, setPerm] = useState<MyPermissions | null>(cache)
-  const [loading, setLoading] = useState(!isFresh())
+  const perm = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
   useEffect(() => {
-    if (isFresh()) return
-    let active = true
-    // 注意：IIFE 首条语句即 await，effect 同步路径不含 setState（规避 react-hooks/set-state-in-effect）
-    void (async () => {
-      try {
-        const res = await fetch('/api/permissions/my')
-        if (!res.ok) return
-        const json = (await res.json()) as MyPermissions
-        cache = json
-        cachedAt = Date.now()
-        if (active) setPerm(json)
-      } finally {
-        if (active) setLoading(false)
-      }
-    })()
+    // 挂载即尝试加载（过期才会真正发请求）；常驻 layout 也由此覆盖 TTL 过期场景。
+    // 注意：不在 effect 内 setState —— 数据回填经 store.notify 触发重渲染，
+    // 规避 react-hooks/set-state-in-effect。
+    void load()
+    // 回到前台时刷新，让权限变更尽快生效
+    const onFocus = () => void load()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void load()
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisible)
     return () => {
-      active = false
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [])
 
@@ -55,7 +101,7 @@ export function useMyPermissions() {
 
   return {
     perm,
-    loading,
+    loading: perm === null,
     can,
     isOwner,
     isAdmin: perm?.isAdmin ?? false,
@@ -63,8 +109,9 @@ export function useMyPermissions() {
   }
 }
 
-// 供登出等场景清空缓存（用户切换时调用）
+// 供登出等场景清空缓存（用户切换时调用）：清空并通知所有订阅者立即重渲染
 export function clearPermissionCache() {
   cache = null
   cachedAt = 0
+  notify()
 }

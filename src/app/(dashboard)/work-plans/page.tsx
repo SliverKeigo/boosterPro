@@ -11,6 +11,7 @@ import {
   Field,
   useToast,
 } from '@/components/ui'
+import { useMyPermissions } from '@/lib/usePermissions'
 
 const STATUS_OPTIONS = ['进行中', '已完成', '暂停', '待开始']
 const STATUS_BADGE: Record<string, string> = {
@@ -33,6 +34,8 @@ const EMPTY_FORM: any = {
 
 export default function WorkPlansPage() {
   const toast = useToast()
+  // work-plans 接口要求管理员（requireAdmin），页面同步加 admin 守卫
+  const { isAdmin, loading: permLoading } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -140,6 +143,29 @@ export default function WorkPlansPage() {
     { key: 'ownerId', title: '负责人 ID', defaultVisible: false },
     { key: 'notes', title: '备注', defaultVisible: false },
   ]
+
+  // 权限守卫：work-plans 接口要求管理员，非管理员直达页面只显示无权提示
+  if (permLoading) {
+    return (
+      <div className="flex items-center justify-center py-24 text-base-content/50">
+        <span className="loading loading-spinner loading-md" />
+        <span className="ml-2">加载中…</span>
+      </div>
+    )
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex justify-center py-24">
+        <div className="card bg-base-100 shadow-sm">
+          <div className="card-body items-center text-center">
+            <h2 className="card-title text-base-content">无权访问</h2>
+            <p className="text-sm text-base-content/60">该页面仅管理员可访问</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>

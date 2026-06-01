@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server'
-import { handleApiError } from '@/lib/apiError'
+import { handleApiError, HttpError } from '@/lib/apiError'
 import { requireAdmin } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
+    const pid = parseInt(id)
+    if (!Number.isInteger(pid) || pid <= 0) throw new HttpError(400, '非法的 ID')
     const department = await prisma.department.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: pid },
       include: { _count: { select: { users: true } } },
     })
     if (!department) return NextResponse.json({ error: '未找到' }, { status: 404 })
@@ -21,11 +23,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   try {
     await requireAdmin()
     const { id } = await params
+    const pid = parseInt(id)
+    if (!Number.isInteger(pid) || pid <= 0) throw new HttpError(400, '非法的 ID')
     const body = await req.json()
     const { name } = body
     if (!name) return NextResponse.json({ error: '部门名称不能为空' }, { status: 400 })
     const department = await prisma.department.update({
-      where: { id: parseInt(id) },
+      where: { id: pid },
       data: { name },
       include: { _count: { select: { users: true } } },
     })
@@ -39,9 +43,11 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   try {
     await requireAdmin()
     const { id } = await params
-    const count = await prisma.user.count({ where: { departmentId: parseInt(id) } })
+    const pid = parseInt(id)
+    if (!Number.isInteger(pid) || pid <= 0) throw new HttpError(400, '非法的 ID')
+    const count = await prisma.user.count({ where: { departmentId: pid } })
     if (count > 0) return NextResponse.json({ error: '该部门下有用户，无法删除' }, { status: 400 })
-    await prisma.department.delete({ where: { id: parseInt(id) } })
+    await prisma.department.delete({ where: { id: pid } })
     return NextResponse.json({ success: true })
   } catch (e) {
     return handleApiError(e)

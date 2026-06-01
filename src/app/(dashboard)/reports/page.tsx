@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { BarChart3, PieChart, Users, FileText, ShieldAlert } from 'lucide-react'
+import { useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 
 // ─── 枚举映射（与 candidates / requirements 页保持一致） ──────────────────────────
@@ -256,6 +257,7 @@ export default function ReportsPage() {
   // 权限：仅 REPORT VIEW 可看报表
   const { can, isAdmin, loading: permLoading } = useMyPermissions()
   const allowed = isAdmin || can('REPORT', 'VIEW')
+  const toast = useToast()
 
   // loading 初始为 true，仅在客户端首个 effect 拉数完成后才渲染图表，
   // 既避免 SSR 阶段 echarts 访问 window，也保证服务端 / 客户端首屏一致
@@ -271,15 +273,13 @@ export default function ReportsPage() {
     void (async () => {
       try {
         const res = await fetch('/api/reports')
-        const json = res.ok ? await res.json() : { candidates: [], requirements: [] }
+        if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || '')
+        const json = await res.json()
         if (!alive) return
         setCandidates(json.candidates ?? [])
         setRequirements(json.requirements ?? [])
-      } catch {
-        if (alive) {
-          setCandidates([])
-          setRequirements([])
-        }
+      } catch (e) {
+        if (alive) toast.error(e instanceof Error && e.message ? e.message : '加载失败')
       } finally {
         if (alive) setLoading(false)
       }
@@ -287,7 +287,7 @@ export default function ReportsPage() {
     return () => {
       alive = false
     }
-  }, [permLoading, allowed])
+  }, [permLoading, allowed, toast])
 
   // ── 候选人维度聚合 ──
   const statusDist = useMemo(

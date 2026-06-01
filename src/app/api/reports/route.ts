@@ -9,18 +9,29 @@ export async function GET() {
   try {
     await requirePermission('REPORT', 'VIEW')
     const [candidates, requirements] = await Promise.all([
+      // 报表仅消费这些非敏感字段；显式 select 杜绝 phone/email/birthYear/
+      // salaryPlan/offerFileUrl/backgroundCheckReportUrl 等 PII 越权外泄。
       prisma.candidate.findMany({
         orderBy: { createdAt: 'desc' },
-        // 报表按 customer.shortName / submitter.name 聚合，需带上对应关系
-        include: {
+        select: {
+          id: true,
+          recommendationStatus: true,
+          createdAt: true,
+          // 报表按 customer.shortName / submitter.name 聚合
           customer: { select: { id: true, shortName: true } },
           submitter: { select: { id: true, name: true } },
         },
       }),
+      // 同理：需求仅取报表用到的非敏感字段
       prisma.requirement.findMany({
         orderBy: { createdAt: 'desc' },
-        // 报表按 customer.shortName 聚合
-        include: { customer: { select: { id: true, shortName: true } } },
+        select: {
+          id: true,
+          status: true,
+          createdAt: true,
+          // 报表按 customer.shortName 聚合
+          customer: { select: { id: true, shortName: true } },
+        },
       }),
     ])
     return NextResponse.json({ candidates, requirements })

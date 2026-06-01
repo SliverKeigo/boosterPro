@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { runWebSearchJson } from '@/lib/ai'
 import { HttpError, handleApiError } from '@/lib/apiError'
+import { getCurrentUser, getPermissionMap } from '@/lib/permissions'
 
 // Serverless 平台下 AI 联网调用较慢，放宽函数执行上限
 export const maxDuration = 60
@@ -8,6 +9,15 @@ export const maxDuration = 60
 // 输入公司名称，联网搜索后返回用于【自动填充客户档案已有字段】的结构化数据
 export async function POST(req: Request) {
   try {
+    // 资源功能权限：与「在新增/编辑客户表单内才显示 AI 按钮」一致，要求对 CUSTOMER 有 CREATE 或 EDIT
+    const user = await getCurrentUser()
+    if (!user) throw new HttpError(401, '未登录')
+    const map = await getPermissionMap(user)
+    const acts = map['CUSTOMER'] || []
+    if (!user.isAdmin && !acts.includes('CREATE') && !acts.includes('EDIT')) {
+      throw new HttpError(403, '无权使用该功能')
+    }
+
     const { companyName } = await req.json()
     if (!companyName || !String(companyName).trim()) {
       return NextResponse.json({ error: '请先填写公司名称' }, { status: 400 })

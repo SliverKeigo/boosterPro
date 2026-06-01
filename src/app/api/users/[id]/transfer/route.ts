@@ -19,6 +19,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (fromId === toId) throw new HttpError(400, '移交的源用户与目标用户不能相同')
     const targetUser = await prisma.user.findUnique({ where: { id: toId } })
     if (!targetUser) throw new HttpError(400, '目标用户不存在')
+    const fromUser = await prisma.user.findUnique({ where: { id: fromId } })
+    if (!fromUser) throw new HttpError(400, '源用户不存在')
 
     const [
       candidate,

@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 // 返回全量数据，前端 BoostTable 负责搜索 / 排序 / 分页
 export async function GET() {
   try {
+    await requireAdmin()
     const data = await prisma.role.findMany({
       orderBy: { createdAt: 'desc' },
       include: { _count: { select: { users: true } } },
