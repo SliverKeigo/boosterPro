@@ -1,0 +1,534 @@
+'use client'
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useCallback, useEffect, useState } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
+import {
+  BoostTable,
+  type BoostColumn,
+  SubTable,
+  Modal,
+  Popconfirm,
+  Field,
+  FileUpload,
+  useToast,
+} from '@/components/ui'
+
+// ─── 枚举映射 ──────────────────────────────────────────────────────────────────
+const EDUCATION_LABELS: Record<string, string> = {
+  BACHELOR: '本科',
+  MASTER: '硕士',
+  DOCTOR: '博士',
+  ASSOCIATE: '大专',
+  OTHER: '其他',
+}
+const SCHOOL_TIER_LABELS: Record<string, string> = {
+  T985: '985',
+  T211: '211',
+  GENERAL_FIRST: '双一流',
+  GENERAL: '普通',
+  OVERSEAS: '海外留学',
+}
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: '已推荐待反馈',
+  INTERVIEWING: '面试中',
+  SALARY_NEGO: '谈薪中',
+  OFFERING: 'Offer中',
+  ONBOARDING: '入职中',
+  GUARANTEE: '保证期',
+  POST_GUARANTEE_CLOSED: '过保关闭',
+  RESUME_FAILED: '简历失败',
+  INTERNAL_RESUME_FAILED: '简历内推失败',
+  INTERVIEW_SCHEDULE_FAILED: '约面失败',
+  INTERVIEW_FAILED: '面试失败',
+  SALARY_NEGO_FAILED: '谈薪失败',
+  OFFER_FAILED: 'Offer失败',
+  ONBOARD_FAILED: '入职失败',
+  NOT_PASSED_GUARANTEE: '未过保',
+  RESIGNED_POST_GUARANTEE: '离职统计已过保',
+  RESIGNED_LOCAL: '离职统计本地',
+}
+const STATUS_BADGE: Record<string, string> = {
+  PENDING: 'badge-info',
+  INTERVIEWING: 'badge-info',
+  SALARY_NEGO: 'badge-warning',
+  OFFERING: 'badge-warning',
+  ONBOARDING: 'badge-primary',
+  GUARANTEE: 'badge-success',
+  POST_GUARANTEE_CLOSED: 'badge-ghost',
+  RESUME_FAILED: 'badge-error',
+  INTERNAL_RESUME_FAILED: 'badge-error',
+  INTERVIEW_SCHEDULE_FAILED: 'badge-error',
+  INTERVIEW_FAILED: 'badge-error',
+  SALARY_NEGO_FAILED: 'badge-error',
+  OFFER_FAILED: 'badge-error',
+  ONBOARD_FAILED: 'badge-error',
+  NOT_PASSED_GUARANTEE: 'badge-warning',
+  RESIGNED_POST_GUARANTEE: 'badge-ghost',
+  RESIGNED_LOCAL: 'badge-ghost',
+}
+
+// 推荐状态 → 需额外显示的流程字段（参照文档 image23 状态驱动规则）
+const STATUS_FIELDS: Record<string, string[]> = {
+  PENDING: ['recommendationReason', 'interviewProgress'],
+  INTERVIEWING: ['recommendationReason', 'interviewProgress'],
+  SALARY_NEGO: ['interviewProgress', 'salaryPlan'],
+  OFFERING: ['interviewProgress', 'salaryPlan', 'offerDate', 'offerFileUrl'],
+  ONBOARDING: ['interviewProgress', 'offerDate', 'offerOnboardDate', 'offerFileUrl', 'backgroundCheckReportUrl', 'actualOnboardDate'],
+  GUARANTEE: ['interviewProgress', 'offerDate', 'actualOnboardDate', 'guaranteePeriodEnd', 'guaranteePeriodMonths'],
+  POST_GUARANTEE_CLOSED: ['interviewProgress', 'offerDate', 'actualOnboardDate', 'guaranteePeriodEnd', 'guaranteePeriodMonths'],
+  RESUME_FAILED: ['failureReason'],
+  INTERNAL_RESUME_FAILED: ['failureReason'],
+  INTERVIEW_SCHEDULE_FAILED: ['interviewProgress', 'failureReason'],
+  INTERVIEW_FAILED: ['interviewProgress', 'failureReason'],
+  SALARY_NEGO_FAILED: ['interviewProgress', 'salaryPlan', 'failureReason'],
+  OFFER_FAILED: ['interviewProgress', 'salaryPlan', 'offerDate', 'failureReason'],
+  ONBOARD_FAILED: ['interviewProgress', 'offerDate', 'offerOnboardDate', 'failureReason'],
+  NOT_PASSED_GUARANTEE: ['interviewProgress', 'offerDate', 'actualOnboardDate', 'guaranteePeriodEnd', 'guaranteePeriodMonths', 'failureReason'],
+  RESIGNED_POST_GUARANTEE: ['interviewProgress', 'offerDate', 'guaranteePeriodEnd', 'failureReason'],
+  RESIGNED_LOCAL: ['failureReason'],
+}
+
+const opts = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }))
+const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
+
+const EMPTY_FORM: any = {
+  name: '', birthYear: '', phone: '', email: '',
+  education: '', schoolTier: '', customerId: '', customerShortName: '', requirementId: '',
+  recruitmentParty: '', recruitmentChannel: '', recommendationTime: '',
+  recommendationStatus: 'PENDING',
+  recommendationReportUrl: '', recommendationReason: '', interviewProgress: '',
+  failureReason: '', offerDate: '', offerOnboardDate: '', offerFileUrl: '',
+  backgroundCheckReportUrl: '', actualOnboardDate: '', salaryPlan: '',
+  guaranteePeriodEnd: '', guaranteePeriodMonths: '',
+  tags: '', notes: '', submitDepartmentId: '', submitterId: '',
+  guaranteeCommunications: [], riskEvents: [],
+}
+
+export default function CandidatesPage() {
+  const toast = useToast()
+  const [data, setData] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<any>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [form, setForm] = useState<any>(EMPTY_FORM)
+  const [customers, setCustomers] = useState<any[]>([])
+  const [requirements, setRequirements] = useState<any[]>([])
+  const [departments, setDepartments] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
+
+  useEffect(() => {
+    fetch('/api/clients').then((r) => r.json()).then((j) => setCustomers(j.data || [])).catch(() => {})
+    fetch('/api/requirements').then((r) => r.json()).then((j) => setRequirements(j.data || [])).catch(() => {})
+    fetch('/api/departments').then((r) => r.json()).then((j) => setDepartments(j.data || [])).catch(() => {})
+    fetch('/api/users').then((r) => r.json()).then((j) => setUsers(j.data || [])).catch(() => {})
+  }, [])
+
+  const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
+  const visible = (field: string) =>
+    (STATUS_FIELDS[form.recommendationStatus] ?? []).includes(field)
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/candidates')
+      if (!res.ok) throw new Error()
+      const json = await res.json()
+      setData(json.data)
+    } catch {
+      toast.error('加载失败')
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
+
+  useEffect(() => {
+    void fetchData()
+  }, [fetchData])
+
+  const openCreate = () => {
+    setEditing(null)
+    setForm({ ...EMPTY_FORM })
+    setOpen(true)
+  }
+
+  const openEdit = (r: any) => {
+    setEditing(r)
+    setForm({
+      ...EMPTY_FORM,
+      ...r,
+      birthYear: r.birthYear ?? '',
+      customerId: r.customerId ?? '',
+      customerShortName: r.customerShortName ?? '',
+      requirementId: r.requirementId ?? '',
+      submitDepartmentId: r.submitDepartmentId ?? '',
+      submitterId: r.submitterId ?? '',
+      guaranteePeriodMonths: r.guaranteePeriodMonths ?? '',
+      recommendationTime: fmtDate(r.recommendationTime),
+      offerDate: fmtDate(r.offerDate),
+      offerOnboardDate: fmtDate(r.offerOnboardDate),
+      actualOnboardDate: fmtDate(r.actualOnboardDate),
+      guaranteePeriodEnd: fmtDate(r.guaranteePeriodEnd),
+      tags: Array.isArray(r.tags) ? r.tags.join(', ') : '',
+      guaranteeCommunications: (r.guaranteeCommunications ?? []).map((x: any) => ({
+        date: fmtDate(x.date),
+        content: x.content ?? '',
+      })),
+      riskEvents: (r.riskEvents ?? []).map((x: any) => ({
+        date: fmtDate(x.date),
+        riskDescription: x.riskDescription ?? '',
+      })),
+    })
+    setOpen(true)
+  }
+
+  const handleDelete = async (id: number) => {
+    try {
+      const res = await fetch(`/api/candidates/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error()
+      toast.success('删除成功')
+      void fetchData()
+    } catch {
+      toast.error('删除失败')
+    }
+  }
+
+  const handleSubmit = async () => {
+    if (!form.name?.trim()) return toast.error('请填写候选人姓名')
+    if (!form.recruitmentChannel?.trim()) return toast.error('请填写招聘渠道')
+    setSubmitting(true)
+    try {
+      const payload = {
+        ...form,
+        tags: String(form.tags || '')
+          .split(',')
+          .map((s: string) => s.trim())
+          .filter(Boolean),
+      }
+      const url = editing ? `/api/candidates/${editing.id}` : '/api/candidates'
+      const res = await fetch(url, {
+        method: editing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error()
+      toast.success(editing ? '更新成功' : '创建成功')
+      setOpen(false)
+      void fetchData()
+    } catch {
+      toast.error(editing ? '更新失败' : '创建失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const columns: BoostColumn<any>[] = [
+    { key: 'customerName', title: '客户简称', accessor: (r) => r.customer?.shortName,
+      render: (v) => v ? <span className="font-medium text-primary">{v}</span> : <span className="text-base-content/30">—</span> },
+    { key: 'positionName', title: '岗位名称', accessor: (r) => r.requirement?.positionName },
+    { key: 'name', title: '候选人姓名', render: (v) => <span className="font-medium">{v}</span> },
+    { key: 'recommendationTime', title: '推荐时间', accessor: (r) => r.recommendationTime,
+      render: (v) => <span className="text-base-content/60">{fmtDate(v) || '—'}</span> },
+    { key: 'recommendationStatus', title: '推荐状态',
+      render: (v) => <span className={`badge ${STATUS_BADGE[v] ?? 'badge-ghost'} badge-sm`}>{STATUS_LABELS[v] ?? v}</span> },
+    { key: 'submitterName', title: '提交人', accessor: (r) => r.submitter?.name },
+    { key: 'interviewProgress', title: '面试进展', render: (v) => v ? <span className="line-clamp-1 max-w-[200px]">{v}</span> : <span className="text-base-content/30">—</span> },
+    // 以下默认隐藏，可在"显示列"开启 —— 覆盖全部字段
+    { key: 'recruitmentParty', title: '招聘需求方', defaultVisible: false },
+    { key: 'recruitmentChannel', title: '招聘渠道', defaultVisible: false },
+    { key: 'phone', title: '联系电话', defaultVisible: false },
+    { key: 'email', title: '邮箱', defaultVisible: false },
+    { key: 'birthYear', title: '出生年份', defaultVisible: false },
+    { key: 'education', title: '教育经历', defaultVisible: false, accessor: (r) => EDUCATION_LABELS[r.education] ?? '' },
+    { key: 'schoolTier', title: '院校', defaultVisible: false, accessor: (r) => SCHOOL_TIER_LABELS[r.schoolTier] ?? '' },
+    { key: 'recommendationReason', title: '推荐理由', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[200px]">{v}</span> : '—' },
+    { key: 'offerDate', title: 'Offer日期', defaultVisible: false, render: (v) => fmtDate(v) || '—' },
+    { key: 'offerOnboardDate', title: 'Offer到岗日期', defaultVisible: false, render: (v) => fmtDate(v) || '—' },
+    { key: 'actualOnboardDate', title: '实际到岗日期', defaultVisible: false, render: (v) => fmtDate(v) || '—' },
+    { key: 'salaryPlan', title: '薪酬方案', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[200px]">{v}</span> : '—' },
+    { key: 'guaranteePeriodEnd', title: '保证期结束日期', defaultVisible: false, render: (v) => fmtDate(v) || '—' },
+    { key: 'guaranteePeriodMonths', title: '保证期时长(月)', defaultVisible: false },
+    { key: 'failureReason', title: '推荐失败原因', defaultVisible: false },
+    { key: 'tags', title: '候选人标签', defaultVisible: false, sortable: false,
+      accessor: (r) => (Array.isArray(r.tags) ? r.tags.join(' ') : ''),
+      render: (_v, r) => (
+        <div className="flex flex-wrap gap-1">
+          {(r.tags ?? []).map((t: string, i: number) => (
+            <span key={i} className="badge badge-ghost badge-sm">{t}</span>
+          ))}
+        </div>
+      ) },
+    { key: 'notes', title: '备注', defaultVisible: false },
+  ]
+
+  return (
+    <div>
+      <div className="mb-4">
+        <h1 className="text-xl font-bold text-base-content">候选人挖猎进度看板</h1>
+        <p className="mt-0.5 text-sm text-base-content/50">管理所有候选人信息及推荐进展</p>
+      </div>
+
+      <BoostTable
+        title="候选人列表"
+        columns={columns}
+        data={data}
+        loading={loading}
+        rowKey="id"
+        onCreate={openCreate}
+        createText="新增"
+        onImport={() => toast.info('导入功能开发中')}
+        onRefresh={fetchData}
+        searchPlaceholder="搜索姓名 / 客户 / 岗位 / 状态…"
+        actions={(r) => (
+          <div className="flex items-center gap-1">
+            <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openEdit(r)}>
+              <Pencil className="h-3.5 w-3.5" />
+              编辑
+            </button>
+            <Popconfirm title="确认删除该候选人？" onConfirm={() => handleDelete(r.id)}>
+              <button className="btn btn-ghost btn-xs gap-1 text-error">
+                <Trash2 className="h-3.5 w-3.5" />
+                删除
+              </button>
+            </Popconfirm>
+          </div>
+        )}
+      />
+
+      {/* ── 新建 / 编辑 ── */}
+      <Modal
+        open={open}
+        title={editing ? '编辑候选人' : '新增候选人'}
+        onClose={() => setOpen(false)}
+        onOk={handleSubmit}
+        okText={editing ? '保存' : '创建'}
+        confirmLoading={submitting}
+        width={760}
+      >
+        {/* 基本信息 */}
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="候选人姓名" required>
+            <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="请输入" />
+          </Field>
+          <Field label="出生年份">
+            <input type="number" className="input input-bordered w-full" value={form.birthYear} onChange={(e) => setField('birthYear', e.target.value)} placeholder="如 1990" />
+          </Field>
+          <Field label="联系电话">
+            <input className="input input-bordered w-full" value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="请输入" />
+          </Field>
+          <Field label="候选人邮箱">
+            <input className="input input-bordered w-full" value={form.email} onChange={(e) => setField('email', e.target.value)} placeholder="请输入" />
+          </Field>
+          <Field label="教育经历">
+            <select className="select select-bordered w-full" value={form.education} onChange={(e) => setField('education', e.target.value)}>
+              <option value="">请选择</option>
+              {opts(EDUCATION_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Field>
+          <Field label="院校">
+            <select className="select select-bordered w-full" value={form.schoolTier} onChange={(e) => setField('schoolTier', e.target.value)}>
+              <option value="">请选择</option>
+              {opts(SCHOOL_TIER_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Field>
+          <Field label="客户名称">
+            <select
+              className="select select-bordered w-full"
+              value={form.customerId}
+              onChange={(e) => {
+                const cid = e.target.value
+                setField('customerId', cid)
+                setField('requirementId', '')
+                const c = customers.find((x) => String(x.id) === String(cid))
+                setField('customerShortName', c?.shortName || '')
+              }}
+            >
+              <option value="">请选择客户</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>{c.fullName || c.shortName}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="客户简称">
+            <input
+              className="input input-bordered w-full"
+              value={form.customerShortName}
+              onChange={(e) => setField('customerShortName', e.target.value)}
+              placeholder="选择客户后自动填充，可修改"
+            />
+          </Field>
+          <Field label="招聘需求方">
+            <select
+              className="select select-bordered w-full"
+              value={form.recruitmentParty}
+              disabled={!form.customerId}
+              onChange={(e) => {
+                setField('recruitmentParty', e.target.value)
+                setField('requirementId', '')
+              }}
+            >
+              <option value="">{form.customerId ? '请选择招聘需求方' : '请先选择客户'}</option>
+              {[
+                ...new Set(
+                  requirements
+                    .filter((r) => String(r.customerId) === String(form.customerId) && r.recruiter)
+                    .map((r) => r.recruiter),
+                ),
+              ].map((rc: any) => (
+                <option key={rc} value={rc}>{rc}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="岗位名称">
+            <select
+              className="select select-bordered w-full"
+              value={form.requirementId}
+              disabled={!form.customerId}
+              onChange={(e) => setField('requirementId', e.target.value)}
+            >
+              <option value="">{form.customerId ? '请选择岗位' : '请先选择客户'}</option>
+              {requirements
+                .filter(
+                  (r) =>
+                    String(r.customerId) === String(form.customerId) &&
+                    (!form.recruitmentParty || r.recruiter === form.recruitmentParty),
+                )
+                .map((r) => (
+                  <option key={r.id} value={r.id}>{r.positionName}</option>
+                ))}
+            </select>
+          </Field>
+          <Field label="推荐时间">
+            <input type="date" className="input input-bordered w-full" value={form.recommendationTime} onChange={(e) => setField('recommendationTime', e.target.value)} />
+          </Field>
+          <Field label="招聘渠道" required>
+            <input className="input input-bordered w-full" value={form.recruitmentChannel} onChange={(e) => setField('recruitmentChannel', e.target.value)} placeholder="如：猎聘、内推、Boss直聘" />
+          </Field>
+          <Field label="推荐报告">
+            <FileUpload value={form.recommendationReportUrl} onChange={(url) => setField('recommendationReportUrl', url)} />
+          </Field>
+          <Field label="推荐状态" required>
+            <select className="select select-bordered w-full" value={form.recommendationStatus} onChange={(e) => setField('recommendationStatus', e.target.value)}>
+              {opts(STATUS_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Field>
+        </div>
+
+        <div className="divider my-3" />
+
+        {/* 状态驱动流程字段 */}
+        <div className="rounded-xl border border-base-300 bg-base-200/40 p-4">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-base-content/50">
+            流程字段（根据推荐状态显示）
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {visible('recommendationReason') && (
+              <Field label="推荐理由" className="col-span-2">
+                <textarea className="textarea textarea-bordered w-full" rows={2} value={form.recommendationReason} onChange={(e) => setField('recommendationReason', e.target.value)} placeholder="请填写推荐理由" />
+              </Field>
+            )}
+            {visible('interviewProgress') && (
+              <Field label="面试进展" className="col-span-2">
+                <textarea className="textarea textarea-bordered w-full" rows={2} value={form.interviewProgress} onChange={(e) => setField('interviewProgress', e.target.value)} placeholder="描述当前面试进展" />
+              </Field>
+            )}
+            {visible('salaryPlan') && (
+              <Field label="薪酬方案" className="col-span-2">
+                <textarea className="textarea textarea-bordered w-full" rows={2} value={form.salaryPlan} onChange={(e) => setField('salaryPlan', e.target.value)} placeholder="薪资结构、年终、股票等" />
+              </Field>
+            )}
+            {visible('offerDate') && (
+              <Field label="Offer 日期">
+                <input type="date" className="input input-bordered w-full" value={form.offerDate} onChange={(e) => setField('offerDate', e.target.value)} />
+              </Field>
+            )}
+            {visible('offerOnboardDate') && (
+              <Field label="Offer 到岗日期">
+                <input type="date" className="input input-bordered w-full" value={form.offerOnboardDate} onChange={(e) => setField('offerOnboardDate', e.target.value)} />
+              </Field>
+            )}
+            {visible('offerFileUrl') && (
+              <Field label="Offer（上传文件）" className="col-span-2">
+                <FileUpload value={form.offerFileUrl} onChange={(url) => setField('offerFileUrl', url)} />
+              </Field>
+            )}
+            {visible('backgroundCheckReportUrl') && (
+              <Field label="背景调查报告" className="col-span-2">
+                <FileUpload value={form.backgroundCheckReportUrl} onChange={(url) => setField('backgroundCheckReportUrl', url)} />
+              </Field>
+            )}
+            {visible('actualOnboardDate') && (
+              <Field label="实际到岗日期">
+                <input type="date" className="input input-bordered w-full" value={form.actualOnboardDate} onChange={(e) => setField('actualOnboardDate', e.target.value)} />
+              </Field>
+            )}
+            {visible('guaranteePeriodEnd') && (
+              <Field label="保证期结束日期">
+                <input type="date" className="input input-bordered w-full" value={form.guaranteePeriodEnd} onChange={(e) => setField('guaranteePeriodEnd', e.target.value)} />
+              </Field>
+            )}
+            {visible('guaranteePeriodMonths') && (
+              <Field label="保证期时长(月)">
+                <input type="number" className="input input-bordered w-full" value={form.guaranteePeriodMonths} onChange={(e) => setField('guaranteePeriodMonths', e.target.value)} placeholder="请输入数字" />
+              </Field>
+            )}
+            {visible('failureReason') && (
+              <Field label="推荐失败原因描述" className="col-span-2">
+                <textarea className="textarea textarea-bordered w-full" rows={2} value={form.failureReason} onChange={(e) => setField('failureReason', e.target.value)} placeholder="请填写失败的具体原因，如谈薪失败的实际谈薪、期望薪资、gap 等" />
+              </Field>
+            )}
+          </div>
+        </div>
+
+        <div className="divider my-3" />
+
+        {/* 子表 */}
+        <div className="space-y-4">
+          <SubTable
+            title="保证期内沟通记录"
+            value={form.guaranteeCommunications}
+            onChange={(rows) => setField('guaranteeCommunications', rows)}
+            columns={[
+              { key: 'date', title: '日期', type: 'date', width: 160 },
+              { key: 'content', title: '沟通内容', type: 'textarea', width: 320 },
+            ]}
+          />
+          <SubTable
+            title="风险管理表单"
+            value={form.riskEvents}
+            onChange={(rows) => setField('riskEvents', rows)}
+            columns={[
+              { key: 'date', title: '日期', type: 'date', width: 160 },
+              { key: 'riskDescription', title: '风险识别', type: 'textarea', width: 320 },
+            ]}
+          />
+        </div>
+
+        <div className="divider my-3" />
+
+        {/* 底部 */}
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="候选人标签（逗号分隔）" className="col-span-2">
+            <input className="input input-bordered w-full" value={form.tags} onChange={(e) => setField('tags', e.target.value)} placeholder="如：核心人才, 已背调" />
+          </Field>
+          <Field label="提交人部门">
+            <select className="select select-bordered w-full" value={form.submitDepartmentId} onChange={(e) => setField('submitDepartmentId', e.target.value)}>
+              <option value="">请选择部门</option>
+              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </Field>
+          <Field label="提交人">
+            <select className="select select-bordered w-full" value={form.submitterId} onChange={(e) => setField('submitterId', e.target.value)}>
+              <option value="">请选择提交人</option>
+              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </Field>
+          <Field label="备注" className="col-span-2">
+            <textarea className="textarea textarea-bordered w-full" rows={2} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="其他备注信息" />
+          </Field>
+        </div>
+      </Modal>
+    </div>
+  )
+}

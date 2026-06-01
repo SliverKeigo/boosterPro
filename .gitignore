@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# 文件上传本地存储
+uploads/
+
+# 文档（含图片），不入库
+docs/

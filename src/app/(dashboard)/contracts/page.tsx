@@ -1,0 +1,309 @@
+'use client'
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useCallback, useEffect, useState } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
+import {
+  BoostTable,
+  type BoostColumn,
+  SubTable,
+  Modal,
+  Popconfirm,
+  Field,
+  FileUpload,
+  useToast,
+} from '@/components/ui'
+
+const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
+
+const EMPTY_FORM: any = {
+  customerId: '',
+  contractName: '',
+  signingYear: '',
+  effectiveStart: '',
+  effectiveEnd: '',
+  expiryDate: '',
+  serviceType: '',
+  headhunterFeeRate: '',
+  billingMonths: '',
+  ropFeeRate: '',
+  salesOwnerId: '',
+  deliveryOwnerId: '',
+  contractFileUrl: '',
+  invoiceInfoText: '',
+  invoiceInfoFileUrl: '',
+  notes: '',
+  invoices: [],
+}
+
+export default function ContractsPage() {
+  const toast = useToast()
+  const [data, setData] = useState<any[]>([])
+  const [customers, setCustomers] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<any>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [form, setForm] = useState<any>(EMPTY_FORM)
+
+  const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
+
+  useEffect(() => {
+    fetch('/api/clients')
+      .then((r) => r.json())
+      .then((j) => setCustomers(j.data || []))
+      .catch(() => {})
+  }, [])
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/contracts')
+      if (!res.ok) throw new Error()
+      const json = await res.json()
+      setData(json.data)
+    } catch {
+      toast.error('加载失败')
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
+
+  useEffect(() => {
+    void fetchData()
+  }, [fetchData])
+
+  const openCreate = () => {
+    setEditing(null)
+    setForm({ ...EMPTY_FORM })
+    setOpen(true)
+  }
+
+  const openEdit = (r: any) => {
+    setEditing(r)
+    setForm({
+      ...EMPTY_FORM,
+      ...r,
+      customerId: r.customerId ?? '',
+      signingYear: r.signingYear ?? '',
+      headhunterFeeRate: r.headhunterFeeRate ?? '',
+      billingMonths: r.billingMonths ?? '',
+      ropFeeRate: r.ropFeeRate ?? '',
+      salesOwnerId: r.salesOwnerId ?? '',
+      deliveryOwnerId: r.deliveryOwnerId ?? '',
+      effectiveStart: fmtDate(r.effectiveStart),
+      effectiveEnd: fmtDate(r.effectiveEnd),
+      expiryDate: fmtDate(r.expiryDate),
+      invoices: (r.invoices ?? []).map((x: any) => ({
+        invoiceType: x.invoiceType ?? '',
+        verificationResult: x.verificationResult ?? '',
+      })),
+    })
+    setOpen(true)
+  }
+
+  const handleDelete = async (id: number) => {
+    try {
+      const res = await fetch(`/api/contracts/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error()
+      toast.success('删除成功')
+      void fetchData()
+    } catch {
+      toast.error('删除失败')
+    }
+  }
+
+  const handleSubmit = async () => {
+    if (!form.customerId?.toString().trim()) return toast.error('请填写关联客户 ID')
+    if (!form.contractName?.trim()) return toast.error('请填写合同名称')
+    if (!form.signingYear?.toString().trim()) return toast.error('请填写签订年份')
+    if (!form.effectiveStart) return toast.error('请选择合同生效开始日期')
+    if (!form.effectiveEnd) return toast.error('请选择合同生效结束日期')
+    if (!form.expiryDate) return toast.error('请选择合同到期日期')
+    if (!form.serviceType?.trim()) return toast.error('请填写服务类型')
+    if (!form.contractFileUrl?.trim()) return toast.error('请填写合同附件 URL')
+    setSubmitting(true)
+    try {
+      const url = editing ? `/api/contracts/${editing.id}` : '/api/contracts'
+      const res = await fetch(url, {
+        method: editing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) throw new Error()
+      toast.success(editing ? '更新成功' : '创建成功')
+      setOpen(false)
+      void fetchData()
+    } catch {
+      toast.error(editing ? '更新失败' : '创建失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const columns: BoostColumn<any>[] = [
+    {
+      key: 'customerName',
+      title: '关联客户',
+      accessor: (r) => r.customer?.shortName,
+      render: (v) =>
+        v ? (
+          <span className="font-medium text-primary">{v}</span>
+        ) : (
+          <span className="text-base-content/30">—</span>
+        ),
+    },
+    { key: 'contractName', title: '合同名称', render: (v) => <span className="font-medium">{v}</span> },
+    { key: 'serviceType', title: '服务类型' },
+    { key: 'signingYear', title: '签订年份' },
+    { key: 'effectiveStart', title: '生效开始', render: (v) => fmtDate(v) || '—' },
+    { key: 'effectiveEnd', title: '生效结束', render: (v) => fmtDate(v) || '—' },
+    { key: 'expiryDate', title: '到期日期', render: (v) => fmtDate(v) || '—' },
+    {
+      key: 'salesOwnerName',
+      title: '销售负责人',
+      accessor: (r) => r.salesOwner?.name,
+    },
+    {
+      key: 'deliveryOwnerName',
+      title: '交付负责人',
+      accessor: (r) => r.deliveryOwner?.name,
+    },
+    {
+      key: 'invoicesCount',
+      title: '发票数',
+      sortable: false,
+      accessor: (r) => (r.invoices ?? []).length,
+      render: (v) => <span className="badge badge-ghost badge-sm">{v}</span>,
+    },
+    {
+      key: 'createdAt',
+      title: '创建时间',
+      defaultVisible: false,
+      render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span>,
+    },
+    // 以下默认隐藏，可在“显示列”开启
+    { key: 'customerId', title: '客户 ID', defaultVisible: false },
+    { key: 'headhunterFeeRate', title: '猎头服务费率%', defaultVisible: false, render: (v) => (v ?? '') === '' ? '—' : String(v) },
+    { key: 'billingMonths', title: '计费月数', defaultVisible: false },
+    { key: 'ropFeeRate', title: 'ROP 服务费率', defaultVisible: false, render: (v) => (v ?? '') === '' ? '—' : String(v) },
+    { key: 'salesOwnerId', title: '销售负责人 ID', defaultVisible: false },
+    { key: 'deliveryOwnerId', title: '交付负责人 ID', defaultVisible: false },
+    { key: 'contractFileUrl', title: '合同附件 URL', defaultVisible: false },
+    { key: 'invoiceInfoText', title: '开票信息', defaultVisible: false },
+    { key: 'notes', title: '备注', defaultVisible: false },
+  ]
+
+  return (
+    <div>
+      <div className="mb-4">
+        <h1 className="text-xl font-bold text-base-content">销售合同</h1>
+        <p className="mt-0.5 text-sm text-base-content/50">管理所有销售合同及发票信息</p>
+      </div>
+
+      <BoostTable
+        title="合同列表"
+        columns={columns}
+        data={data}
+        loading={loading}
+        rowKey="id"
+        onCreate={openCreate}
+        createText="新增"
+        onImport={() => toast.info('导入功能开发中')}
+        onRefresh={fetchData}
+        searchPlaceholder="搜索合同名称 / 客户 / 服务类型…"
+        actions={(r) => (
+          <div className="flex items-center gap-1">
+            <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openEdit(r)}>
+              <Pencil className="h-3.5 w-3.5" />
+              编辑
+            </button>
+            <Popconfirm title="确认删除该合同？" onConfirm={() => handleDelete(r.id)}>
+              <button className="btn btn-ghost btn-xs gap-1 text-error">
+                <Trash2 className="h-3.5 w-3.5" />
+                删除
+              </button>
+            </Popconfirm>
+          </div>
+        )}
+      />
+
+      <Modal
+        open={open}
+        title={editing ? '编辑合同' : '新增合同'}
+        onClose={() => setOpen(false)}
+        onOk={handleSubmit}
+        okText={editing ? '保存' : '创建'}
+        confirmLoading={submitting}
+        width={760}
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="关联客户" required>
+            <select className="select select-bordered w-full" value={form.customerId} onChange={(e) => setField('customerId', e.target.value)}>
+              <option value="">请选择客户</option>
+              {customers.map((c) => <option key={c.id} value={c.id}>{c.shortName}</option>)}
+            </select>
+          </Field>
+          <Field label="合同名称" required>
+            <input className="input input-bordered w-full" value={form.contractName} onChange={(e) => setField('contractName', e.target.value)} placeholder="请输入" />
+          </Field>
+          <Field label="签订年份" required>
+            <input type="number" className="input input-bordered w-full" value={form.signingYear} onChange={(e) => setField('signingYear', e.target.value)} placeholder="如 2025" />
+          </Field>
+          <Field label="合同有效期" required className="col-span-2">
+            <div className="flex items-center gap-2">
+              <input type="date" className="input input-bordered w-full" value={form.effectiveStart} onChange={(e) => setField('effectiveStart', e.target.value)} placeholder="起始日期" />
+              <span className="text-base-content/40">-</span>
+              <input type="date" className="input input-bordered w-full" value={form.effectiveEnd} onChange={(e) => setField('effectiveEnd', e.target.value)} placeholder="结束日期" />
+            </div>
+          </Field>
+          <Field label="合同到期日期" required>
+            <input type="date" className="input input-bordered w-full" value={form.expiryDate} onChange={(e) => setField('expiryDate', e.target.value)} />
+          </Field>
+          <Field label="服务类型" required>
+            <input className="input input-bordered w-full" value={form.serviceType} onChange={(e) => setField('serviceType', e.target.value)} placeholder="请选择" />
+          </Field>
+          <Field label="猎头服务费率%">
+            <input type="number" className="input input-bordered w-full" value={form.headhunterFeeRate} onChange={(e) => setField('headhunterFeeRate', e.target.value)} placeholder="请输入" />
+          </Field>
+          <Field label="计费月数">
+            <input type="number" className="input input-bordered w-full" value={form.billingMonths} onChange={(e) => setField('billingMonths', e.target.value)} placeholder="请输入" />
+          </Field>
+          <Field label="ROP 服务费率">
+            <input type="number" className="input input-bordered w-full" value={form.ropFeeRate} onChange={(e) => setField('ropFeeRate', e.target.value)} placeholder="请输入" />
+          </Field>
+          <Field label="销售负责人 ID">
+            <input type="number" className="input input-bordered w-full" value={form.salesOwnerId} onChange={(e) => setField('salesOwnerId', e.target.value)} placeholder="请选择（用户 ID）" />
+          </Field>
+          <Field label="交付负责人 ID">
+            <input type="number" className="input input-bordered w-full" value={form.deliveryOwnerId} onChange={(e) => setField('deliveryOwnerId', e.target.value)} placeholder="请选择（用户 ID）" />
+          </Field>
+          <Field label="合同附件" required className="col-span-2">
+            <FileUpload value={form.contractFileUrl} onChange={(url) => setField('contractFileUrl', url)} />
+          </Field>
+          <Field label="开票信息" className="col-span-2">
+            <textarea className="textarea textarea-bordered w-full" rows={2} value={form.invoiceInfoText} onChange={(e) => setField('invoiceInfoText', e.target.value)} placeholder="开票相关信息" />
+          </Field>
+          <Field label="开票信息（文件）" className="col-span-2">
+            <FileUpload value={form.invoiceInfoFileUrl} onChange={(url) => setField('invoiceInfoFileUrl', url)} />
+          </Field>
+          <Field label="备注" className="col-span-2">
+            <textarea className="textarea textarea-bordered w-full" rows={2} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="其他备注信息" />
+          </Field>
+        </div>
+
+        <div className="divider my-3" />
+
+        <SubTable
+          title="发票详情"
+          value={form.invoices}
+          onChange={(rows) => setField('invoices', rows)}
+          columns={[
+            { key: 'invoiceType', title: '发票类型', type: 'text', width: 240 },
+            { key: 'verificationResult', title: '查验结果', type: 'text', width: 240 },
+          ]}
+        />
+      </Modal>
+    </div>
+  )
+}
