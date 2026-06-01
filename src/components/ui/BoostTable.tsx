@@ -54,6 +54,8 @@ interface BoostTableProps<T> {
   onImport?: () => void
   /** 不传则使用内置 CSV 导出（按可见列 + 当前筛选结果） */
   onExport?: () => void
+  /** 是否显示导出按钮（受导出权限控制），默认 true */
+  showExport?: boolean
   onRefresh?: () => void
   moreActions?: MoreAction[]
   actions?: (record: T) => ReactNode
@@ -88,6 +90,7 @@ export function BoostTable<T extends Record<string, any>>({
   createText = '新增',
   onImport,
   onExport,
+  showExport = true,
   onRefresh,
   moreActions,
   actions,
@@ -218,10 +221,12 @@ export function BoostTable<T extends Record<string, any>>({
             导入
           </button>
         )}
-        <button type="button" className={ICON_BTN} onClick={onExport ?? builtinExport}>
-          <Download className="h-4 w-4" />
-          导出
-        </button>
+        {showExport && (
+          <button type="button" className={ICON_BTN} onClick={onExport ?? builtinExport}>
+            <Download className="h-4 w-4" />
+            导出
+          </button>
+        )}
         {moreActions && moreActions.length > 0 && (
           <Dropdown
             width={180}

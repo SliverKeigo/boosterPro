@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
+import { requirePermission, assertRowWritable } from '@/lib/permissions'
 import { buildTalentPoolData } from '@/lib/talentPoolData'
 
 export async function GET(
@@ -8,6 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requirePermission('TALENT_POOL', 'VIEW')
     const { id } = await params
     const item = await prisma.talentPool.findUnique({ where: { id: parseInt(id) } })
     if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -22,7 +24,13 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requirePermission('TALENT_POOL', 'EDIT')
     const { id } = await params
+    const existing = await prisma.talentPool.findUnique({
+      where: { id: parseInt(id) },
+      select: { createdById: true },
+    })
+    assertRowWritable(user, existing)
     const body = await req.json()
     const item = await prisma.talentPool.update({
       where: { id: parseInt(id) },
@@ -39,7 +47,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requirePermission('TALENT_POOL', 'DELETE')
     const { id } = await params
+    const existing = await prisma.talentPool.findUnique({
+      where: { id: parseInt(id) },
+      select: { createdById: true },
+    })
+    assertRowWritable(user, existing)
     await prisma.talentPool.delete({ where: { id: parseInt(id) } })
     return NextResponse.json({ success: true })
   } catch (e) {

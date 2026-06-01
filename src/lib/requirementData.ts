@@ -6,6 +6,44 @@ export const REQUIREMENT_INCLUDE = {
   urgentRecords: true,
 }
 
+// Requirement model 的已知标量字段白名单（不含 relation / 子表 / id / createdAt / updatedAt / createdById）
+const REQUIREMENT_SCALAR_FIELDS = [
+  'customerId',
+  'recruiter',
+  'positionName',
+  'headcount',
+  'monthlySalaryMin',
+  'monthlySalaryMax',
+  'annualSalaryMin',
+  'annualSalaryMax',
+  'ageMin',
+  'ageMax',
+  'genderRequirement',
+  'educationRequirement',
+  'languageRequirement',
+  'status',
+  'deadline',
+  'baseCity',
+  'jobDescription',
+  'talentProfile',
+  'projectExperience',
+  'closeReason',
+  'notes',
+  'attachmentUrl',
+  'latestUpdate',
+  'industry',
+  'followDate',
+] as const
+
+/** 仅保留白名单标量字段，过滤掉前端多传的脏字段 */
+function pickScalars(data: any, fields: readonly string[]): any {
+  const out: any = {}
+  for (const f of fields) {
+    if (f in data) out[f] = data[f]
+  }
+  return out
+}
+
 /** 把前端表单 payload 清洗为 Prisma create/update 数据（含子表嵌套写） */
 export function buildRequirementData(body: any, mode: 'create' | 'update') {
   const {
@@ -67,8 +105,10 @@ export function buildRequirementData(body: any, mode: 'create' | 'update') {
       date: r.date ? new Date(r.date) : null,
     }))
 
-  data.positionProfiles = mode === 'create' ? { create: profiles } : { deleteMany: {}, create: profiles }
-  data.urgentRecords = mode === 'create' ? { create: urgent } : { deleteMany: {}, create: urgent }
+  // 白名单过滤掉多余键后，再附加子表嵌套写
+  const out = pickScalars(data, REQUIREMENT_SCALAR_FIELDS)
+  out.positionProfiles = mode === 'create' ? { create: profiles } : { deleteMany: {}, create: profiles }
+  out.urgentRecords = mode === 'create' ? { create: urgent } : { deleteMany: {}, create: urgent }
 
-  return data
+  return out
 }

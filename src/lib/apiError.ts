@@ -1,6 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server'
 
+// 业务层可主动抛出的带状态码错误（如 401 未登录 / 403 无权限 / 404 不存在），
+// 由 handleApiError 统一转成对应响应，避免在每个 route 里手写 return。
+export class HttpError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'HttpError'
+  }
+}
+
 // 常见 Prisma 已知错误码 → 可读中文提示 + 合适状态码
 const PRISMA_MESSAGES: Record<string, { msg: string; status: number }> = {
   P2002: { msg: '数据重复：存在唯一约束冲突', status: 409 },
@@ -23,6 +35,12 @@ function prismaCode(e: unknown): string | null {
  * - 其余错误：开发环境返回真实 message 便于排查，生产环境返回通用提示
  */
 export function handleApiError(e: unknown) {
+  // 业务主动抛出的 HttpError：用其状态码与消息（4xx 属正常业务流，不污染错误日志）
+  if (e instanceof HttpError) {
+    if (e.status >= 500) console.error(e)
+    return NextResponse.json({ error: e.message }, { status: e.status })
+  }
+
   console.error(e)
 
   const code = prismaCode(e)

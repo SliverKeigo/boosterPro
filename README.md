@@ -49,10 +49,16 @@ UPLOAD_DIR="./uploads"                         # 文件上传本地存储路径
 
 ### 2. 安装与启动
 ```bash
-npm install
-npx prisma generate
+npm install              # 含 tsx（db:seed 用它运行 TS 种子脚本）
+npx prisma generate      # 生成 Prisma Client
+npx prisma db push       # 应用表结构到数据库（需 .env 中已设 DATABASE_URL）
+npm run db:seed          # 初始化默认管理员 / 部门 / 角色（幂等，可重复执行）
 npm run dev
 ```
+
+> Prisma 7 通过 `prisma.config.ts` 读取 `DATABASE_URL`，因此执行 `prisma db push` 前务必在 `.env` 中配置好该变量。
+> 若 `npm install` 未安装 `tsx`，可手动补装：`npm i -D tsx`。
+
 访问 http://localhost:3000 ，默认管理员账号：`admin@boosterpro.com` / `Admin@123456`
 
 ## 项目结构

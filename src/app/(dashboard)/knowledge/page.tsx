@@ -14,6 +14,9 @@ import {
   RichText,
   useToast,
 } from '@/components/ui'
+import { useMyPermissions } from '@/lib/usePermissions'
+
+const RES = 'KNOWLEDGE'
 
 const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
 // 富文本字段去 HTML 标签后截断显示
@@ -30,8 +33,9 @@ const EMPTY_FORM: any = {
 
 export default function KnowledgePage() {
   const toast = useToast()
+  const { can, isOwner } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -39,8 +43,8 @@ export default function KnowledgePage() {
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
+  const fetchData = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true)
     try {
       const res = await fetch('/api/knowledge')
       if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
@@ -54,7 +58,10 @@ export default function KnowledgePage() {
   }, [toast])
 
   useEffect(() => {
-    void fetchData()
+    // 包一层异步 IIFE（首句即 await），让 effect 同步路径不含 setState（react-hooks/set-state-in-effect）
+    void (async () => {
+      await fetchData()
+    })()
   }, [fetchData])
 
   const openCreate = () => {
@@ -172,23 +179,28 @@ export default function KnowledgePage() {
         data={data}
         loading={loading}
         rowKey="id"
-        onCreate={openCreate}
+        onCreate={can(RES, 'CREATE') ? openCreate : undefined}
         createText="新增"
-        onImport={() => toast.info('导入功能开发中')}
-        onRefresh={fetchData}
+        onImport={can(RES, 'IMPORT') ? () => toast.info('导入功能开发中') : undefined}
+        onRefresh={() => fetchData(true)}
+        showExport={can(RES, 'EXPORT')}
         searchPlaceholder="搜索分类 / 标签 / 关键词…"
         actions={(r) => (
           <div className="flex items-center gap-1">
-            <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openEdit(r)}>
-              <Pencil className="h-3.5 w-3.5" />
-              编辑
-            </button>
-            <Popconfirm title="确认删除该知识条目？" onConfirm={() => handleDelete(r.id)}>
-              <button className="btn btn-ghost btn-xs gap-1 text-error">
-                <Trash2 className="h-3.5 w-3.5" />
-                删除
+            {can(RES, 'EDIT') && isOwner(r) && (
+              <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openEdit(r)}>
+                <Pencil className="h-3.5 w-3.5" />
+                编辑
               </button>
-            </Popconfirm>
+            )}
+            {can(RES, 'DELETE') && isOwner(r) && (
+              <Popconfirm title="确认删除该知识条目？" onConfirm={() => handleDelete(r.id)}>
+                <button className="btn btn-ghost btn-xs gap-1 text-error">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  删除
+                </button>
+              </Popconfirm>
+            )}
           </div>
         )}
       />

@@ -6,6 +6,25 @@ export const SUPPLEMENT_INCLUDE = {
   customerProfiles: true,
 }
 
+// ClientSupplement model 的已知标量字段白名单（不含 relation / 子表 / id / createdAt / updatedAt / createdById）
+const SUPPLEMENT_SCALAR_FIELDS = [
+  'customerId',
+  'demandCustomer',
+  'openingSpeech',
+  'companyCultureWelfare',
+  'notes',
+  'attachmentUrl',
+] as const
+
+/** 仅保留白名单标量字段，过滤掉前端多传的脏字段 */
+function pickScalars(data: any, fields: readonly string[]): any {
+  const out: any = {}
+  for (const f of fields) {
+    if (f in data) out[f] = data[f]
+  }
+  return out
+}
+
 /** 把前端表单 payload 清洗为 Prisma create/update 数据（含子表嵌套写） */
 export function buildSupplementData(body: any, mode: 'create' | 'update') {
   const {
@@ -38,8 +57,10 @@ export function buildSupplementData(body: any, mode: 'create' | 'update') {
     .filter((r) => r.specialty || r.description)
     .map((r) => ({ specialty: r.specialty || null, description: r.description || null }))
 
-  data.demandUpdates = mode === 'create' ? { create: updates } : { deleteMany: {}, create: updates }
-  data.customerProfiles = mode === 'create' ? { create: profiles } : { deleteMany: {}, create: profiles }
+  // 白名单过滤掉多余键后，再附加子表嵌套写
+  const out = pickScalars(data, SUPPLEMENT_SCALAR_FIELDS)
+  out.demandUpdates = mode === 'create' ? { create: updates } : { deleteMany: {}, create: updates }
+  out.customerProfiles = mode === 'create' ? { create: profiles } : { deleteMany: {}, create: profiles }
 
-  return data
+  return out
 }

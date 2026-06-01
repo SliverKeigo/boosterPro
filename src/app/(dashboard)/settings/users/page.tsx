@@ -2,8 +2,9 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, ArrowRightLeft } from 'lucide-react'
 import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, useToast } from '@/components/ui'
+import { useMyPermissions } from '@/lib/usePermissions'
 
 const EMPTY_FORM: any = {
   name: '', email: '', password: '', departmentId: '', roleId: '',
@@ -11,19 +12,28 @@ const EMPTY_FORM: any = {
 
 export default function UsersPage() {
   const toast = useToast()
+  const { isAdmin } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
   const [roles, setRoles] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState<any>(EMPTY_FORM)
 
+  // 移交权限
+  const [transferOpen, setTransferOpen] = useState(false)
+  const [transferring, setTransferring] = useState(false)
+  const [transferSource, setTransferSource] = useState<any>(null)
+  const [transferTargetId, setTransferTargetId] = useState('')
+
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
+  // showLoading=false 时不在 effect 同步路径触发 setLoading（规避 react-hooks/set-state-in-effect），
+  // loading 初值即 true，加载完成后在 finally 置 false。
+  const fetchData = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true)
     try {
       const res = await fetch('/api/users')
       if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
@@ -48,9 +58,38 @@ export default function UsersPage() {
   }, [toast])
 
   useEffect(() => {
-    void fetchData()
-    void fetchOptions()
+    void (async () => {
+      await fetchData()
+      await fetchOptions()
+    })()
   }, [fetchData, fetchOptions])
+
+  const openTransfer = (r: any) => {
+    setTransferSource(r)
+    setTransferTargetId('')
+    setTransferOpen(true)
+  }
+
+  const handleTransfer = async () => {
+    if (!transferSource) return
+    if (!transferTargetId) return toast.error('请选择接收数据的目标用户')
+    setTransferring(true)
+    try {
+      const res = await fetch(`/api/users/${transferSource.id}/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toUserId: Number(transferTargetId) }),
+      })
+      if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
+      toast.success('已移交该用户创建的全部数据')
+      setTransferOpen(false)
+      void fetchData(true)
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : ('移交失败'))
+    } finally {
+      setTransferring(false)
+    }
+  }
 
   const openCreate = () => {
     setEditing(null)
@@ -76,7 +115,7 @@ export default function UsersPage() {
       const res = await fetch(`/api/users/${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
       toast.success('删除成功')
-      void fetchData()
+      void fetchData(true)
     } catch (e) {
       toast.error(e instanceof Error && e.message ? e.message : ('删除失败'))
     }
@@ -105,7 +144,7 @@ export default function UsersPage() {
       if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
       toast.success(editing ? '更新成功' : '创建成功')
       setOpen(false)
-      void fetchData()
+      void fetchData(true)
     } catch (e) {
       toast.error(e instanceof Error && e.message ? e.message : (editing ? '更新失败' : '创建失败'))
     } finally {
@@ -140,7 +179,7 @@ export default function UsersPage() {
         onCreate={openCreate}
         createText="新增用户"
         onImport={() => toast.info('导入功能开发中')}
-        onRefresh={fetchData}
+        onRefresh={() => fetchData(true)}
         searchPlaceholder="搜索用户名 / 邮箱 / 部门 / 角色…"
         actions={(r) => (
           <div className="flex items-center gap-1">
@@ -148,6 +187,12 @@ export default function UsersPage() {
               <Pencil className="h-3.5 w-3.5" />
               编辑
             </button>
+            {isAdmin && (
+              <button className="btn btn-ghost btn-xs gap-1 text-secondary" onClick={() => openTransfer(r)}>
+                <ArrowRightLeft className="h-3.5 w-3.5" />
+                移交权限
+              </button>
+            )}
             <Popconfirm title="确认删除该用户？" onConfirm={() => handleDelete(r.id)}>
               <button className="btn btn-ghost btn-xs gap-1 text-error">
                 <Trash2 className="h-3.5 w-3.5" />
@@ -187,6 +232,44 @@ export default function UsersPage() {
             <select className="select select-bordered w-full" value={form.roleId} onChange={(e) => setField('roleId', e.target.value)}>
               <option value="">请选择</option>
               {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </Field>
+        </div>
+      </Modal>
+
+      {/* 移交权限：将该用户创建的全部数据移交给目标用户 */}
+      <Modal
+        open={transferOpen}
+        title="移交权限"
+        onClose={() => setTransferOpen(false)}
+        onOk={handleTransfer}
+        okText="确认移交"
+        confirmLoading={transferring}
+        width={480}
+      >
+        <div className="flex flex-col gap-4">
+          <div className="rounded-lg bg-base-200 px-3 py-2.5 text-sm text-base-content/70">
+            将
+            <span className="mx-1 font-medium text-base-content">
+              {transferSource?.name ?? ''}
+            </span>
+            创建的全部数据移交给所选目标用户，此操作不可撤销。
+          </div>
+          <Field label="目标用户" required>
+            <select
+              className="select select-bordered w-full"
+              value={transferTargetId}
+              onChange={(e) => setTransferTargetId(e.target.value)}
+            >
+              <option value="">请选择</option>
+              {data
+                .filter((u) => u.id !== transferSource?.id)
+                .map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                    {u.email ? `（${u.email}）` : ''}
+                  </option>
+                ))}
             </select>
           </Field>
         </div>

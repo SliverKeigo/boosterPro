@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
+import { requirePermission, assertRowWritable } from '@/lib/permissions'
 import { CONTRACT_INCLUDE, buildContractData } from '@/lib/contractData'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requirePermission('CONTRACT', 'VIEW')
     const { id } = await params
     const item = await prisma.contract.findUnique({
       where: { id: parseInt(id) },
@@ -19,7 +21,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const user = await requirePermission('CONTRACT', 'EDIT')
     const { id } = await params
+    const existing = await prisma.contract.findUnique({
+      where: { id: parseInt(id) },
+      select: { createdById: true },
+    })
+    assertRowWritable(user, existing)
     const body = await req.json()
     const item = await prisma.contract.update({
       where: { id: parseInt(id) },
@@ -34,7 +42,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const user = await requirePermission('CONTRACT', 'DELETE')
     const { id } = await params
+    const existing = await prisma.contract.findUnique({
+      where: { id: parseInt(id) },
+      select: { createdById: true },
+    })
+    assertRowWritable(user, existing)
     await prisma.contract.delete({ where: { id: parseInt(id) } })
     return NextResponse.json({ success: true })
   } catch (e) {

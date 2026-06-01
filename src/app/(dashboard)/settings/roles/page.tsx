@@ -10,7 +10,7 @@ const EMPTY_FORM: any = { name: '', description: '' }
 export default function RolesPage() {
   const toast = useToast()
   const [data, setData] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -18,8 +18,8 @@ export default function RolesPage() {
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
+  const fetchData = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true)
     try {
       const res = await fetch('/api/roles')
       if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
@@ -33,7 +33,10 @@ export default function RolesPage() {
   }, [toast])
 
   useEffect(() => {
-    void fetchData()
+    // 包一层异步 IIFE（首句即 await），让 effect 同步路径不含 setState（react-hooks/set-state-in-effect）
+    void (async () => {
+      await fetchData()
+    })()
   }, [fetchData])
 
   const openCreate = () => {
@@ -111,7 +114,7 @@ export default function RolesPage() {
         onCreate={openCreate}
         createText="新增角色"
         onImport={() => toast.info('导入功能开发中')}
-        onRefresh={fetchData}
+        onRefresh={() => fetchData(true)}
         searchPlaceholder="搜索角色名称 / 描述…"
         actions={(r) => (
           <div className="flex items-center gap-1">

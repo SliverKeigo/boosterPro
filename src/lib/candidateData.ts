@@ -14,6 +14,48 @@ export const CANDIDATE_INCLUDE = {
   riskEvents: true,
 }
 
+// Candidate model 的已知标量字段白名单（不含 relation / 子表 / id / createdAt / updatedAt / createdById）
+const CANDIDATE_SCALAR_FIELDS = [
+  'name',
+  'birthYear',
+  'phone',
+  'email',
+  'education',
+  'schoolTier',
+  'customerId',
+  'customerShortName',
+  'requirementId',
+  'recruitmentParty',
+  'recruitmentChannel',
+  'recommendationTime',
+  'recommendationStatus',
+  'recommendationReportUrl',
+  'recommendationReason',
+  'interviewProgress',
+  'failureReason',
+  'offerDate',
+  'offerOnboardDate',
+  'offerFileUrl',
+  'backgroundCheckReportUrl',
+  'actualOnboardDate',
+  'salaryPlan',
+  'guaranteePeriodEnd',
+  'guaranteePeriodMonths',
+  'tags',
+  'notes',
+  'submitDepartmentId',
+  'submitterId',
+] as const
+
+/** 仅保留白名单标量字段，过滤掉前端多传的脏字段 */
+function pickScalars(data: any, fields: readonly string[]): any {
+  const out: any = {}
+  for (const f of fields) {
+    if (f in data) out[f] = data[f]
+  }
+  return out
+}
+
 /** 把前端表单 payload 清洗为 Prisma create/update 数据（含子表嵌套写） */
 export function buildCandidateData(body: any, mode: 'create' | 'update') {
   const {
@@ -68,8 +110,10 @@ export function buildCandidateData(body: any, mode: 'create' | 'update') {
     .filter((r) => r.date || r.riskDescription)
     .map((r) => ({ date: r.date ? new Date(r.date) : null, riskDescription: r.riskDescription || null }))
 
-  data.guaranteeCommunications = mode === 'create' ? { create: gc } : { deleteMany: {}, create: gc }
-  data.riskEvents = mode === 'create' ? { create: re } : { deleteMany: {}, create: re }
+  // 白名单过滤掉多余键后，再附加子表嵌套写
+  const out = pickScalars(data, CANDIDATE_SCALAR_FIELDS)
+  out.guaranteeCommunications = mode === 'create' ? { create: gc } : { deleteMany: {}, create: gc }
+  out.riskEvents = mode === 'create' ? { create: re } : { deleteMany: {}, create: re }
 
-  return data
+  return out
 }

@@ -26,6 +26,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { Popconfirm, useToast } from '@/components/ui'
+import { useMyPermissions } from '@/lib/usePermissions'
+import { PATH_TO_RESOURCE } from '@/lib/resources'
 
 interface NavItem {
   href: string
@@ -98,6 +100,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [openKeys, setOpenKeys] = useState<string[]>(GROUPS.map((g) => g.key))
 
+  const { can, isAdmin, loading: permLoading } = useMyPermissions()
+
   const fetchUser = useCallback(async () => {
     try {
       const res = await fetch('/api/auth/me')
@@ -109,8 +113,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [router])
 
   useEffect(() => {
-    void fetchUser()
+    // IIFE：effect 同步路径不直接含 setState（规避 react-hooks/set-state-in-effect）
+    void (async () => {
+      await fetchUser()
+    })()
   }, [fetchUser])
+
+  // 菜单按权限过滤：八个业务菜单看 VIEW 权限，系统管理组限管理员；权限加载中先全显，避免闪烁
+  const canSeeItem = (item: NavItem) => {
+    const res = PATH_TO_RESOURCE[item.href.replace(/^\//, '')]
+    if (res) return permLoading || can(res, 'VIEW')
+    return true
+  }
+  const canSeeGroup = (group: NavGroup) => {
+    if (group.key === 'system') return permLoading || isAdmin
+    return group.items.some(canSeeItem)
+  }
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -150,7 +168,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <LayoutDashboard className="h-4 w-4 shrink-0" />
             工作台
           </button>
-          {GROUPS.map((group) => {
+          {GROUPS.filter(canSeeGroup).map((group) => {
             const open = openKeys.includes(group.key)
             return (
               <div key={group.key} className="mb-1">
@@ -167,7 +185,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </button>
                 {open && (
                   <ul className="mt-0.5 space-y-0.5">
-                    {group.items.map((item) => {
+                    {group.items.filter(canSeeItem).map((item) => {
                       const active = isActive(item.href)
                       return (
                         <li key={item.href}>

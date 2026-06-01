@@ -34,7 +34,7 @@ const EMPTY_FORM: any = {
 export default function WorkPlansPage() {
   const toast = useToast()
   const [data, setData] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -42,8 +42,8 @@ export default function WorkPlansPage() {
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
+  const fetchData = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true)
     try {
       const res = await fetch('/api/work-plans')
       if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
@@ -57,7 +57,10 @@ export default function WorkPlansPage() {
   }, [toast])
 
   useEffect(() => {
-    void fetchData()
+    // 包一层异步 IIFE（首句即 await），让 effect 同步路径不含 setState（react-hooks/set-state-in-effect）
+    void (async () => {
+      await fetchData()
+    })()
   }, [fetchData])
 
   const openCreate = () => {
@@ -154,7 +157,7 @@ export default function WorkPlansPage() {
         onCreate={openCreate}
         createText="新增"
         onImport={() => toast.info('导入功能开发中')}
-        onRefresh={fetchData}
+        onRefresh={() => fetchData(true)}
         searchPlaceholder="搜索标题 / 状态 / 负责人…"
         actions={(r) => (
           <div className="flex items-center gap-1">

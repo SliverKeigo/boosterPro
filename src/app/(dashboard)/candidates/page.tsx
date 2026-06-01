@@ -13,6 +13,9 @@ import {
   FileUpload,
   useToast,
 } from '@/components/ui'
+import { useMyPermissions } from '@/lib/usePermissions'
+
+const RES = 'CANDIDATE'
 
 // ─── 枚举映射 ──────────────────────────────────────────────────────────────────
 const EDUCATION_LABELS: Record<string, string> = {
@@ -110,8 +113,9 @@ const EMPTY_FORM: any = {
 
 export default function CandidatesPage() {
   const toast = useToast()
+  const { can, isOwner } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -132,8 +136,8 @@ export default function CandidatesPage() {
   const visible = (field: string) =>
     (STATUS_FIELDS[form.recommendationStatus] ?? []).includes(field)
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
+  const fetchData = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true)
     try {
       const res = await fetch('/api/candidates')
       if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
@@ -147,7 +151,10 @@ export default function CandidatesPage() {
   }, [toast])
 
   useEffect(() => {
-    void fetchData()
+    // 包一层异步 IIFE（首句即 await），让 effect 同步路径不含 setState（react-hooks/set-state-in-effect）
+    void (async () => {
+      await fetchData()
+    })()
   }, [fetchData])
 
   const openCreate = () => {
@@ -283,23 +290,28 @@ export default function CandidatesPage() {
         data={data}
         loading={loading}
         rowKey="id"
-        onCreate={openCreate}
+        onCreate={can(RES, 'CREATE') ? openCreate : undefined}
         createText="新增"
-        onImport={() => toast.info('导入功能开发中')}
-        onRefresh={fetchData}
+        onImport={can(RES, 'IMPORT') ? () => toast.info('导入功能开发中') : undefined}
+        onRefresh={() => fetchData(true)}
+        showExport={can(RES, 'EXPORT')}
         searchPlaceholder="搜索姓名 / 客户 / 岗位 / 状态…"
         actions={(r) => (
           <div className="flex items-center gap-1">
-            <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openEdit(r)}>
-              <Pencil className="h-3.5 w-3.5" />
-              编辑
-            </button>
-            <Popconfirm title="确认删除该候选人？" onConfirm={() => handleDelete(r.id)}>
-              <button className="btn btn-ghost btn-xs gap-1 text-error">
-                <Trash2 className="h-3.5 w-3.5" />
-                删除
+            {can(RES, 'EDIT') && isOwner(r) && (
+              <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openEdit(r)}>
+                <Pencil className="h-3.5 w-3.5" />
+                编辑
               </button>
-            </Popconfirm>
+            )}
+            {can(RES, 'DELETE') && isOwner(r) && (
+              <Popconfirm title="确认删除该候选人？" onConfirm={() => handleDelete(r.id)}>
+                <button className="btn btn-ghost btn-xs gap-1 text-error">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  删除
+                </button>
+              </Popconfirm>
+            )}
           </div>
         )}
       />

@@ -18,7 +18,9 @@ export async function GET() {
         id: true,
         name: true,
         email: true,
+        isAdmin: true,
         department: { select: { name: true } },
+        role: { select: { name: true } },
       },
     })
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

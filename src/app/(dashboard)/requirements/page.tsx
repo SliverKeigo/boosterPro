@@ -13,6 +13,9 @@ import {
   FileUpload,
   useToast,
 } from '@/components/ui'
+import { useMyPermissions } from '@/lib/usePermissions'
+
+const RES = 'REQUIREMENT'
 
 // ─── 枚举 / 选项映射 ────────────────────────────────────────────────────────────
 const GENDER_LABELS: Record<string, string> = { MALE: '男', FEMALE: '女', ANY: '不限' }
@@ -43,9 +46,10 @@ const EMPTY_FORM: any = {
 
 export default function RequirementsPage() {
   const toast = useToast()
+  const { can, isOwner } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
   const [customers, setCustomers] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -89,8 +93,8 @@ export default function RequirementsPage() {
       .catch(() => {})
   }, [])
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
+  const fetchData = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true)
     try {
       const res = await fetch('/api/requirements')
       if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
@@ -104,7 +108,10 @@ export default function RequirementsPage() {
   }, [toast])
 
   useEffect(() => {
-    void fetchData()
+    // 包一层异步 IIFE（首句即 await），让 effect 同步路径不含 setState（react-hooks/set-state-in-effect）
+    void (async () => {
+      await fetchData()
+    })()
   }, [fetchData])
 
   const openCreate = () => {
@@ -206,10 +213,8 @@ export default function RequirementsPage() {
     { key: 'closeReason', title: '关闭/暂停原因', defaultVisible: false },
     { key: 'latestUpdate', title: '最新动态', defaultVisible: false },
     { key: 'notes', title: '其他备注', defaultVisible: false },
-    { key: 'aiKnowledgeSkills', title: 'AI 知识技能', defaultVisible: false },
-    { key: 'aiWorkExperience', title: 'AI 工作经验', defaultVisible: false },
-    { key: 'aiBonusPoints', title: 'AI 加分项', defaultVisible: false },
-    { key: 'aiIndustryResources', title: 'AI 行业资源', defaultVisible: false },
+    { key: 'talentProfile', title: '人才画像', defaultVisible: false },
+    { key: 'projectExperience', title: '项目经验', defaultVisible: false },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => fmtDateTime(v) },
   ]
 
@@ -226,23 +231,28 @@ export default function RequirementsPage() {
         data={data}
         loading={loading}
         rowKey="id"
-        onCreate={openCreate}
+        onCreate={can(RES, 'CREATE') ? openCreate : undefined}
         createText="新增"
-        onImport={() => toast.info('导入功能开发中')}
-        onRefresh={fetchData}
+        onImport={can(RES, 'IMPORT') ? () => toast.info('导入功能开发中') : undefined}
+        onRefresh={() => fetchData(true)}
+        showExport={can(RES, 'EXPORT')}
         searchPlaceholder="搜索岗位 / 客户 / 状态 / 城市…"
         actions={(r) => (
           <div className="flex items-center gap-1">
-            <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openEdit(r)}>
-              <Pencil className="h-3.5 w-3.5" />
-              编辑
-            </button>
-            <Popconfirm title="确认删除该需求？" onConfirm={() => handleDelete(r.id)}>
-              <button className="btn btn-ghost btn-xs gap-1 text-error">
-                <Trash2 className="h-3.5 w-3.5" />
-                删除
+            {can(RES, 'EDIT') && isOwner(r) && (
+              <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openEdit(r)}>
+                <Pencil className="h-3.5 w-3.5" />
+                编辑
               </button>
-            </Popconfirm>
+            )}
+            {can(RES, 'DELETE') && isOwner(r) && (
+              <Popconfirm title="确认删除该需求？" onConfirm={() => handleDelete(r.id)}>
+                <button className="btn btn-ghost btn-xs gap-1 text-error">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  删除
+                </button>
+              </Popconfirm>
+            )}
           </div>
         )}
       />

@@ -1,5 +1,30 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+// TalentPool model 的已知标量字段白名单（不含 relation / id / createdAt / updatedAt / createdById）
+const TALENT_POOL_SCALAR_FIELDS = [
+  'name',
+  'birthYear',
+  'gender',
+  'education',
+  'phone',
+  'currentPosition',
+  'targetPosition',
+  'positionType',
+  'positionLevel',
+  'age',
+  'tags',
+  'resumeUrl',
+] as const
+
+/** 仅保留白名单标量字段，过滤掉前端多传的脏字段 */
+function pickScalars(data: any, fields: readonly string[]): any {
+  const out: any = {}
+  for (const f of fields) {
+    if (f in data) out[f] = data[f]
+  }
+  return out
+}
+
 /** 把前端表单 payload 清洗为 Prisma create/update 数据 */
 export function buildTalentPoolData(body: any) {
   const {
@@ -36,5 +61,6 @@ export function buildTalentPoolData(body: any) {
       : []
   }
 
-  return data
+  // 白名单过滤掉多余键
+  return pickScalars(data, TALENT_POOL_SCALAR_FIELDS)
 }

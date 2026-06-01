@@ -5,6 +5,32 @@ export const OPPORTUNITY_INCLUDE = {
   progressRecords: true,
 }
 
+// Opportunity model 的已知标量字段白名单（不含 relation / 子表 / id / createdAt / updatedAt / createdById）
+const OPPORTUNITY_SCALAR_FIELDS = [
+  'name',
+  'description',
+  'region',
+  'status',
+  'nature',
+  'contactName',
+  'contactTitle',
+  'contactInfo',
+  'salesDecisionInfo',
+  'customerDecisionMaker',
+  'decisionMakerDescription',
+  'salesOwnerId',
+  'attachmentUrl',
+] as const
+
+/** 仅保留白名单标量字段，过滤掉前端多传的脏字段 */
+function pickScalars(data: any, fields: readonly string[]): any {
+  const out: any = {}
+  for (const f of fields) {
+    if (f in data) out[f] = data[f]
+  }
+  return out
+}
+
 /** 把前端表单 payload 清洗为 Prisma create/update 数据（含子表嵌套写） */
 export function buildOpportunityData(body: any, mode: 'create' | 'update') {
   const {
@@ -36,7 +62,9 @@ export function buildOpportunityData(body: any, mode: 'create' | 'update') {
       description: r.description || null,
     }))
 
-  data.progressRecords = mode === 'create' ? { create: pr } : { deleteMany: {}, create: pr }
+  // 白名单过滤掉多余键后，再附加子表嵌套写
+  const out = pickScalars(data, OPPORTUNITY_SCALAR_FIELDS)
+  out.progressRecords = mode === 'create' ? { create: pr } : { deleteMany: {}, create: pr }
 
-  return data
+  return out
 }

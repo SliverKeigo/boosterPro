@@ -6,6 +6,18 @@ export const KNOWLEDGE_INCLUDE = {
   },
 }
 
+// KnowledgeBase model 的已知标量字段白名单（不含 relation / 子表 / id / createdAt / updatedAt / createdById）
+const KNOWLEDGE_SCALAR_FIELDS = ['category', 'tags', 'keywords', 'fileUrl', 'notes'] as const
+
+/** 仅保留白名单标量字段，过滤掉前端多传的脏字段 */
+function pickScalars(data: any, fields: readonly string[]): any {
+  const out: any = {}
+  for (const f of fields) {
+    if (f in data) out[f] = data[f]
+  }
+  return out
+}
+
 /** 把前端表单 payload 清洗为 Prisma create/update 数据（含管理细则子表嵌套写） */
 export function buildKnowledgeData(body: any, mode: 'create' | 'update') {
   const {
@@ -38,8 +50,10 @@ export function buildKnowledgeData(body: any, mode: 'create' | 'update') {
       details: r.details || null,
     }))
 
-  data.managementRecords =
+  // 白名单过滤掉多余键后，再附加子表嵌套写
+  const out = pickScalars(data, KNOWLEDGE_SCALAR_FIELDS)
+  out.managementRecords =
     mode === 'create' ? { create: records } : { deleteMany: {}, create: records }
 
-  return data
+  return out
 }

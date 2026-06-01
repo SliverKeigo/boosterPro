@@ -35,23 +35,23 @@ enum GenderType {
 }
 
 enum RecommendationStatus {
-  PENDING                  @map("已推荐待反馈")
-  INTERVIEWING             @map("面试中")
-  SALARY_NEGO              @map("谈薪中")
-  OFFERING                 @map("Offer中")
-  ONBOARDING               @map("入职中")
-  GUARANTEE                @map("保证期")
-  POST_GUARANTEE_CLOSED    @map("过保关闭")
-  RESUME_FAILED            @map("简历失败")
-  INTERNAL_RESUME_FAILED   @map("简历内推失败")
+  PENDING                   @map("已推荐待反馈")
+  INTERVIEWING              @map("面试中")
+  SALARY_NEGO               @map("谈薪中")
+  OFFERING                  @map("Offer中")
+  ONBOARDING                @map("入职中")
+  GUARANTEE                 @map("保证期")
+  POST_GUARANTEE_CLOSED     @map("过保关闭")
+  RESUME_FAILED             @map("简历失败")
+  INTERNAL_RESUME_FAILED    @map("简历内推失败")
   INTERVIEW_SCHEDULE_FAILED @map("约面失败")
-  INTERVIEW_FAILED         @map("面试失败")
-  SALARY_NEGO_FAILED       @map("谈薪失败")
-  OFFER_FAILED             @map("Offer失败")
-  ONBOARD_FAILED           @map("入职失败")
-  NOT_PASSED_GUARANTEE     @map("未过保")
-  RESIGNED_POST_GUARANTEE  @map("离职统计已过保")
-  RESIGNED_LOCAL           @map("离职统计本地")
+  INTERVIEW_FAILED          @map("面试失败")
+  SALARY_NEGO_FAILED        @map("谈薪失败")
+  OFFER_FAILED              @map("Offer失败")
+  ONBOARD_FAILED            @map("入职失败")
+  NOT_PASSED_GUARANTEE      @map("未过保")
+  RESIGNED_POST_GUARANTEE   @map("离职统计已过保")
+  RESIGNED_LOCAL            @map("离职统计本地")
 
   @@map("recommendation_status")
 }
@@ -97,24 +97,33 @@ model Role {
 }
 
 model User {
-  id                       Int                        @id @default(autoincrement())
-  name                     String                     @db.VarChar(100)
-  email                    String?                    @unique @db.VarChar(255)
-  passwordHash             String?                    @map("password_hash") @db.VarChar(255)
-  department               Department?                @relation(fields: [departmentId], references: [id])
-  departmentId             Int?                       @map("department_id")
-  role                     Role?                      @relation(fields: [roleId], references: [id])
-  roleId                   Int?                       @map("role_id")
-  permissions              Permission[]
-  submittedCandidates      Candidate[]                @relation("CandidateSubmitter")
-  salesOpportunities       Opportunity[]              @relation("OpportunitySalesOwner")
-  contractSales            Contract[]                 @relation("ContractSalesOwner")
-  contractDeliveries       Contract[]                 @relation("ContractDeliveryOwner")
-  workPlans                WorkPlan[]
-  urgentRecords            RequirementUrgentRecord[]
-  knowledgeRecords         KnowledgeManagementRecord[]
-  createdAt                DateTime                   @default(now()) @map("created_at")
-  updatedAt                DateTime                   @updatedAt @map("updated_at")
+  id                   Int                         @id @default(autoincrement())
+  name                 String                      @db.VarChar(100)
+  email                String?                     @unique @db.VarChar(255)
+  passwordHash         String?                     @map("password_hash") @db.VarChar(255)
+  department           Department?                 @relation(fields: [departmentId], references: [id])
+  departmentId         Int?                        @map("department_id")
+  role                 Role?                       @relation(fields: [roleId], references: [id])
+  roleId               Int?                        @map("role_id")
+  permissions          Permission[]
+  submittedCandidates  Candidate[]                 @relation("CandidateSubmitter")
+  salesOpportunities   Opportunity[]               @relation("OpportunitySalesOwner")
+  contractSales        Contract[]                  @relation("ContractSalesOwner")
+  contractDeliveries   Contract[]                  @relation("ContractDeliveryOwner")
+  workPlans            WorkPlan[]
+  urgentRecords        RequirementUrgentRecord[]
+  knowledgeRecords     KnowledgeManagementRecord[]
+  isAdmin              Boolean                     @default(false) @map("is_admin")
+  createdCandidates    Candidate[]                 @relation("CandidateCreatedBy")
+  createdRequirements  Requirement[]               @relation("RequirementCreatedBy")
+  createdSupplements   ClientSupplement[]          @relation("ClientSupplementCreatedBy")
+  createdTalents       TalentPool[]                @relation("TalentPoolCreatedBy")
+  createdOpportunities Opportunity[]               @relation("OpportunityCreatedBy")
+  createdCustomers     Customer[]                  @relation("CustomerCreatedBy")
+  createdContracts     Contract[]                  @relation("ContractCreatedBy")
+  createdKnowledge     KnowledgeBase[]             @relation("KnowledgeBaseCreatedBy")
+  createdAt            DateTime                    @default(now()) @map("created_at")
+  updatedAt            DateTime                    @updatedAt @map("updated_at")
 
   @@map("users")
 }
@@ -142,7 +151,11 @@ model Customer {
   createdAt          DateTime                @default(now()) @map("created_at")
   updatedAt          DateTime                @updatedAt @map("updated_at")
 
+  createdBy   User? @relation("CustomerCreatedBy", fields: [createdById], references: [id])
+  createdById Int?  @map("created_by_id")
+
   @@index([createdAt])
+  @@index([createdById])
   @@map("customers")
 }
 
@@ -157,20 +170,24 @@ model CustomerOfficeAddress {
 }
 
 model ClientSupplement {
-  id                   Int                        @id @default(autoincrement())
-  customer             Customer                   @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  customerId           Int                        @map("customer_id")
-  demandCustomer       String?                    @map("demand_customer") @db.VarChar(200)
-  openingSpeech        String?                    @map("opening_speech") @db.Text
-  companyCultureWelfare String?                   @map("company_culture_welfare") @db.Text
-  notes                String?                    @db.Text
-  attachmentUrl        String?                    @map("attachment_url") @db.Text
-  demandUpdates        SupplementDemandUpdate[]
-  customerProfiles     SupplementCustomerProfile[]
-  createdAt            DateTime                   @default(now()) @map("created_at")
-  updatedAt            DateTime                   @updatedAt @map("updated_at")
+  id                    Int                         @id @default(autoincrement())
+  customer              Customer                    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId            Int                         @map("customer_id")
+  demandCustomer        String?                     @map("demand_customer") @db.VarChar(200)
+  openingSpeech         String?                     @map("opening_speech") @db.Text
+  companyCultureWelfare String?                     @map("company_culture_welfare") @db.Text
+  notes                 String?                     @db.Text
+  attachmentUrl         String?                     @map("attachment_url") @db.Text
+  demandUpdates         SupplementDemandUpdate[]
+  customerProfiles      SupplementCustomerProfile[]
+  createdAt             DateTime                    @default(now()) @map("created_at")
+  updatedAt             DateTime                    @updatedAt @map("updated_at")
+
+  createdBy   User? @relation("ClientSupplementCreatedBy", fields: [createdById], references: [id])
+  createdById Int?  @map("created_by_id")
 
   @@index([createdAt])
+  @@index([createdById])
   @@map("client_supplements")
 }
 
@@ -197,41 +214,45 @@ model SupplementCustomerProfile {
 }
 
 model Requirement {
-  id                  Int                          @id @default(autoincrement())
-  customer            Customer                     @relation(fields: [customerId], references: [id])
-  customerId          Int                          @map("customer_id")
-  recruiter           String?                      @db.VarChar(200)
-  positionName        String                       @map("position_name") @db.VarChar(200)
-  headcount           Int
-  monthlySalaryMin    Int?                         @map("monthly_salary_min")
-  monthlySalaryMax    Int?                         @map("monthly_salary_max")
-  annualSalaryMin     Decimal?                     @map("annual_salary_min") @db.Decimal(10, 2)
-  annualSalaryMax     Decimal?                     @map("annual_salary_max") @db.Decimal(10, 2)
-  ageMin              Int?                         @map("age_min")
-  ageMax              Int?                         @map("age_max")
-  genderRequirement   GenderType?                  @map("gender_requirement") @default(ANY)
-  educationRequirement String?                     @map("education_requirement") @db.VarChar(100)
-  languageRequirement  String?                     @map("language_requirement") @db.VarChar(100)
-  status              String                       @db.VarChar(100)
-  deadline            DateTime                     @db.Date
-  baseCity            String                       @map("base_city") @db.VarChar(100)
-  jobDescription      String?                      @map("job_description") @db.Text
-  talentProfile       String?                      @map("talent_profile") @db.Text
-  projectExperience   String?                      @map("project_experience") @db.Text
-  closeReason         String?                      @map("close_reason") @db.Text
-  notes               String?                      @db.Text
-  attachmentUrl       String?                      @map("attachment_url") @db.Text
-  latestUpdate        String?                      @map("latest_update") @db.Text
-  industry            String?                      @db.VarChar(100)
-  followDate          DateTime?                    @map("follow_date") @db.Date
-  positionProfiles    RequirementPositionProfile[]
-  urgentRecords       RequirementUrgentRecord[]
-  candidates          Candidate[]
-  createdAt           DateTime                     @default(now()) @map("created_at")
-  updatedAt           DateTime                     @updatedAt @map("updated_at")
+  id                   Int                          @id @default(autoincrement())
+  customer             Customer                     @relation(fields: [customerId], references: [id])
+  customerId           Int                          @map("customer_id")
+  recruiter            String?                      @db.VarChar(200)
+  positionName         String                       @map("position_name") @db.VarChar(200)
+  headcount            Int
+  monthlySalaryMin     Int?                         @map("monthly_salary_min")
+  monthlySalaryMax     Int?                         @map("monthly_salary_max")
+  annualSalaryMin      Decimal?                     @map("annual_salary_min") @db.Decimal(10, 2)
+  annualSalaryMax      Decimal?                     @map("annual_salary_max") @db.Decimal(10, 2)
+  ageMin               Int?                         @map("age_min")
+  ageMax               Int?                         @map("age_max")
+  genderRequirement    GenderType?                  @default(ANY) @map("gender_requirement")
+  educationRequirement String?                      @map("education_requirement") @db.VarChar(100)
+  languageRequirement  String?                      @map("language_requirement") @db.VarChar(100)
+  status               String                       @db.VarChar(100)
+  deadline             DateTime                     @db.Date
+  baseCity             String                       @map("base_city") @db.VarChar(100)
+  jobDescription       String?                      @map("job_description") @db.Text
+  talentProfile        String?                      @map("talent_profile") @db.Text
+  projectExperience    String?                      @map("project_experience") @db.Text
+  closeReason          String?                      @map("close_reason") @db.Text
+  notes                String?                      @db.Text
+  attachmentUrl        String?                      @map("attachment_url") @db.Text
+  latestUpdate         String?                      @map("latest_update") @db.Text
+  industry             String?                      @db.VarChar(100)
+  followDate           DateTime?                    @map("follow_date") @db.Date
+  positionProfiles     RequirementPositionProfile[]
+  urgentRecords        RequirementUrgentRecord[]
+  candidates           Candidate[]
+  createdAt            DateTime                     @default(now()) @map("created_at")
+  updatedAt            DateTime                     @updatedAt @map("updated_at")
+
+  createdBy   User? @relation("RequirementCreatedBy", fields: [createdById], references: [id])
+  createdById Int?  @map("created_by_id")
 
   @@index([createdAt])
   @@index([customerId])
+  @@index([createdById])
   @@map("requirements")
 }
 
@@ -274,7 +295,7 @@ model Candidate {
   recruitmentParty         String?                           @map("recruitment_party") @db.VarChar(200)
   recruitmentChannel       String                            @map("recruitment_channel") @db.VarChar(200)
   recommendationTime       DateTime?                         @map("recommendation_time") @db.Date
-  recommendationStatus     RecommendationStatus              @map("recommendation_status") @default(PENDING)
+  recommendationStatus     RecommendationStatus              @default(PENDING) @map("recommendation_status")
   recommendationReportUrl  String?                           @map("recommendation_report_url") @db.Text
   recommendationReason     String?                           @map("recommendation_reason") @db.Text
   interviewProgress        String?                           @map("interview_progress") @db.Text
@@ -297,9 +318,13 @@ model Candidate {
   createdAt                DateTime                          @default(now()) @map("created_at")
   updatedAt                DateTime                          @updatedAt @map("updated_at")
 
+  createdBy   User? @relation("CandidateCreatedBy", fields: [createdById], references: [id])
+  createdById Int?  @map("created_by_id")
+
   @@index([createdAt])
   @@index([customerId])
   @@index([requirementId])
+  @@index([createdById])
   @@map("candidates")
 }
 
@@ -326,47 +351,55 @@ model CandidateRiskEvent {
 }
 
 model TalentPool {
-  id              Int        @id @default(autoincrement())
-  name            String     @db.VarChar(100)
-  birthYear       Int?       @map("birth_year")
+  id              Int         @id @default(autoincrement())
+  name            String      @db.VarChar(100)
+  birthYear       Int?        @map("birth_year")
   gender          GenderType?
-  education       String?    @db.VarChar(50)
-  phone           String?    @db.VarChar(50)
-  currentPosition String     @map("current_position") @db.VarChar(200)
-  targetPosition  String?    @map("target_position") @db.VarChar(200)
-  positionType    String?    @map("position_type") @db.VarChar(100)
-  positionLevel   String?    @map("position_level") @db.VarChar(100)
+  education       String?     @db.VarChar(50)
+  phone           String?     @db.VarChar(50)
+  currentPosition String      @map("current_position") @db.VarChar(200)
+  targetPosition  String?     @map("target_position") @db.VarChar(200)
+  positionType    String?     @map("position_type") @db.VarChar(100)
+  positionLevel   String?     @map("position_level") @db.VarChar(100)
   age             Int?
   tags            String[]
-  resumeUrl       String     @map("resume_url") @db.Text
-  createdAt       DateTime   @default(now()) @map("created_at")
-  updatedAt       DateTime   @updatedAt @map("updated_at")
+  resumeUrl       String      @map("resume_url") @db.Text
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  createdBy   User? @relation("TalentPoolCreatedBy", fields: [createdById], references: [id])
+  createdById Int?  @map("created_by_id")
 
   @@index([createdAt])
+  @@index([createdById])
   @@map("talent_pool")
 }
 
 model Opportunity {
-  id                       Int               @id @default(autoincrement())
-  name                     String            @db.VarChar(200)
-  description              String            @db.Text
-  region                   String            @db.VarChar(100)
-  status                   OpportunityStatus @default(LEAD)
-  nature                   OpportunityNature @default(DIRECT)
-  contactName              String?           @map("contact_name") @db.VarChar(100)
-  contactTitle             String?           @map("contact_title") @db.VarChar(100)
-  contactInfo              String?           @map("contact_info") @db.VarChar(500)
-  salesDecisionInfo        String            @map("sales_decision_info") @db.Text
-  customerDecisionMaker    String            @map("customer_decision_maker") @db.VarChar(100)
-  decisionMakerDescription String            @map("decision_maker_description") @db.Text
-  salesOwner               User?             @relation("OpportunitySalesOwner", fields: [salesOwnerId], references: [id])
-  salesOwnerId             Int?              @map("sales_owner_id")
-  attachmentUrl            String?           @map("attachment_url") @db.Text
+  id                       Int                   @id @default(autoincrement())
+  name                     String                @db.VarChar(200)
+  description              String                @db.Text
+  region                   String                @db.VarChar(100)
+  status                   OpportunityStatus     @default(LEAD)
+  nature                   OpportunityNature     @default(DIRECT)
+  contactName              String?               @map("contact_name") @db.VarChar(100)
+  contactTitle             String?               @map("contact_title") @db.VarChar(100)
+  contactInfo              String?               @map("contact_info") @db.VarChar(500)
+  salesDecisionInfo        String                @map("sales_decision_info") @db.Text
+  customerDecisionMaker    String                @map("customer_decision_maker") @db.VarChar(100)
+  decisionMakerDescription String                @map("decision_maker_description") @db.Text
+  salesOwner               User?                 @relation("OpportunitySalesOwner", fields: [salesOwnerId], references: [id])
+  salesOwnerId             Int?                  @map("sales_owner_id")
+  attachmentUrl            String?               @map("attachment_url") @db.Text
   progressRecords          OpportunityProgress[]
-  createdAt                DateTime          @default(now()) @map("created_at")
-  updatedAt                DateTime          @updatedAt @map("updated_at")
+  createdAt                DateTime              @default(now()) @map("created_at")
+  updatedAt                DateTime              @updatedAt @map("updated_at")
+
+  createdBy   User? @relation("OpportunityCreatedBy", fields: [createdById], references: [id])
+  createdById Int?  @map("created_by_id")
 
   @@index([createdAt])
+  @@index([createdById])
   @@map("opportunities")
 }
 
@@ -382,32 +415,36 @@ model OpportunityProgress {
 }
 
 model Contract {
-  id                 Int      @id @default(autoincrement())
-  customer           Customer @relation(fields: [customerId], references: [id])
-  customerId         Int      @map("customer_id")
-  contractName       String   @map("contract_name") @db.VarChar(200)
-  signingYear        Int      @map("signing_year")
-  effectiveStart     DateTime @map("effective_start") @db.Date
-  effectiveEnd       DateTime @map("effective_end") @db.Date
-  expiryDate         DateTime @map("expiry_date") @db.Date
-  serviceType        String   @map("service_type") @db.VarChar(100)
-  headhunterFeeRate  Decimal? @map("headhunter_fee_rate") @db.Decimal(5, 2)
-  billingMonths      Int?     @map("billing_months")
-  ropFeeRate         Decimal? @map("rop_fee_rate") @db.Decimal(5, 2)
-  salesOwner         User?    @relation("ContractSalesOwner", fields: [salesOwnerId], references: [id])
-  salesOwnerId       Int?     @map("sales_owner_id")
-  deliveryOwner      User?    @relation("ContractDeliveryOwner", fields: [deliveryOwnerId], references: [id])
-  deliveryOwnerId    Int?     @map("delivery_owner_id")
-  contractFileUrl    String   @map("contract_file_url") @db.Text
-  invoiceInfoText    String?  @map("invoice_info_text") @db.Text
-  invoiceInfoFileUrl String?  @map("invoice_info_file_url") @db.Text
-  notes              String?  @db.Text
+  id                 Int               @id @default(autoincrement())
+  customer           Customer          @relation(fields: [customerId], references: [id])
+  customerId         Int               @map("customer_id")
+  contractName       String            @map("contract_name") @db.VarChar(200)
+  signingYear        Int               @map("signing_year")
+  effectiveStart     DateTime          @map("effective_start") @db.Date
+  effectiveEnd       DateTime          @map("effective_end") @db.Date
+  expiryDate         DateTime          @map("expiry_date") @db.Date
+  serviceType        String            @map("service_type") @db.VarChar(100)
+  headhunterFeeRate  Decimal?          @map("headhunter_fee_rate") @db.Decimal(5, 2)
+  billingMonths      Int?              @map("billing_months")
+  ropFeeRate         Decimal?          @map("rop_fee_rate") @db.Decimal(5, 2)
+  salesOwner         User?             @relation("ContractSalesOwner", fields: [salesOwnerId], references: [id])
+  salesOwnerId       Int?              @map("sales_owner_id")
+  deliveryOwner      User?             @relation("ContractDeliveryOwner", fields: [deliveryOwnerId], references: [id])
+  deliveryOwnerId    Int?              @map("delivery_owner_id")
+  contractFileUrl    String            @map("contract_file_url") @db.Text
+  invoiceInfoText    String?           @map("invoice_info_text") @db.Text
+  invoiceInfoFileUrl String?           @map("invoice_info_file_url") @db.Text
+  notes              String?           @db.Text
   invoices           ContractInvoice[]
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  createdBy   User? @relation("ContractCreatedBy", fields: [createdById], references: [id])
+  createdById Int?  @map("created_by_id")
 
   @@index([createdAt])
   @@index([customerId])
+  @@index([createdById])
   @@map("contracts")
 }
 
@@ -423,17 +460,21 @@ model ContractInvoice {
 }
 
 model KnowledgeBase {
-  id                Int                        @id @default(autoincrement())
-  category          String                     @db.VarChar(100)
+  id                Int                         @id @default(autoincrement())
+  category          String                      @db.VarChar(100)
   tags              String[]
-  keywords          String                     @db.Text
-  fileUrl           String?                    @map("file_url") @db.Text
-  notes             String?                    @db.Text
+  keywords          String                      @db.Text
+  fileUrl           String?                     @map("file_url") @db.Text
+  notes             String?                     @db.Text
   managementRecords KnowledgeManagementRecord[]
-  createdAt         DateTime                   @default(now()) @map("created_at")
-  updatedAt         DateTime                   @updatedAt @map("updated_at")
+  createdAt         DateTime                    @default(now()) @map("created_at")
+  updatedAt         DateTime                    @updatedAt @map("updated_at")
+
+  createdBy   User? @relation("KnowledgeBaseCreatedBy", fields: [createdById], references: [id])
+  createdById Int?  @map("created_by_id")
 
   @@index([createdAt])
+  @@index([createdById])
   @@map("knowledge_base")
 }
 
@@ -481,4 +522,33 @@ model Permission {
   updatedAt    DateTime    @updatedAt @map("updated_at")
 
   @@map("permissions")
+}
+
+// 权限组：八个业务菜单(resource)各可配置多个权限组，每组持有若干功能权限(actions)与一组成员
+model PermissionGroup {
+  id         Int                     @id @default(autoincrement())
+  name       String                  @db.VarChar(200)
+  resource   String                  @db.VarChar(50)
+  actions    String[]
+  applyToAll Boolean                 @default(false) @map("apply_to_all")
+  members    PermissionGroupMember[]
+  createdAt  DateTime                @default(now()) @map("created_at")
+  updatedAt  DateTime                @updatedAt @map("updated_at")
+
+  @@index([resource])
+  @@map("permission_groups")
+}
+
+// 权限组成员：memberType 区分 USER / DEPARTMENT / ROLE，memberId 指向对应表主键
+model PermissionGroupMember {
+  id         Int             @id @default(autoincrement())
+  group      PermissionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId    Int             @map("group_id")
+  memberType String          @map("member_type") @db.VarChar(20)
+  memberId   Int             @map("member_id")
+  createdAt  DateTime        @default(now()) @map("created_at")
+
+  @@index([groupId])
+  @@index([memberType, memberId])
+  @@map("permission_group_members")
 }
