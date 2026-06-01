@@ -1,8 +1,9 @@
 import { SignJWT, jwtVerify } from 'jose'
 
-const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET ?? 'boosterpro-jwt-secret-fallback'
-)
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET 环境变量未配置，请在 .env 中设置后再启动')
+}
+const SECRET = new TextEncoder().encode(process.env.JWT_SECRET)
 
 export interface JwtPayload {
   userId: number

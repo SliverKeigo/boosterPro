@@ -37,14 +37,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
     const ext = path.extname(decoded).toLowerCase()
     const mime = MIME[ext] || 'application/octet-stream'
 
-    // ?download=1 强制下载，否则 inline 预览
+    // 仅图片/PDF/文本允许 inline 预览，其余强制下载；并禁止浏览器 MIME 嗅探
+    const INLINE_SAFE = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.pdf', '.txt'])
     const dl = new URL(req.url).searchParams.get('download')
-    const disposition = dl ? 'attachment' : 'inline'
+    const disposition = !dl && INLINE_SAFE.has(ext) ? 'inline' : 'attachment'
 
     return new NextResponse(new Uint8Array(buf), {
       headers: {
         'Content-Type': mime,
         'Content-Disposition': `${disposition}; filename*=UTF-8''${encodeURIComponent(origName)}`,
+        'X-Content-Type-Options': 'nosniff',
       },
     })
   } catch {

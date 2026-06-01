@@ -50,6 +50,11 @@ export function buildCandidateData(body: any, mode: 'create' | 'update') {
     else if (data[f] !== null) data[f] = Number(data[f])
   }
 
+  // 枚举字段：空串归 null（否则 Prisma 枚举校验会报错导致 500）
+  for (const f of ['education', 'schoolTier']) {
+    if (data[f] === '' || data[f] === undefined) data[f] = null
+  }
+
   const gc = (guaranteeCommunications as any[])
     .filter((r) => r.date || r.content)
     .map((r) => ({ date: r.date ? new Date(r.date) : null, content: r.content || null }))

@@ -13,6 +13,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '未收到文件' }, { status: 400 })
     }
 
+    // 扩展名白名单：拒绝可执行 / 可在浏览器执行脚本的危险类型（.html/.svg/.js/.exe 等）
+    const ALLOWED_EXT = new Set([
+      '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp',
+      '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+      '.txt', '.csv', '.md', '.zip', '.rar', '.7z',
+    ])
+    const fileExt = path.extname(file.name).toLowerCase()
+    if (!ALLOWED_EXT.has(fileExt)) {
+      return NextResponse.json(
+        { error: `不支持的文件类型：${fileExt || '未知'}` },
+        { status: 400 },
+      )
+    }
+
     const dir = path.resolve(process.cwd(), UPLOAD_DIR)
     await mkdir(dir, { recursive: true })
 

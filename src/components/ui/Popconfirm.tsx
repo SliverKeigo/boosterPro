@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { AlertTriangle } from 'lucide-react'
 
@@ -28,12 +28,16 @@ export function Popconfirm({
   const triggerRef = useRef<HTMLSpanElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
-  const openPop = () => {
+  const reposition = useCallback(() => {
     const el = triggerRef.current
-    if (el) {
-      const r = el.getBoundingClientRect()
-      setPos({ top: r.bottom + 6, left: r.right })
-    }
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    // 面板宽 256px(w-64) 右对齐到触发器右缘，clamp 防止左侧溢出视口
+    setPos({ top: r.bottom + 6, left: Math.max(r.right, 264) })
+  }, [])
+
+  const openPop = () => {
+    reposition()
     setOpen(true)
   }
 
@@ -45,8 +49,15 @@ export function Popconfirm({
       setOpen(false)
     }
     document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
+    // 打开期间滚动/缩放时跟随触发器重新定位（capture 捕获嵌套滚动容器）
+    window.addEventListener('scroll', reposition, true)
+    window.addEventListener('resize', reposition)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      window.removeEventListener('scroll', reposition, true)
+      window.removeEventListener('resize', reposition)
+    }
+  }, [open, reposition])
 
   return (
     <>

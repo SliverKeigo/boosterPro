@@ -89,6 +89,9 @@ const STATUS_FIELDS: Record<string, string[]> = {
   RESIGNED_LOCAL: ['failureReason'],
 }
 
+// 所有受状态驱动的流程字段全集（提交前用于清除当前状态不显示的字段，避免脏数据）
+const ALL_FLOW_FIELDS = Array.from(new Set(Object.values(STATUS_FIELDS).flat()))
+
 const opts = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }))
 const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
 
@@ -199,12 +202,17 @@ export default function CandidatesPage() {
     if (!form.recruitmentChannel?.trim()) return toast.error('请填写招聘渠道')
     setSubmitting(true)
     try {
-      const payload = {
+      const visibleFlow = new Set(STATUS_FIELDS[form.recommendationStatus] ?? [])
+      const payload: any = {
         ...form,
         tags: String(form.tags || '')
           .split(',')
           .map((s: string) => s.trim())
           .filter(Boolean),
+      }
+      // 清除当前推荐状态下不显示的流程字段，避免与最终状态矛盾的脏数据入库
+      for (const f of ALL_FLOW_FIELDS) {
+        if (!visibleFlow.has(f)) payload[f] = ''
       }
       const url = editing ? `/api/candidates/${editing.id}` : '/api/candidates'
       const res = await fetch(url, {
@@ -340,6 +348,7 @@ export default function CandidatesPage() {
                 const cid = e.target.value
                 setField('customerId', cid)
                 setField('requirementId', '')
+                setField('recruitmentParty', '')
                 const c = customers.find((x) => String(x.id) === String(cid))
                 setField('customerShortName', c?.shortName || '')
               }}
