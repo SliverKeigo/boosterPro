@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server'
+import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
-import { CANDIDATE_INCLUDE, buildCandidateData } from '@/lib/candidateData'
+import { CANDIDATE_INCLUDE, CANDIDATE_LIST_INCLUDE, buildCandidateData } from '@/lib/candidateData'
 
 // 返回全量数据，前端 BoostTable 负责搜索 / 排序 / 分页
 export async function GET() {
   try {
     const data = await prisma.candidate.findMany({
       orderBy: { createdAt: 'desc' },
-      include: CANDIDATE_INCLUDE,
+      include: CANDIDATE_LIST_INCLUDE,
     })
     return NextResponse.json({ data, total: data.length })
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }
 
@@ -25,7 +25,6 @@ export async function POST(req: Request) {
     })
     return NextResponse.json(item, { status: 201 })
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }

@@ -1,9 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export const CANDIDATE_INCLUDE = {
+// 列表用：不含子表，避免列表接口拉取大量列表页用不到的历史子表记录
+export const CANDIDATE_LIST_INCLUDE = {
   customer: { select: { id: true, shortName: true } },
   requirement: { select: { id: true, positionName: true } },
   submitter: { select: { id: true, name: true } },
+}
+
+// 详情 / 创建更新返回用：含子表
+export const CANDIDATE_INCLUDE = {
+  ...CANDIDATE_LIST_INCLUDE,
   guaranteeCommunications: true,
   riskEvents: true,
 }

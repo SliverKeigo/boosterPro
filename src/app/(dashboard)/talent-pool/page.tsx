@@ -29,11 +29,11 @@ export default function TalentPoolPage() {
     setLoading(true)
     try {
       const res = await fetch('/api/talent-pool')
-      if (!res.ok) throw new Error()
+      if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
       const json = await res.json()
       setData(json.data)
-    } catch {
-      toast.error('加载失败')
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : ('加载失败'))
     } finally {
       setLoading(false)
     }
@@ -65,11 +65,11 @@ export default function TalentPoolPage() {
   const handleDelete = async (id: number) => {
     try {
       const res = await fetch(`/api/talent-pool/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error()
+      if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
       toast.success('删除成功')
       void fetchData()
-    } catch {
-      toast.error('删除失败')
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : ('删除失败'))
     }
   }
 
@@ -92,12 +92,12 @@ export default function TalentPoolPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
       toast.success(editing ? '更新成功' : '创建成功')
       setOpen(false)
       void fetchData()
-    } catch {
-      toast.error(editing ? '更新失败' : '创建失败')
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : (editing ? '更新失败' : '创建失败'))
     } finally {
       setSubmitting(false)
     }

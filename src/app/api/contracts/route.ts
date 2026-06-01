@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
 import { CONTRACT_INCLUDE, buildContractData } from '@/lib/contractData'
 
@@ -11,8 +12,7 @@ export async function GET() {
     })
     return NextResponse.json({ data, total: data.length })
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }
 
@@ -25,7 +25,6 @@ export async function POST(req: Request) {
     })
     return NextResponse.json(item, { status: 201 })
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }

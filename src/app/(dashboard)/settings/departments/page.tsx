@@ -22,11 +22,11 @@ export default function DepartmentsPage() {
     setLoading(true)
     try {
       const res = await fetch('/api/departments')
-      if (!res.ok) throw new Error()
+      if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
       const json = await res.json()
       setData(json.data)
-    } catch {
-      toast.error('加载失败')
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : ('加载失败'))
     } finally {
       setLoading(false)
     }
@@ -58,8 +58,8 @@ export default function DepartmentsPage() {
       }
       toast.success('删除成功')
       void fetchData()
-    } catch {
-      toast.error('删除失败')
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : ('删除失败'))
     }
   }
 
@@ -73,12 +73,12 @@ export default function DepartmentsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: form.name }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
       toast.success(editing ? '更新成功' : '创建成功')
       setOpen(false)
       void fetchData()
-    } catch {
-      toast.error(editing ? '更新失败' : '创建失败')
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : (editing ? '更新失败' : '创建失败'))
     } finally {
       setSubmitting(false)
     }

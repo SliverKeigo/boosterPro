@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
 import { buildTalentPoolData } from '@/lib/talentPoolData'
 
@@ -8,8 +9,7 @@ export async function GET() {
     const data = await prisma.talentPool.findMany({ orderBy: { createdAt: 'desc' } })
     return NextResponse.json({ data, total: data.length })
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }
 
@@ -19,7 +19,6 @@ export async function POST(req: Request) {
     const item = await prisma.talentPool.create({ data: buildTalentPoolData(body) })
     return NextResponse.json(item, { status: 201 })
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }

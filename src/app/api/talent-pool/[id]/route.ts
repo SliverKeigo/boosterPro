@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
 import { buildTalentPoolData } from '@/lib/talentPoolData'
 
@@ -12,8 +13,7 @@ export async function GET(
     if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return NextResponse.json(item)
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }
 
@@ -30,8 +30,7 @@ export async function PUT(
     })
     return NextResponse.json(item)
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }
 
@@ -44,7 +43,6 @@ export async function DELETE(
     await prisma.talentPool.delete({ where: { id: parseInt(id) } })
     return NextResponse.json({ success: true })
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }

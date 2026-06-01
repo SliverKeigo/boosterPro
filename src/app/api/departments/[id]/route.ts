@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -11,8 +12,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!department) return NextResponse.json({ error: '未找到' }, { status: 404 })
     return NextResponse.json(department)
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }
 
@@ -29,8 +29,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     })
     return NextResponse.json(department)
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }
 
@@ -42,7 +41,6 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     await prisma.department.delete({ where: { id: parseInt(id) } })
     return NextResponse.json({ success: true })
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }

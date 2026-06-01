@@ -142,6 +142,7 @@ model Customer {
   createdAt          DateTime                @default(now()) @map("created_at")
   updatedAt          DateTime                @updatedAt @map("updated_at")
 
+  @@index([createdAt])
   @@map("customers")
 }
 
@@ -169,6 +170,7 @@ model ClientSupplement {
   createdAt            DateTime                   @default(now()) @map("created_at")
   updatedAt            DateTime                   @updatedAt @map("updated_at")
 
+  @@index([createdAt])
   @@map("client_supplements")
 }
 
@@ -228,6 +230,8 @@ model Requirement {
   createdAt           DateTime                     @default(now()) @map("created_at")
   updatedAt           DateTime                     @updatedAt @map("updated_at")
 
+  @@index([createdAt])
+  @@index([customerId])
   @@map("requirements")
 }
 
@@ -293,6 +297,9 @@ model Candidate {
   createdAt                DateTime                          @default(now()) @map("created_at")
   updatedAt                DateTime                          @updatedAt @map("updated_at")
 
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([requirementId])
   @@map("candidates")
 }
 
@@ -335,6 +342,7 @@ model TalentPool {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
+  @@index([createdAt])
   @@map("talent_pool")
 }
 
@@ -358,6 +366,7 @@ model Opportunity {
   createdAt                DateTime          @default(now()) @map("created_at")
   updatedAt                DateTime          @updatedAt @map("updated_at")
 
+  @@index([createdAt])
   @@map("opportunities")
 }
 
@@ -397,6 +406,8 @@ model Contract {
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
+  @@index([createdAt])
+  @@index([customerId])
   @@map("contracts")
 }
 
@@ -422,6 +433,7 @@ model KnowledgeBase {
   createdAt         DateTime                   @default(now()) @map("created_at")
   updatedAt         DateTime                   @updatedAt @map("updated_at")
 
+  @@index([createdAt])
   @@map("knowledge_base")
 }
 

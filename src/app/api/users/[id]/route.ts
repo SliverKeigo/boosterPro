@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
@@ -17,8 +18,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const { passwordHash, ...userWithoutPassword } = user
     return NextResponse.json(userWithoutPassword)
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }
 
@@ -47,8 +47,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { passwordHash, ...userWithoutPassword } = user
     return NextResponse.json(userWithoutPassword)
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }
 
@@ -58,7 +57,6 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     await prisma.user.delete({ where: { id: parseInt(id) } })
     return NextResponse.json({ success: true })
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(e)
   }
 }
