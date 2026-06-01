@@ -27,6 +27,12 @@ export async function POST(req: Request) {
       )
     }
 
+    // 文件大小上限：防止超大文件一次性读入内存撑爆进程（DoS）
+    const MAX_SIZE = 50 * 1024 * 1024 // 50MB
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json({ error: '文件超过 50MB 大小限制' }, { status: 400 })
+    }
+
     const dir = path.resolve(process.cwd(), UPLOAD_DIR)
     await mkdir(dir, { recursive: true })
 

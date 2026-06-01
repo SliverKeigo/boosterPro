@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server'
 import { openai, MODEL } from '@/lib/openai'
 import { parseAiJson } from '@/lib/ai'
 
+// Serverless 平台下 AI 联网调用较慢，放宽函数执行上限
+export const maxDuration = 60
+
 // 输入公司名称，联网搜索后返回用于【自动填充客户档案已有字段】的结构化数据
 export async function POST(req: Request) {
   try {

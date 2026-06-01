@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server'
 import { openai, MODEL } from '@/lib/openai'
 import { parseAiJson } from '@/lib/ai'
 
+// Serverless 平台下 AI 联网调用较慢，放宽函数执行上限
+export const maxDuration = 60
+
 // 输入岗位 JD，联网搜索该岗位最新技术栈/任职要求趋势后，分析「岗位简易画像」（不定数量条目）
 export async function POST(req: Request) {
   try {
