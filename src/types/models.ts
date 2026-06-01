@@ -49,7 +49,6 @@ import type {
   User,
   Role,
   Department,
-  Permission,
   WorkPlan,
 } from '@prisma/client'
 
@@ -76,7 +75,6 @@ export type {
   User,
   Role,
   Department,
-  Permission,
   WorkPlan,
 }
 

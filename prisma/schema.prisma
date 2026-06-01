@@ -75,12 +75,11 @@ enum OpportunityNature {
 }
 
 model Department {
-  id          Int          @id @default(autoincrement())
-  name        String       @db.VarChar(100)
-  users       User[]
-  permissions Permission[]
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  users     User[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("departments")
 }
@@ -105,7 +104,6 @@ model User {
   departmentId         Int?                        @map("department_id")
   role                 Role?                       @relation(fields: [roleId], references: [id])
   roleId               Int?                        @map("role_id")
-  permissions          Permission[]
   submittedCandidates  Candidate[]                 @relation("CandidateSubmitter")
   salesOpportunities   Opportunity[]               @relation("OpportunitySalesOwner")
   contractSales        Contract[]                  @relation("ContractSalesOwner")
@@ -504,24 +502,6 @@ model WorkPlan {
   updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@map("work_plans")
-}
-
-model Permission {
-  id           Int         @id @default(autoincrement())
-  user         User?       @relation(fields: [userId], references: [id])
-  userId       Int?        @map("user_id")
-  department   Department? @relation(fields: [departmentId], references: [id])
-  departmentId Int?        @map("department_id")
-  resourceType String      @map("resource_type") @db.VarChar(100)
-  resourceId   Int?        @map("resource_id")
-  canCreate    Boolean     @default(false) @map("can_create")
-  canDelete    Boolean     @default(false) @map("can_delete")
-  canEdit      Boolean     @default(false) @map("can_edit")
-  canView      Boolean     @default(false) @map("can_view")
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
-
-  @@map("permissions")
 }
 
 // 权限组：八个业务菜单(resource)各可配置多个权限组，每组持有若干功能权限(actions)与一组成员

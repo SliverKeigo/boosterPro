@@ -10,6 +10,7 @@ export const RESOURCES = [
   { key: 'CUSTOMER', label: '客户基本信息', path: 'clients' },
   { key: 'CONTRACT', label: '销售合同', path: 'contracts' },
   { key: 'KNOWLEDGE', label: '公司知识库', path: 'knowledge' },
+  { key: 'REPORT', label: '数据报表', path: 'reports' },
 ] as const
 
 export type ResourceKey = (typeof RESOURCES)[number]['key']

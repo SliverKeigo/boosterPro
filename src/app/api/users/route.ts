@@ -1,19 +1,33 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
-import { requireAdmin } from '@/lib/permissions'
+import { getCurrentUser, requireAdmin } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
-// 返回全量数据，前端 BoostTable 负责搜索 / 排序 / 分页（不返回 passwordHash）
+// 分级返回（避免信息泄露）：
+// - 管理员：全量字段（不返回 passwordHash），供用户管理 / 权限设置页使用，前端 BoostTable 负责搜索 / 排序 / 分页。
+// - 普通登录用户：仅 { id, name }，供业务页（如候选人页提交人 / 负责人下拉）使用。
+// 返回结构统一为 { data, total }，前端均消费 json.data。
 export async function GET() {
   try {
+    const me = await getCurrentUser()
+    if (!me) return NextResponse.json({ error: '未登录或登录已过期' }, { status: 401 })
+
+    if (me.isAdmin) {
+      const data = await prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
+        omit: { passwordHash: true },
+        include: {
+          department: true,
+          role: true,
+        },
+      })
+      return NextResponse.json({ data, total: data.length })
+    }
+
     const data = await prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
-      omit: { passwordHash: true },
-      include: {
-        department: true,
-        role: true,
-      },
+      select: { id: true, name: true },
     })
     return NextResponse.json({ data, total: data.length })
   } catch (e) {

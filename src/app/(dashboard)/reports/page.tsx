@@ -3,7 +3,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { BarChart3, PieChart, Users, FileText } from 'lucide-react'
+import { BarChart3, PieChart, Users, FileText, ShieldAlert } from 'lucide-react'
+import { useMyPermissions } from '@/lib/usePermissions'
 
 // ─── 枚举映射（与 candidates / requirements 页保持一致） ──────────────────────────
 const STATUS_LABELS: Record<string, string> = {
@@ -252,28 +253,41 @@ function ChartCard({
 const ECHART_STYLE = { height: 300, width: '100%' }
 
 export default function ReportsPage() {
+  // 权限：仅 REPORT VIEW 可看报表
+  const { can, isAdmin, loading: permLoading } = useMyPermissions()
+  const allowed = isAdmin || can('REPORT', 'VIEW')
+
   // loading 初始为 true，仅在客户端首个 effect 拉数完成后才渲染图表，
   // 既避免 SSR 阶段 echarts 访问 window，也保证服务端 / 客户端首屏一致
   const [loading, setLoading] = useState(true)
   const [candidates, setCandidates] = useState<any[]>([])
   const [requirements, setRequirements] = useState<any[]>([])
 
+  // 权限就绪且有权后再拉报表数据。IIFE 首条语句即 await，
+  // effect 同步路径不含 setState（规避 react-hooks/set-state-in-effect）。
   useEffect(() => {
+    if (permLoading || !allowed) return
     let alive = true
-    Promise.all([
-      fetch('/api/candidates').then((r) => r.json()).catch(() => ({ data: [] })),
-      fetch('/api/requirements').then((r) => r.json()).catch(() => ({ data: [] })),
-    ])
-      .then(([c, r]) => {
+    void (async () => {
+      try {
+        const res = await fetch('/api/reports')
+        const json = res.ok ? await res.json() : { candidates: [], requirements: [] }
         if (!alive) return
-        setCandidates(c.data ?? [])
-        setRequirements(r.data ?? [])
-      })
-      .finally(() => alive && setLoading(false))
+        setCandidates(json.candidates ?? [])
+        setRequirements(json.requirements ?? [])
+      } catch {
+        if (alive) {
+          setCandidates([])
+          setRequirements([])
+        }
+      } finally {
+        if (alive) setLoading(false)
+      }
+    })()
     return () => {
       alive = false
     }
-  }, [])
+  }, [permLoading, allowed])
 
   // ── 候选人维度聚合 ──
   const statusDist = useMemo(
@@ -295,6 +309,39 @@ export default function ReportsPage() {
     () => countBy(requirements, (r) => r.status),
     [requirements],
   )
+
+  // ── 守卫：放在所有 hooks 之后，避免破坏 Rules of Hooks ──
+  // 权限校验中
+  if (permLoading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <span className="loading loading-spinner loading-lg text-primary" />
+      </div>
+    )
+  }
+
+  // 无 REPORT VIEW 权限
+  if (!allowed) {
+    return (
+      <div>
+        <div className="mb-4">
+          <h1 className="text-xl font-bold text-base-content">数据报表</h1>
+          <p className="mt-0.5 text-sm text-base-content/50">候选人推荐与客户需求的统计概览</p>
+        </div>
+        <div className="card border border-base-300 bg-base-100 shadow-sm">
+          <div className="card-body items-center py-20 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-error/10">
+              <ShieldAlert className="h-8 w-8 text-error" />
+            </div>
+            <h2 className="mt-2 text-lg font-semibold text-base-content">无权访问数据报表</h2>
+            <p className="max-w-md text-sm text-base-content/50">
+              您当前没有查看数据报表的权限，请联系管理员开通
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
