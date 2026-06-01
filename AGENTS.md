@@ -9,17 +9,26 @@ This version has breaking changes — APIs, conventions, and file structure may 
 猎头 / 招聘 CRM。技术栈：Next.js 16 + daisyUI（**不要再引入 Ant Design**）+ Prisma 7 + PostgreSQL + ECharts + OpenAI 兼容 API。详见 `README.md`，通用组件用法见 `src/components/ui/GUIDE.md`。
 
 ## 数据库
-- 本项目只用 `public` schema（约 23 张表）。数据库内的 `novel` / `真寻` schema 是**其他无关项目**，忽略、勿删。
-- Prisma 7：连接走 `src/lib/prisma.ts` 的 `@prisma/adapter-pg`（`schema.prisma` 的 datasource **不写 url**）。改完 schema 跑 `npx prisma generate`，dev server 需重启才会加载新 client。
+- 本项目只用 `public` schema（约 24 张表）。数据库内的 `novel` / `真寻` schema 是**其他无关项目**，忽略、勿删。
+- Prisma 7：连接走 `src/lib/prisma.ts` 的 `@prisma/adapter-pg`（`schema.prisma` 的 datasource **不写 url**）。改完 schema 跑 `npx prisma generate`，dev server 需重启才会加载新 client。CLI（`prisma db push` 等）经 `prisma.config.ts` 读 `.env` 的 `DATABASE_URL`；本机改库结构也可直接用 `psql` 跑 `ALTER`/`CREATE INDEX`（adapter 模式下 db push 受限时的备选）。
+- 八个业务主表均有 `created_by_id`（数据所有权外键 → `users`），`users` 有 `is_admin`；权限组在 `permission_groups` / `permission_group_members`。**旧 `permissions` 表已废弃删除，勿再使用。**
 - 字段完整说明见 `docs/数据字典.md`。
 
 ## 通用约定
 - 列表页一律用 `BoostTable`，列定义需**覆盖该模型所有字段**（不常用的设 `defaultVisible:false`）。
-- 列表 API 的 GET 返回**全量数据** `{ data, total }`，搜索 / 排序 / 分页由前端 BoostTable 负责。
+- 列表 API 的 GET 返回**全量数据** `{ data, total }`，搜索 / 排序 / 分页由前端 BoostTable 负责；返回的每行需含 `createdById`，前端据此判断行级归属。
 - 文件字段用 `FileUpload`（上传到 `UPLOAD_DIR`，经 `/api/files/[name]` 下载）；富文本字段用 `RichText`；表单内的"子表 / 表中表"用 `SubTable`。
 
+## 权限系统
+- 资源 / 动作常量在 `src/lib/resources.ts`（前后端共享，**单一事实源**；新增资源/动作只改这里 + schema `created_by_id` + route 守卫）。九资源：CANDIDATE/REQUIREMENT/CLIENT_SUPPLEMENT/TALENT_POOL/OPPORTUNITY/CUSTOMER/CONTRACT/KNOWLEDGE/REPORT；六动作：VIEW/CREATE/EDIT/DELETE/IMPORT/EXPORT。
+- 后端守卫（`src/lib/permissions.ts`）：业务 route 用 `await requirePermission(resource, action)`（GET=VIEW、POST=CREATE、PUT=EDIT、DELETE=DELETE）；**写操作（PUT/DELETE）再 `assertRowWritable(user, existing)`** 校验行级归属（非本人创建且非 admin 拒绝）；POST 写库时设 `createdById = user.id`。系统管理接口（users/roles/departments/permission-groups/work-plans 的写操作）用 `requireAdmin()`。AI 接口按对应资源的 CREATE/EDIT 鉴权。
+- 错误一律 `throw new HttpError(status, msg)`（`src/lib/apiError.ts`），由各 route 的 `catch(e){ return handleApiError(e) }` 统一转响应——**不要在 catch 里硬编码 status**（会把 HttpError 的 401/403/404/502 吞成 500）。
+- GET 的特例：`users` / `departments` 的 GET 对**非管理员返回精简字段**（候选人页下拉依赖，不能整体 requireAdmin）；`roles` 的 GET 仅管理员。
+- 前端：`useMyPermissions()`（`src/lib/usePermissions.ts`）的 `can(resource,action)` / `isOwner(row)` 控制按钮 / 菜单显隐。
+- 种子：`npm run db:seed`（`tsx --env-file=.env prisma/seed.ts`，独立脚本须 `--env-file` 才能加载 `.env`）创建默认管理员 `admin@boosterpro.com`（`isAdmin=true`）。
+
 ## AI 功能
-- 通过 OpenAI **Responses API** + `web_search` 工具联网：`(openai as any).responses.create({ tools: [{ type: 'web_search' }], input })`。
+- 通过 OpenAI **Responses API** + `web_search` 工具联网：`(openai as any).responses.create({ tools: [{ type: 'web_search' }], input })`（已封装为 `src/lib/ai.ts` 的 `runWebSearchJson`）。
 - 联网工具正式名是 `web_search`（GA），**不是** `web_search_preview`（旧预览名，会 upstream 失败）。
 - `OPENAI_MODEL` 必须是该 API 实际支持的有效模型名。
 
@@ -32,3 +41,6 @@ This version has breaking changes — APIs, conventions, and file structure may 
    曾因工具名用错（`web_search_preview` 而非 `web_search`）就误判"不支持联网"，还想让用户去开通额外搜索服务。当用户基于实际使用经验坚持某能力可用时，**优先假设是自己用错了**，穷举排查。
 
 3. 单次报错（尤其 `upstream_error`）≠ 整体能力不支持——若错误返回里已包含正常的对象结构，往往说明端点是通的、只是某个参数/工具名有问题，应继续排查而非否定。
+
+4. **任何业务接口都必须后端独立鉴权，前端按权限隐藏入口只是 UX、不是安全边界。**
+   code review 曾发现：用户/角色/部门管理接口只靠 middleware 登录态、缺 `requireAdmin`，任意登录用户可重置管理员密码提权；AI 接口、报表接口也一度只前端隐藏。新增接口先想"谁能调、能否越权拿到不该看的数据"再写守卫。新建跨资源聚合接口（如 reports）要显式 `select` 必要字段，别用裸 `findMany` 把 PII 全量返回。
