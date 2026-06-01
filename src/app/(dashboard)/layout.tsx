@@ -26,7 +26,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { Popconfirm, useToast } from '@/components/ui'
-import { useMyPermissions } from '@/lib/usePermissions'
+import { useMyPermissions, clearPermissionCache } from '@/lib/usePermissions'
 import { PATH_TO_RESOURCE } from '@/lib/resources'
 
 interface NavItem {
@@ -132,6 +132,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
+    // 清空模块级权限缓存，避免同一浏览器换账号登录后沿用上一用户的权限
+    clearPermissionCache()
     toast.success('已退出登录')
     router.push('/login')
     router.refresh()

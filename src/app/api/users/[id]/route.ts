@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
@@ -8,6 +9,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params
     const user = await prisma.user.findUnique({
       where: { id: parseInt(id) },
+      omit: { passwordHash: true },
       include: {
         department: true,
         role: true,
@@ -15,8 +17,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     })
     if (!user) return NextResponse.json({ error: '未找到' }, { status: 404 })
 
-    const { passwordHash, ...userWithoutPassword } = user
-    return NextResponse.json(userWithoutPassword)
+    return NextResponse.json(user)
   } catch (e) {
     return handleApiError(e)
   }
@@ -28,7 +29,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const body = await req.json()
     const { name, email, password, departmentId, roleId } = body
 
-    const updateData: any = {}
+    const updateData: Prisma.UserUncheckedUpdateInput = {}
     if (name) updateData.name = name
     if (email) updateData.email = email
     if (password) updateData.passwordHash = await bcrypt.hash(password, 10)
@@ -38,14 +39,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const user = await prisma.user.update({
       where: { id: parseInt(id) },
       data: updateData,
+      omit: { passwordHash: true },
       include: {
         department: true,
         role: true,
       },
     })
 
-    const { passwordHash, ...userWithoutPassword } = user
-    return NextResponse.json(userWithoutPassword)
+    return NextResponse.json(user)
   } catch (e) {
     return handleApiError(e)
   }
