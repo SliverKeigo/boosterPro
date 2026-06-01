@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server'
 import { runWebSearchJson } from '@/lib/ai'
+import { HttpError, handleApiError } from '@/lib/apiError'
 
 // Serverless 平台下 AI 联网调用较慢，放宽函数执行上限
 export const maxDuration = 60
@@ -33,6 +34,8 @@ export async function POST(req: Request) {
       })),
     })
   } catch (e) {
+    // HttpError（如 AI 解析失败 502）透传其状态码；其余视为调用失败，保留友好前缀
+    if (e instanceof HttpError) return handleApiError(e)
     console.error('AI job-profile error', e)
     const msg = e instanceof Error ? e.message : '未知错误'
     return NextResponse.json({ error: 'AI 分析失败：' + msg }, { status: 500 })

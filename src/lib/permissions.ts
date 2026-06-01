@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 服务端权限判定。仅在 route handler / server 代码中使用（依赖 prisma 与 next/headers）。
+import { cache } from 'react'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, AUTH_COOKIE } from '@/lib/auth'
@@ -15,8 +16,9 @@ export interface CurrentUser {
   roleId: number | null
 }
 
-// 从 cookie 解析当前登录用户（含 isAdmin / department / role），未登录返回 null
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+// 从 cookie 解析当前登录用户（含 isAdmin / department / role），未登录返回 null。
+// cache()：同一请求内多次调用只查一次库（Next App Router 请求级去重）。
+export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const token = (await cookies()).get(AUTH_COOKIE)?.value
   if (!token) return null
   const payload = await verifyToken(token)
@@ -25,7 +27,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     where: { id: payload.userId },
     select: { id: true, name: true, email: true, isAdmin: true, departmentId: true, roleId: true },
   })
-}
+})
 
 // 计算用户对所有 resource 的功能权限集合：{ CANDIDATE: ['VIEW','CREATE',...], ... }
 export async function getPermissionMap(user: CurrentUser): Promise<Record<string, string[]>> {
@@ -77,6 +79,14 @@ export async function requirePermission(resource: ResourceKey, action: ActionKey
   if (!user.isAdmin && !(await hasAction(user, resource, action))) {
     throw new HttpError(403, '您没有执行该操作的权限')
   }
+  return user
+}
+
+// 仅管理员守卫：用于用户 / 角色 / 部门 / 权限组等系统管理接口
+export async function requireAdmin(): Promise<CurrentUser> {
+  const user = await getCurrentUser()
+  if (!user) throw new HttpError(401, '未登录或登录已过期')
+  if (!user.isAdmin) throw new HttpError(403, '仅管理员可执行该操作')
   return user
 }
 

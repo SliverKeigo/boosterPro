@@ -2,13 +2,15 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, ShieldAlert } from 'lucide-react'
 import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, useToast } from '@/components/ui'
+import { useMyPermissions } from '@/lib/usePermissions'
 
 const EMPTY_FORM: any = { name: '', description: '' }
 
 export default function RolesPage() {
   const toast = useToast()
+  const { isAdmin, loading: permLoading } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -85,6 +87,36 @@ export default function RolesPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // 权限校验中
+  if (permLoading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <span className="loading loading-spinner loading-lg text-primary" />
+      </div>
+    )
+  }
+
+  // 非管理员
+  if (!isAdmin) {
+    return (
+      <div>
+        <div className="mb-4">
+          <h1 className="text-xl font-bold text-base-content">角色管理</h1>
+          <p className="mt-0.5 text-sm text-base-content/50">管理系统角色及权限说明</p>
+        </div>
+        <div className="card border border-base-300 bg-base-100 shadow-sm">
+          <div className="card-body items-center py-20 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-error/10">
+              <ShieldAlert className="h-8 w-8 text-error" />
+            </div>
+            <h2 className="mt-2 text-lg font-semibold text-base-content">无权访问</h2>
+            <p className="max-w-md text-sm text-base-content/50">仅管理员可访问</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const columns: BoostColumn<any>[] = [

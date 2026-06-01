@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
+import { requireAdmin } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 
 // 返回全量数据，前端 BoostTable 负责搜索 / 排序 / 分页
@@ -17,6 +18,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    await requireAdmin()
     const body = await req.json()
     const { name } = body
     if (!name) return NextResponse.json({ error: '部门名称不能为空' }, { status: 400 })

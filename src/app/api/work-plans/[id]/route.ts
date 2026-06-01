@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
+import { requireAdmin } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 
 const WORK_PLAN_INCLUDE = {
@@ -24,6 +25,7 @@ function buildData(body: any) {
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requireAdmin()
     const { id } = await params
     const item = await prisma.workPlan.findUnique({
       where: { id: parseInt(id) },
@@ -38,6 +40,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requireAdmin()
     const { id } = await params
     const body = await req.json()
     const item = await prisma.workPlan.update({
@@ -53,6 +56,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requireAdmin()
     const { id } = await params
     await prisma.workPlan.delete({ where: { id: parseInt(id) } })
     return NextResponse.json({ success: true })

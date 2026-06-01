@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
+import { requireAdmin } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
@@ -22,6 +23,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    await requireAdmin()
     const body = await req.json()
     const { name, email, password, departmentId, roleId } = body
     if (!name) return NextResponse.json({ error: '用户名不能为空' }, { status: 400 })

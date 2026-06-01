@@ -11,10 +11,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const { id } = await params
     const fromId = parseInt(id)
+    if (!Number.isInteger(fromId) || fromId <= 0) throw new HttpError(400, '非法的用户 ID')
     const body = await req.json()
     const toId = Number(body.toUserId)
     if (!toId) throw new HttpError(400, '缺少目标用户 toUserId')
+    if (!Number.isInteger(toId) || toId <= 0) throw new HttpError(400, '非法的目标用户 ID')
     if (fromId === toId) throw new HttpError(400, '移交的源用户与目标用户不能相同')
+    const targetUser = await prisma.user.findUnique({ where: { id: toId } })
+    if (!targetUser) throw new HttpError(400, '目标用户不存在')
 
     const [
       candidate,

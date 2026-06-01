@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
+import { requireAdmin } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -18,6 +19,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requireAdmin()
     const { id } = await params
     const body = await req.json()
     const { name, description } = body
@@ -35,6 +37,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requireAdmin()
     const { id } = await params
     const count = await prisma.user.count({ where: { roleId: parseInt(id) } })
     if (count > 0) return NextResponse.json({ error: '该角色下有用户，无法删除' }, { status: 400 })

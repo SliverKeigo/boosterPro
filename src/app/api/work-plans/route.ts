@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
+import { requireAdmin } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 
 const WORK_PLAN_INCLUDE = {
@@ -25,6 +26,7 @@ function buildData(body: any) {
 // 返回全量数据，前端 BoostTable 负责搜索 / 排序 / 分页
 export async function GET() {
   try {
+    await requireAdmin()
     const data = await prisma.workPlan.findMany({
       orderBy: { createdAt: 'desc' },
       include: WORK_PLAN_INCLUDE,
@@ -37,6 +39,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    await requireAdmin()
     const body = await req.json()
     const item = await prisma.workPlan.create({
       data: buildData(body),
