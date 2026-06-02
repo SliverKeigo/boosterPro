@@ -9,7 +9,7 @@ export async function GET() {
   try {
     await requirePermission('CONTRACT', 'VIEW')
     const data = await prisma.contract.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
       include: CONTRACT_INCLUDE,
     })
     return NextResponse.json({ data, total: data.length })

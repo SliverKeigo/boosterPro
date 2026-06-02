@@ -8,7 +8,7 @@ import { buildTalentPoolData } from '@/lib/talentPoolData'
 export async function GET() {
   try {
     await requirePermission('TALENT_POOL', 'VIEW')
-    const data = await prisma.talentPool.findMany({ orderBy: { createdAt: 'desc' } })
+    const data = await prisma.talentPool.findMany({ orderBy: { updatedAt: 'desc' } })
     return NextResponse.json({ data, total: data.length })
   } catch (e) {
     return handleApiError(e)

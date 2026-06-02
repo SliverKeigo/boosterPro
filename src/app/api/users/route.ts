@@ -15,7 +15,7 @@ export async function GET() {
 
     if (me.isAdmin) {
       const data = await prisma.user.findMany({
-        orderBy: { createdAt: 'desc' },
+        orderBy: { updatedAt: 'desc' },
         omit: { passwordHash: true },
         include: {
           department: true,
@@ -26,7 +26,7 @@ export async function GET() {
     }
 
     const data = await prisma.user.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
       select: { id: true, name: true, departmentId: true },
     })
     return NextResponse.json({ data, total: data.length })

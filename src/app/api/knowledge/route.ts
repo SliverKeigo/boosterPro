@@ -9,7 +9,7 @@ export async function GET() {
   try {
     await requirePermission('KNOWLEDGE', 'VIEW')
     const data = await prisma.knowledgeBase.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
       include: KNOWLEDGE_INCLUDE,
     })
     return NextResponse.json({ data, total: data.length })

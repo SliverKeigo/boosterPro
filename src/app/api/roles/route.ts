@@ -8,7 +8,7 @@ export async function GET() {
   try {
     await requireAdmin()
     const data = await prisma.role.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
       include: { _count: { select: { users: true } } },
     })
     return NextResponse.json({ data, total: data.length })

@@ -70,7 +70,7 @@ export async function GET(req: Request) {
     const data = await prisma.permissionGroup.findMany({
       where: resource ? { resource } : undefined,
       include: { members: true },
-      orderBy: { id: 'desc' },
+      orderBy: { updatedAt: 'desc' },
     })
     return NextResponse.json({ data })
   } catch (e) {
