@@ -7,6 +7,7 @@ import {
   BoostTable,
   type BoostColumn,
   SubTable,
+  SubTableCell,
   Modal,
   Popconfirm,
   Field,
@@ -183,11 +184,21 @@ export default function ContractsPage() {
       accessor: (r) => r.deliveryOwner?.name,
     },
     {
-      key: 'invoicesCount',
-      title: '发票数',
+      key: 'invoices',
+      title: '发票',
       sortable: false,
-      accessor: (r) => (r.invoices ?? []).length,
-      render: (v) => <span className="badge badge-ghost badge-sm">{v}</span>,
+      accessor: (r) => (r.invoices ?? []).map((x: any) => x.invoiceType).filter(Boolean).join(' '),
+      render: (_v, r) => (
+        <SubTableCell
+          rows={r.invoices}
+          title="发票"
+          unit="条"
+          columns={[
+            { key: 'invoiceType', title: '发票类型' },
+            { key: 'verificationResult', title: '查验结果' },
+          ]}
+        />
+      ),
     },
     {
       key: 'createdAt',
@@ -206,23 +217,6 @@ export default function ContractsPage() {
     { key: 'invoiceInfoText', title: '开票信息', defaultVisible: false },
     { key: 'invoiceInfoFileUrl', title: '开票信息（文件）', defaultVisible: false, sortable: false, render: (v) => v ? '已上传' : '—' },
     { key: 'notes', title: '备注', defaultVisible: false },
-    {
-      key: 'invoices',
-      title: '发票明细',
-      defaultVisible: false,
-      sortable: false,
-      accessor: (r) => (r.invoices ?? []).map((x: any) => x.invoiceType).filter(Boolean).join(' '),
-      render: (_v, r) => {
-        const list = (r.invoices ?? []) as any[]
-        return list.length ? (
-          <div className="flex flex-wrap gap-1">
-            {list.map((x, i) => (
-              <span key={i} className="badge badge-ghost badge-sm">{x.invoiceType || '—'}</span>
-            ))}
-          </div>
-        ) : '—'
-      },
-    },
   ]
 
   return (

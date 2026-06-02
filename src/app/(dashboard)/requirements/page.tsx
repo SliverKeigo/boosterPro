@@ -7,6 +7,7 @@ import {
   BoostTable,
   type BoostColumn,
   SubTable,
+  SubTableCell,
   Modal,
   Popconfirm,
   Field,
@@ -222,8 +223,41 @@ export default function RequirementsPage() {
     { key: 'talentProfile', title: '人才画像', defaultVisible: false },
     { key: 'projectExperience', title: '项目经验', defaultVisible: false },
     { key: 'attachmentUrl', title: '附件', defaultVisible: false, render: (v) => (v ? '有' : '—') },
-    { key: 'positionProfiles', title: '岗位画像', defaultVisible: false, accessor: (r) => (r.positionProfiles ?? []).map((p: any) => p.knowledgeCategory).filter(Boolean).join('、'), render: (v) => v || '—' },
-    { key: 'urgentRecords', title: '加急记录', defaultVisible: false, accessor: (r) => ((r.urgentRecords ?? []).length ? `${r.urgentRecords.length} 次` : ''), render: (v) => v || '—' },
+    {
+      key: 'positionProfiles',
+      title: '岗位画像',
+      defaultVisible: false,
+      sortable: false,
+      accessor: (r) => (r.positionProfiles ?? []).map((p: any) => p.knowledgeCategory).filter(Boolean).join('、'),
+      render: (_v, r) => (
+        <SubTableCell
+          rows={r.positionProfiles}
+          title="岗位画像"
+          columns={[
+            { key: 'knowledgeCategory', title: '知识分类' },
+            { key: 'knowledgeAmount', title: '知识要求' },
+          ]}
+        />
+      ),
+    },
+    {
+      key: 'urgentRecords',
+      title: '加急记录',
+      defaultVisible: false,
+      sortable: false,
+      accessor: (r) => ((r.urgentRecords ?? []).length ? `${r.urgentRecords.length} 次` : ''),
+      render: (_v, r) => (
+        <SubTableCell
+          rows={r.urgentRecords}
+          title="加急记录"
+          unit="次"
+          columns={[
+            { key: 'memberId', title: '成员 ID' },
+            { key: 'date', title: '日期', render: (v) => fmtDate(v) },
+          ]}
+        />
+      ),
+    },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => fmtDateTime(v) },
   ]
 

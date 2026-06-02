@@ -7,6 +7,7 @@ import {
   BoostTable,
   type BoostColumn,
   SubTable,
+  SubTableCell,
   Modal,
   Popconfirm,
   Field,
@@ -297,8 +298,24 @@ export default function CandidatesPage() {
     { key: 'recommendationReportUrl', title: '推荐报告', defaultVisible: false, render: (v) => (v ? '有' : '—') },
     { key: 'offerFileUrl', title: 'Offer 文件', defaultVisible: false, render: (v) => (v ? '有' : '—') },
     { key: 'backgroundCheckReportUrl', title: '背景调查报告', defaultVisible: false, render: (v) => (v ? '有' : '—') },
-    { key: 'guaranteeCommunications', title: '保证期沟通', defaultVisible: false, accessor: (r) => ((r.guaranteeCommunications ?? []).length ? `${r.guaranteeCommunications.length} 条` : ''), render: (v) => v || '—' },
-    { key: 'riskEvents', title: '风险事件', defaultVisible: false, accessor: (r) => ((r.riskEvents ?? []).length ? `${r.riskEvents.length} 条` : ''), render: (v) => v || '—' },
+    { key: 'guaranteeCommunications', title: '保证期沟通', defaultVisible: false, sortable: false,
+      accessor: (r) => (r.guaranteeCommunications ?? []).map((x: any) => x.content).filter(Boolean).join('；'),
+      render: (_v, r) => (
+        <SubTableCell rows={r.guaranteeCommunications} title="保证期内沟通记录" unit="条"
+          columns={[
+            { key: 'date', title: '日期', render: (v) => fmtDate(v) },
+            { key: 'content', title: '沟通内容' },
+          ]} />
+      ) },
+    { key: 'riskEvents', title: '风险事件', defaultVisible: false, sortable: false,
+      accessor: (r) => (r.riskEvents ?? []).map((x: any) => x.riskDescription).filter(Boolean).join('；'),
+      render: (_v, r) => (
+        <SubTableCell rows={r.riskEvents} title="风险管理表单" unit="条"
+          columns={[
+            { key: 'date', title: '日期', render: (v) => fmtDate(v) },
+            { key: 'riskDescription', title: '风险识别' },
+          ]} />
+      ) },
     { key: 'customerId', title: '客户 ID', defaultVisible: false },
     { key: 'requirementId', title: '需求 ID', defaultVisible: false },
     { key: 'submitDepartmentId', title: '提交人部门 ID', defaultVisible: false },

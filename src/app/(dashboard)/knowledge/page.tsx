@@ -7,6 +7,7 @@ import {
   BoostTable,
   type BoostColumn,
   SubTable,
+  SubTableCell,
   Modal,
   Popconfirm,
   Field,
@@ -154,11 +155,22 @@ export default function KnowledgePage() {
         v ? <span className="line-clamp-1 max-w-[260px]">{v}</span> : <span className="text-base-content/30">—</span>,
     },
     {
-      key: 'recordsCount',
-      title: '管理细则数',
+      key: 'managementRecords',
+      title: '管理细则',
       sortable: false,
-      accessor: (r) => (r.managementRecords ?? []).length,
-      render: (v) => <span className="badge badge-ghost badge-sm">{v}</span>,
+      accessor: (r) => (r.managementRecords ?? []).map((m: any) => m.details).filter(Boolean).join('；'),
+      render: (_v, r) => (
+        <SubTableCell
+          rows={r.managementRecords}
+          title="管理细则"
+          unit="条"
+          columns={[
+            { key: 'date', title: '日期', render: (v) => fmtDate(v) },
+            { key: 'submitterId', title: '提交人 ID' },
+            { key: 'details', title: '细则内容' },
+          ]}
+        />
+      ),
     },
     {
       key: 'createdAt',

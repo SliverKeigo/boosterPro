@@ -7,6 +7,7 @@ import {
   BoostTable,
   type BoostColumn,
   SubTable,
+  SubTableCell,
   Modal,
   Popconfirm,
   Field,
@@ -141,10 +142,30 @@ export default function SupplementsPage() {
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => fmtDateTime(v) },
     { key: 'demandUpdates', title: '需求更新', defaultVisible: false, sortable: false,
       accessor: (r) => (r.demandUpdates ?? []).map((x: any) => x.content).filter(Boolean).join(' '),
-      render: (_v, r) => ((r.demandUpdates ?? []).length ? `${r.demandUpdates.length} 条` : '—') },
+      render: (_v, r) => (
+        <SubTableCell
+          rows={r.demandUpdates}
+          title="需求更新"
+          unit="条"
+          columns={[
+            { key: 'date', title: '日期', render: (v) => fmtDate(v) },
+            { key: 'content', title: '更新内容' },
+          ]}
+        />
+      ) },
     { key: 'customerProfiles', title: '客户画像', defaultVisible: false, sortable: false,
       accessor: (r) => (r.customerProfiles ?? []).map((x: any) => x.specialty).filter(Boolean).join('、'),
-      render: (v) => v || '—' },
+      render: (_v, r) => (
+        <SubTableCell
+          rows={r.customerProfiles}
+          title="客户画像"
+          unit="条"
+          columns={[
+            { key: 'specialty', title: '专长' },
+            { key: 'description', title: '描述' },
+          ]}
+        />
+      ) },
   ]
 
   return (

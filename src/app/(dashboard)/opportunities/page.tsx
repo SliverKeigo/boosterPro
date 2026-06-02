@@ -7,6 +7,7 @@ import {
   BoostTable,
   type BoostColumn,
   SubTable,
+  SubTableCell,
   Modal,
   Popconfirm,
   Field,
@@ -173,9 +174,15 @@ export default function OpportunitiesPage() {
     { key: 'customerDecisionMaker', title: '客户决策人', defaultVisible: false },
     { key: 'decisionMakerDescription', title: '决策人信息描述', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{v}</span> : '—' },
     { key: 'salesOwnerId', title: '销售负责人ID', defaultVisible: false },
-    { key: 'progressRecords', title: '商机进展数', defaultVisible: false, sortable: false,
-      accessor: (r) => (r.progressRecords?.length ?? 0),
-      render: (_v, r) => <span className="badge badge-ghost badge-sm">{r.progressRecords?.length ?? 0}</span> },
+    { key: 'progressRecords', title: '商机进展', defaultVisible: false, sortable: false,
+      accessor: (r) => (r.progressRecords ?? []).map((p: any) => p.description).filter(Boolean).join('；'),
+      render: (_v, r) => (
+        <SubTableCell rows={r.progressRecords} title="商机进展" unit="条"
+          columns={[
+            { key: 'date', title: '日期', render: (v) => fmtDate(v) },
+            { key: 'description', title: '进展描述' },
+          ]} />
+      ) },
     { key: 'attachmentUrl', title: '附件', defaultVisible: false, render: (v) => (v ? '有' : '—') },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
   ]

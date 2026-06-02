@@ -7,6 +7,7 @@ import {
   BoostTable,
   type BoostColumn,
   SubTable,
+  SubTableCell,
   Modal,
   Popconfirm,
   Field,
@@ -166,9 +167,12 @@ export default function ClientsPage() {
     { key: 'industry', title: '所属行业', render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'region', title: '所属区域' },
     { key: 'address', title: '公司地址', render: (v) => v ? <span className="line-clamp-1 max-w-[200px]">{v}</span> : <span className="text-base-content/30">—</span> },
-    { key: 'officeAddressCount', title: '办公地址数', sortable: false,
-      accessor: (r) => (r.officeAddresses?.length ?? 0),
-      render: (v) => <span className="badge badge-ghost badge-sm">{v}</span> },
+    { key: 'officeAddresses', title: '办公地址', sortable: false,
+      accessor: (r) => (r.officeAddresses ?? []).map((x: any) => x.address).filter(Boolean).join('；'),
+      render: (_v, r) => (
+        <SubTableCell rows={r.officeAddresses} title="办公地址"
+          columns={[{ key: 'address', title: '办公地址' }]} />
+      ) },
     { key: 'createdAt', title: '创建时间', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
     // 以下默认隐藏，可在"显示列"开启
     { key: 'formerName', title: '客户曾用名', defaultVisible: false },
@@ -179,15 +183,6 @@ export default function ClientsPage() {
     { key: 'locationLat', title: '纬度', defaultVisible: false, render: (v) => (v ?? '') === '' ? '—' : String(v) },
     { key: 'locationLng', title: '经度', defaultVisible: false, render: (v) => (v ?? '') === '' ? '—' : String(v) },
     { key: 'attachmentUrl', title: '客户附件资料', defaultVisible: false, sortable: false, render: (v) => v ? '已上传' : '—' },
-    { key: 'officeAddresses', title: '办公地址明细', defaultVisible: false, sortable: false,
-      accessor: (r) => (r.officeAddresses ?? []).map((x: any) => x.address).join(' '),
-      render: (_v, r) => (
-        <div className="flex flex-wrap gap-1">
-          {(r.officeAddresses ?? []).map((x: any, i: number) => (
-            <span key={i} className="badge badge-ghost badge-sm">{x.address}</span>
-          ))}
-        </div>
-      ) },
   ]
 
   return (
