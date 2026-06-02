@@ -52,7 +52,7 @@ export function Dropdown({
   }
 
   return (
-    <div className={`relative ${className}`} ref={ref}>
+    <div className={`relative inline-block ${className}`} ref={ref}>
       <button type="button" onClick={toggle} className="contents">
         {trigger}
       </button>
