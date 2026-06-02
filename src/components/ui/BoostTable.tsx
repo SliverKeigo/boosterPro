@@ -1,7 +1,7 @@
 'use client'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   Plus,
   Upload,
@@ -56,6 +56,8 @@ interface MoreAction {
 
 interface BoostTableProps<T> {
   title?: string
+  /** 列显示状态持久化的存储键；不传则回退到 title，二者皆空时不持久化 */
+  storageKey?: string
   columns: BoostColumn<T>[]
   data: T[]
   loading?: boolean
@@ -181,6 +183,7 @@ function looksLikeNumber(v: unknown): boolean {
 
 export function BoostTable<T extends Record<string, any>>({
   title,
+  storageKey,
   columns,
   data,
   loading = false,
@@ -208,6 +211,45 @@ export function BoostTable<T extends Record<string, any>>({
   const [visible, setVisible] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(columns.map((c) => [c.key, c.defaultVisible !== false])),
   )
+  // 列显示状态的持久化：初始化保持 SSR 安全（不读 localStorage，避免表头水合不一致），
+  // 挂载后异步载入；loadedRef 防止载入前的保存 effect 用默认值覆盖已存配置。
+  const loadedRef = useRef(false)
+
+  useEffect(() => {
+    const key = storageKey ?? title
+    if (!key || typeof window === 'undefined') {
+      loadedRef.current = true
+      return
+    }
+    void (async () => {
+      try {
+        const raw = window.localStorage.getItem('bp:cols:' + key)
+        if (raw) {
+          const saved = JSON.parse(raw) as Record<string, boolean>
+          setVisible((prev) => {
+            const next = { ...prev }
+            for (const c of columns) if (typeof saved[c.key] === 'boolean') next[c.key] = saved[c.key]
+            return next
+          })
+        }
+      } catch {
+        /* ignore corrupt storage */
+      }
+      loadedRef.current = true
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const key = storageKey ?? title
+    if (!key || !loadedRef.current || typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem('bp:cols:' + key, JSON.stringify(visible))
+    } catch {
+      /* ignore quota errors */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible])
   /** 已生效的筛选条件（驱动管线） */
   const [conditions, setConditions] = useState<FilterCondition[]>([])
   /** 面板内正在编辑的草稿条件 */
@@ -456,16 +498,15 @@ export function BoostTable<T extends Record<string, any>>({
     close()
   }
 
-  const builtinExport = () => {
-    void exportToExcel({
+  const doExport = (rows: T[]) =>
+    exportToExcel({
       title: title || '导出',
       columns: visibleColumns.map((c) => ({
         header: c.title,
         getValue: c.exportValue ?? accessorOf(c),
       })),
-      rows: sorted,
+      rows,
     })
-  }
 
   const sortableColumns = columns.filter((c) => c.sortable !== false)
 
@@ -501,12 +542,51 @@ export function BoostTable<T extends Record<string, any>>({
             导入
           </button>
         )}
-        {showExport && (
-          <button type="button" className={ICON_BTN} onClick={onExport ?? builtinExport}>
-            <Download className="h-4 w-4" />
-            导出
-          </button>
-        )}
+        {showExport &&
+          (onExport ? (
+            <button type="button" className={ICON_BTN} onClick={onExport}>
+              <Download className="h-4 w-4" />
+              导出
+            </button>
+          ) : (
+            <Dropdown
+              width={170}
+              align="left"
+              trigger={
+                <span className={ICON_BTN}>
+                  <Download className="h-4 w-4" />
+                  导出
+                </span>
+              }
+            >
+              {(close) => (
+                <ul className="menu menu-sm w-full p-0">
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        close()
+                        void doExport(paged)
+                      }}
+                    >
+                      导出当页
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        close()
+                        void doExport(sorted)
+                      }}
+                    >
+                      导出全部（共 {sorted.length} 条）
+                    </button>
+                  </li>
+                </ul>
+              )}
+            </Dropdown>
+          ))}
         {moreActions && moreActions.length > 0 && (
           <Dropdown
             width={180}

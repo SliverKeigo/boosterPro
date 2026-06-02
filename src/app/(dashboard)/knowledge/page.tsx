@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
+import { ChevronDown, Pencil, Trash2 } from 'lucide-react'
 import {
   BoostTable,
   type BoostColumn,
@@ -12,6 +12,7 @@ import {
   Field,
   FileUpload,
   RichText,
+  Dropdown,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -246,20 +247,40 @@ export default function KnowledgePage() {
                     .join(', '),
                 )
               }
+              const selectedLabels = tagOptions
+                .filter((o) => selected.has(o.value))
+                .map((o) => o.label)
               return (
-                <div className="flex flex-wrap gap-x-4 gap-y-2">
-                  {tagOptions.map((o) => (
-                    <label key={o.value} className="label cursor-pointer gap-2 py-0">
-                      <input
-                        type="checkbox"
-                        className="checkbox checkbox-sm"
-                        checked={selected.has(o.value)}
-                        onChange={(e) => toggle(o.value, e.target.checked)}
-                      />
-                      <span className="label-text">{o.label}</span>
-                    </label>
-                  ))}
-                </div>
+                <Dropdown
+                  align="left"
+                  width={300}
+                  className="w-full"
+                  trigger={
+                    <span className="select select-bordered flex w-full cursor-pointer items-center justify-between font-normal">
+                      <span className={selectedLabels.length ? 'truncate' : 'truncate text-base-content/40'}>
+                        {selectedLabels.length ? selectedLabels.join('、') : '请选择标签'}
+                      </span>
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 text-base-content/50" />
+                    </span>
+                  }
+                >
+                  <div className="max-h-64 overflow-auto">
+                    {tagOptions.map((o) => (
+                      <label
+                        key={o.value}
+                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-base-200"
+                      >
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-sm checkbox-primary"
+                          checked={selected.has(o.value)}
+                          onChange={(e) => toggle(o.value, e.target.checked)}
+                        />
+                        <span className="text-sm">{o.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </Dropdown>
               )
             })()}
           </Field>

@@ -4,9 +4,9 @@
 
 /* ---------- 设计令牌（收敛到登录舞台内） ---------- */
 .vc-stage {
-  --blue: #2563eb;
-  --blue-700: #1d4ed8;
-  --blue-ring: rgba(37, 99, 235, 0.16);
+  --blue: #0369a1;
+  --blue-700: #075985;
+  --blue-ring: rgba(3, 105, 161, 0.2);
 
   --ink: #0f172a;
   --ink-2: #334155;
@@ -157,7 +157,7 @@
   white-space: nowrap;
   cursor: pointer;
   transition: background .16s ease, transform .08s ease, box-shadow .16s ease;
-  box-shadow: 0 8px 18px -8px rgba(37, 99, 235, .6);
+  box-shadow: 0 8px 18px -8px rgba(3, 105, 161, .5);
 }
 .bp-btn:hover { background: var(--blue-700); }
 .bp-btn:active { transform: translateY(1px); }
@@ -221,8 +221,8 @@
   background: linear-gradient(155deg, #0f1d3d 0%, #0b1220 55%, #0a0f1c 100%);
 }
 .vc-orb { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .55; }
-.vc-orb-1 { width: 560px; height: 560px; left: -120px; top: -160px; background: radial-gradient(circle, #2563eb 0%, rgba(37, 99, 235, 0) 70%); }
-.vc-orb-2 { width: 520px; height: 520px; right: -140px; bottom: -180px; background: radial-gradient(circle, #1e40af 0%, rgba(30, 64, 175, 0) 70%); }
+.vc-orb-1 { width: 560px; height: 560px; left: -120px; top: -160px; background: radial-gradient(circle, #0369a1 0%, rgba(3, 105, 161, 0) 70%); }
+.vc-orb-2 { width: 520px; height: 520px; right: -140px; bottom: -180px; background: radial-gradient(circle, #075985 0%, rgba(7, 89, 133, 0) 70%); }
 .vc-grid {
   position: absolute; inset: 0;
   background-image: linear-gradient(rgba(255, 255, 255, .05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .05) 1px, transparent 1px);
@@ -264,14 +264,14 @@
   border-color: rgba(255, 255, 255, .16);
 }
 .bp-form--glass .bp-input-wrap:focus-within {
-  border-color: #60a5fa;
+  border-color: #38bdf8;
   background: rgba(255, 255, 255, .1);
-  box-shadow: 0 0 0 4px rgba(96, 165, 250, .18);
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, .2);
 }
 .bp-form--glass .bp-input { color: #fff; }
 .bp-form--glass .bp-input::placeholder { color: rgba(255, 255, 255, .4); }
 .bp-form--glass .bp-input-icon { color: rgba(255, 255, 255, .5); }
-.bp-form--glass .bp-input-wrap:focus-within .bp-input-icon { color: #93c5fd; }
+.bp-form--glass .bp-input-wrap:focus-within .bp-input-icon { color: #7dd3fc; }
 .bp-form--glass .bp-eye { color: rgba(255, 255, 255, .5); }
 .bp-form--glass .bp-eye:hover { color: #fff; background: rgba(255, 255, 255, .1); }
 .bp-form--glass .bp-check { color: rgba(255, 255, 255, .78); }
