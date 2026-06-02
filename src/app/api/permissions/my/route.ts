@@ -8,7 +8,12 @@ export async function GET() {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 })
     const permissions = await getPermissionMap(user)
-    return NextResponse.json({ isAdmin: user.isAdmin, userId: user.id, permissions })
+    return NextResponse.json({
+      isAdmin: user.isAdmin,
+      userId: user.id,
+      departmentId: user.departmentId,
+      permissions,
+    })
   } catch (e) {
     return handleApiError(e)
   }

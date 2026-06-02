@@ -45,7 +45,7 @@ export default function SupplementsPage() {
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
   const loadFormRefs = useCallback(async () => {
-    const c = await refGet('/api/clients')
+    const c = await refGet('/api/clients/options')
     setCustomers(c)
   }, [])
 

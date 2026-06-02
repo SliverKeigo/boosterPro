@@ -54,7 +54,7 @@ const EMPTY_FORM: any = {
 
 export default function OpportunitiesPage() {
   const toast = useToast()
-  const { can, isOwner } = useMyPermissions()
+  const { can, isOwner, userId } = useMyPermissions()
   const { items: statusOptions } = useDict('opportunity_status')
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -95,7 +95,8 @@ export default function OpportunitiesPage() {
   const openCreate = () => {
     void loadFormRefs()
     setEditing(null)
-    setForm({ ...EMPTY_FORM })
+    // 销售负责人默认填当前登录用户（仍可在下拉中改）
+    setForm({ ...EMPTY_FORM, salesOwnerId: userId != null ? String(userId) : '' })
     setOpen(true)
   }
 

@@ -18,12 +18,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - 列表页一律用 `BoostTable`，列定义需**覆盖该模型所有字段**（不常用的设 `defaultVisible:false`）。
 - 列表 API 的 GET 返回**全量数据** `{ data, total }`，搜索 / 排序 / 分页由前端 BoostTable 负责；返回的每行需含 `createdById`，前端据此判断行级归属。
 - 文件字段用 `FileUpload`（上传到 `UPLOAD_DIR`，经 `/api/files/[name]` 下载）；富文本字段用 `RichText`；表单内的"子表 / 表中表"用 `SubTable`。
+- **表单里"引用别的实体"的下拉**（选客户 / 选岗位 / 选用户等）一律走轻量选项接口 `/api/<resource>/options`（仅返回 `id` + 名称等下拉必要字段，**只要求登录、不要求该资源 VIEW**），不要复用会 `requirePermission(...,'VIEW')` 的列表 GET——否则"有新增权限、无目标资源只读权限"的用户会拿到空下拉。已建 `clients/options`、`requirements/options`；用户 / 部门的 GET 本就登录可取。
+- **"提交人 / 负责人"类字段默认填当前登录用户**：前端打开新增弹窗时预填（仍可在下拉改），后端候选人 POST 再对 `submitterId/submitDepartmentId` 做"为空则归当前用户"兜底。`useMyPermissions()` 暴露 `userId` / `departmentId` 供预填。
 
 ## 权限系统
 - 资源 / 动作常量在 `src/lib/resources.ts`（前后端共享，**单一事实源**；新增资源/动作只改这里 + schema `created_by_id` + route 守卫）。九资源：CANDIDATE/REQUIREMENT/CLIENT_SUPPLEMENT/TALENT_POOL/OPPORTUNITY/CUSTOMER/CONTRACT/KNOWLEDGE/REPORT；六动作：VIEW/CREATE/EDIT/DELETE/IMPORT/EXPORT。
 - 后端守卫（`src/lib/permissions.ts`）：业务 route 用 `await requirePermission(resource, action)`（GET=VIEW、POST=CREATE、PUT=EDIT、DELETE=DELETE）；**写操作（PUT/DELETE）再 `assertRowWritable(user, existing)`** 校验行级归属（非本人创建且非 admin 拒绝）；POST 写库时设 `createdById = user.id`。系统管理接口（users/roles/departments/permission-groups/work-plans 的写操作）用 `requireAdmin()`。AI 接口按对应资源的 CREATE/EDIT 鉴权。
 - 错误一律 `throw new HttpError(status, msg)`（`src/lib/apiError.ts`），由各 route 的 `catch(e){ return handleApiError(e) }` 统一转响应——**不要在 catch 里硬编码 status**（会把 HttpError 的 401/403/404/502 吞成 500）。
-- GET 的特例：`users` / `departments` 的 GET 对**非管理员返回精简字段**（候选人页下拉依赖，不能整体 requireAdmin）；`roles` 的 GET 仅管理员。
+- GET 的特例：`users` / `departments` 的 GET 对**非管理员返回精简字段**（候选人页下拉依赖，不能整体 requireAdmin）；`roles` 的 GET 仅管理员。表单下拉另走 `/api/<resource>/options`（如 `clients/options`、`requirements/options`）——**仅登录即可取**、只返回下拉必要字段、不卡该资源 VIEW（避免下拉被只读权限卡空）。
 - 前端：`useMyPermissions()`（`src/lib/usePermissions.ts`）的 `can(resource,action)` / `isOwner(row)` 控制按钮 / 菜单显隐。
 - 种子：`npm run db:seed`（`tsx --env-file=.env prisma/seed.ts`，独立脚本须 `--env-file` 才能加载 `.env`）创建默认管理员 `admin@boosterpro.com`（`isAdmin=true`）。
 

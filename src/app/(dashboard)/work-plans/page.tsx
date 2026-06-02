@@ -12,6 +12,7 @@ import {
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
+import { refGet } from '@/lib/refCache'
 
 const STATUS_OPTIONS = ['进行中', '已完成', '暂停', '待开始']
 const STATUS_BADGE: Record<string, string> = {
@@ -35,15 +36,22 @@ const EMPTY_FORM: any = {
 export default function WorkPlansPage() {
   const toast = useToast()
   // work-plans 接口要求管理员（requireAdmin），页面同步加 admin 守卫
-  const { isAdmin, loading: permLoading } = useMyPermissions()
+  const { isAdmin, loading: permLoading, userId } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState<any>(EMPTY_FORM)
+  const [users, setUsers] = useState<any[]>([])
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
+
+  // 负责人下拉「引用数据」按需加载（打开弹窗时拉，带 url 缓存 + 在途去重）
+  const loadFormRefs = useCallback(async () => {
+    const u = await refGet('/api/users')
+    setUsers(u)
+  }, [])
 
   const fetchData = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true)
@@ -68,12 +76,15 @@ export default function WorkPlansPage() {
 
   const openCreate = () => {
     setEditing(null)
-    setForm({ ...EMPTY_FORM })
+    // 负责人默认填当前登录用户（仍可在下拉中改）
+    setForm({ ...EMPTY_FORM, ownerId: userId != null ? String(userId) : '' })
+    void loadFormRefs()
     setOpen(true)
   }
 
   const openEdit = (r: any) => {
     setEditing(r)
+    void loadFormRefs()
     setForm({
       ...EMPTY_FORM,
       ...r,
@@ -229,8 +240,11 @@ export default function WorkPlansPage() {
               ))}
             </select>
           </Field>
-          <Field label="负责人 ID">
-            <input type="number" className="input input-bordered w-full" value={form.ownerId} onChange={(e) => setField('ownerId', e.target.value)} placeholder="用户 ID" />
+          <Field label="负责人">
+            <select className="select select-bordered w-full" value={form.ownerId} onChange={(e) => setField('ownerId', e.target.value)}>
+              <option value="" disabled hidden>请选择负责人</option>
+              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
           </Field>
           <Field label="开始日期">
             <input type="date" className="input input-bordered w-full" value={form.startDate} onChange={(e) => setField('startDate', e.target.value)} />

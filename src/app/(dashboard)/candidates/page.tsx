@@ -121,7 +121,7 @@ const EMPTY_FORM: any = {
 
 export default function CandidatesPage() {
   const toast = useToast()
-  const { can, isOwner } = useMyPermissions()
+  const { can, isOwner, userId, departmentId } = useMyPermissions()
   const { items: channelOptions } = useDict('recruitment_channel')
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -137,8 +137,8 @@ export default function CandidatesPage() {
   // 表单引用数据按需加载：打开新增/编辑弹窗时再拉（refGet 按 url 缓存 60s + 在途去重，已缓存则瞬时）
   const loadFormRefs = useCallback(async () => {
     const [c, r, d, u] = await Promise.all([
-      refGet('/api/clients'),
-      refGet('/api/requirements'),
+      refGet('/api/clients/options'),
+      refGet('/api/requirements/options'),
       refGet('/api/departments'),
       refGet('/api/users'),
     ])
@@ -176,7 +176,12 @@ export default function CandidatesPage() {
   const openCreate = () => {
     void loadFormRefs()
     setEditing(null)
-    setForm({ ...EMPTY_FORM })
+    // 提交人 / 提交人部门默认填当前登录用户（仍可在下拉中改）
+    setForm({
+      ...EMPTY_FORM,
+      submitterId: userId != null ? String(userId) : '',
+      submitDepartmentId: departmentId != null ? String(departmentId) : '',
+    })
     setOpen(true)
   }
 

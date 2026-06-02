@@ -94,7 +94,7 @@ export default function RequirementsPage() {
 
   // 客户下拉「引用数据」按需加载：打开新增/编辑弹窗时再拉，带 url 缓存 + 在途去重。
   const loadFormRefs = useCallback(async () => {
-    const c = await refGet('/api/clients')
+    const c = await refGet('/api/clients/options')
     setCustomers(c)
   }, [])
 

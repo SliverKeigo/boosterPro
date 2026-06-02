@@ -5,6 +5,7 @@ import { useEffect, useSyncExternalStore } from 'react'
 export interface MyPermissions {
   isAdmin: boolean
   userId: number | null
+  departmentId: number | null // 当前用户所属部门，供表单"提交人部门"自动预填
   permissions: Record<string, string[]> // resource → actions
 }
 
@@ -106,6 +107,7 @@ export function useMyPermissions() {
     isOwner,
     isAdmin: perm?.isAdmin ?? false,
     userId: perm?.userId ?? null,
+    departmentId: perm?.departmentId ?? null,
   }
 }
 

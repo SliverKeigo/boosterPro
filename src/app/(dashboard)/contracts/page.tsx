@@ -44,12 +44,13 @@ const EMPTY_FORM: any = {
 
 export default function ContractsPage() {
   const toast = useToast()
-  const { can, isOwner } = useMyPermissions()
+  const { can, isOwner, userId } = useMyPermissions()
   const { items: serviceTypeOptions } = useDict('service_type')
   const { items: invoiceTypeOptions } = useDict('invoice_type')
   const { items: verificationResultOptions } = useDict('verification_result')
   const [data, setData] = useState<any[]>([])
   const [customers, setCustomers] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
@@ -60,8 +61,12 @@ export default function ContractsPage() {
 
   // 表单下拉引用数据按需加载（打开弹窗时调用，带缓存 / 在途去重）
   const loadFormRefs = useCallback(async () => {
-    const c = await refGet('/api/clients')
+    const [c, u] = await Promise.all([
+      refGet('/api/clients/options'),
+      refGet('/api/users'),
+    ])
     setCustomers(c)
+    setUsers(u)
   }, [])
 
   const fetchData = useCallback(async (showLoading = false) => {
@@ -87,7 +92,8 @@ export default function ContractsPage() {
 
   const openCreate = () => {
     setEditing(null)
-    setForm({ ...EMPTY_FORM })
+    // 销售负责人默认填当前登录用户（仍可在下拉中改）
+    setForm({ ...EMPTY_FORM, salesOwnerId: userId != null ? String(userId) : '' })
     void loadFormRefs()
     setOpen(true)
   }
@@ -312,11 +318,17 @@ export default function ContractsPage() {
           <Field label="ROP 服务费率">
             <input type="number" className="input input-bordered w-full" value={form.ropFeeRate} onChange={(e) => setField('ropFeeRate', e.target.value)} placeholder="请输入" />
           </Field>
-          <Field label="销售负责人 ID">
-            <input type="number" className="input input-bordered w-full" value={form.salesOwnerId} onChange={(e) => setField('salesOwnerId', e.target.value)} placeholder="请选择（用户 ID）" />
+          <Field label="销售负责人">
+            <select className="select select-bordered w-full" value={form.salesOwnerId} onChange={(e) => setField('salesOwnerId', e.target.value)}>
+              <option value="" disabled hidden>请选择销售负责人</option>
+              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
           </Field>
-          <Field label="交付负责人 ID">
-            <input type="number" className="input input-bordered w-full" value={form.deliveryOwnerId} onChange={(e) => setField('deliveryOwnerId', e.target.value)} placeholder="请选择（用户 ID）" />
+          <Field label="交付负责人">
+            <select className="select select-bordered w-full" value={form.deliveryOwnerId} onChange={(e) => setField('deliveryOwnerId', e.target.value)}>
+              <option value="" disabled hidden>请选择交付负责人</option>
+              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
           </Field>
           <Field label="合同附件" required className="col-span-2">
             <FileUpload value={form.contractFileUrl} onChange={(url) => setField('contractFileUrl', url)} />

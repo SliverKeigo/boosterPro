@@ -24,6 +24,10 @@ export async function POST(req: Request) {
     const body = await req.json()
     const data = buildCandidateData(body, 'create')
     data.createdById = user.id
+    // 提交人 / 提交人部门未显式指定时，默认归当前登录用户
+    // （与前端预填一致，并作为非 UI 调用 / 字段被清空时的兜底）
+    if (data.submitterId == null) data.submitterId = user.id
+    if (data.submitDepartmentId == null) data.submitDepartmentId = user.departmentId ?? null
     const item = await prisma.candidate.create({
       data,
       include: CANDIDATE_INCLUDE,
