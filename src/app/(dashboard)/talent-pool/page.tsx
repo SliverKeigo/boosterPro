@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, FileUpload, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
+import { useDict } from '@/lib/useDict'
 
 const RES = 'TALENT_POOL'
 
@@ -19,6 +20,8 @@ const EMPTY_FORM: any = {
 export default function TalentPoolPage() {
   const toast = useToast()
   const { can, isOwner } = useMyPermissions()
+  const { items: positionTypeOptions } = useDict('position_type')
+  const { items: positionLevelOptions } = useDict('position_level')
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -219,11 +222,21 @@ export default function TalentPoolPage() {
             <input className="input input-bordered w-full" value={form.targetPosition} onChange={(e) => setField('targetPosition', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="职位类型">
-            <input className="input input-bordered w-full" value={form.positionType} onChange={(e) => setField('positionType', e.target.value)} placeholder="请选择" />
+            <select className="select select-bordered w-full" value={form.positionType} onChange={(e) => setField('positionType', e.target.value)}>
+              <option value="">请选择</option>
+              {positionTypeOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
           </Field>
           {/* 职位级别 / 简历及相关资料 */}
           <Field label="职位级别">
-            <input className="input input-bordered w-full" value={form.positionLevel} onChange={(e) => setField('positionLevel', e.target.value)} placeholder="请选择" />
+            <select className="select select-bordered w-full" value={form.positionLevel} onChange={(e) => setField('positionLevel', e.target.value)}>
+              <option value="">请选择</option>
+              {positionLevelOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
           </Field>
           <Field label="简历及相关资料" required>
             <FileUpload value={form.resumeUrl} onChange={(url) => setField('resumeUrl', url)} />

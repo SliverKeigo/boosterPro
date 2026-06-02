@@ -14,6 +14,7 @@ import {
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
+import { useDict } from '@/lib/useDict'
 
 const RES = 'CONTRACT'
 
@@ -42,6 +43,9 @@ const EMPTY_FORM: any = {
 export default function ContractsPage() {
   const toast = useToast()
   const { can, isOwner } = useMyPermissions()
+  const { items: serviceTypeOptions } = useDict('service_type')
+  const { items: invoiceTypeOptions } = useDict('invoice_type')
+  const { items: verificationResultOptions } = useDict('verification_result')
   const [data, setData] = useState<any[]>([])
   const [customers, setCustomers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -273,7 +277,12 @@ export default function ContractsPage() {
             <input type="date" className="input input-bordered w-full" value={form.expiryDate} onChange={(e) => setField('expiryDate', e.target.value)} />
           </Field>
           <Field label="服务类型" required>
-            <input className="input input-bordered w-full" value={form.serviceType} onChange={(e) => setField('serviceType', e.target.value)} placeholder="请选择" />
+            <select className="select select-bordered w-full" value={form.serviceType} onChange={(e) => setField('serviceType', e.target.value)}>
+              <option value="">请选择</option>
+              {serviceTypeOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
           </Field>
           <Field label="猎头服务费率%">
             <input type="number" className="input input-bordered w-full" value={form.headhunterFeeRate} onChange={(e) => setField('headhunterFeeRate', e.target.value)} placeholder="请输入" />
@@ -311,8 +320,8 @@ export default function ContractsPage() {
           value={form.invoices}
           onChange={(rows) => setField('invoices', rows)}
           columns={[
-            { key: 'invoiceType', title: '发票类型', type: 'text', width: 240 },
-            { key: 'verificationResult', title: '查验结果', type: 'text', width: 240 },
+            { key: 'invoiceType', title: '发票类型', type: 'select', options: invoiceTypeOptions, width: 240 },
+            { key: 'verificationResult', title: '查验结果', type: 'select', options: verificationResultOptions, width: 240 },
           ]}
         />
       </Modal>
