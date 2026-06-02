@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "test:e2e": "vitest run -c vitest.e2e.config.ts",
     "db:seed": "tsx --env-file=.env prisma/seed.ts",
-    "db:fix-sequences": "tsx --env-file=.env prisma/fix-sequences.ts"
+    "db:fix-sequences": "tsx --env-file=.env prisma/fix-sequences.ts",
+    "deploy": "bash deploy.sh"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
