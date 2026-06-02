@@ -20,7 +20,7 @@ const EMPTY_FORM: any = {
 export default function TalentPoolPage() {
   const toast = useToast()
   const { can, isOwner } = useMyPermissions()
-  const { items: positionTypeOptions } = useDict('position_type')
+  const { items: industryOptions } = useDict('industry')
   const { items: positionLevelOptions } = useDict('position_level')
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -117,7 +117,7 @@ export default function TalentPoolPage() {
     { key: 'gender', title: '性别', accessor: (r) => GENDER_LABELS[r.gender] ?? '' },
     { key: 'currentPosition', title: '当前职位' },
     { key: 'targetPosition', title: '意向职位' },
-    { key: 'positionType', title: '职位类型' },
+    { key: 'positionType', title: '所属行业' },
     { key: 'positionLevel', title: '职位级别' },
     { key: 'education', title: '学历' },
     { key: 'phone', title: '电话' },
@@ -221,10 +221,10 @@ export default function TalentPoolPage() {
           <Field label="意向职位">
             <input className="input input-bordered w-full" value={form.targetPosition} onChange={(e) => setField('targetPosition', e.target.value)} placeholder="请输入" />
           </Field>
-          <Field label="职位类型">
+          <Field label="所属行业">
             <select className="select select-bordered w-full" value={form.positionType} onChange={(e) => setField('positionType', e.target.value)}>
-              <option value="">请选择</option>
-              {positionTypeOptions.map((o) => (
+              <option value="" disabled hidden>请选择</option>
+              {industryOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>

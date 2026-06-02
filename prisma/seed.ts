@@ -27,21 +27,20 @@ const DEFAULT_ROLE_NAME = '超级管理员'
  *（label = value，按下标顺序作为 sort）。industry 的项由 INDUSTRIES 提供。
  */
 const DICT_SEEDS: { code: string; name: string; remark?: string; labels: string[] }[] = [
-  { code: 'industry', name: '行业', labels: INDUSTRIES },
+  { code: 'industry', name: '所属行业', labels: INDUSTRIES },
   {
     code: 'recruitment_channel',
     name: '招聘渠道',
     labels: ['BOSS直聘', '猎聘', '脉脉', '内推', '智联招聘', '前程无忧', '其他'],
   },
-  { code: 'service_type', name: '服务类型', labels: ['RPO', '猎头', '灵活用工', '其他'] },
-  {
-    code: 'position_type',
-    name: '职位类型',
-    labels: ['技术', '产品', '设计', '运营', '市场', '销售', '职能', '其他'],
-  },
+  { code: 'requirement_status', name: '岗位状态', labels: ['新增', '正常', '重启', '暂停', '加急', '关闭', '售前岗位'] },
+  { code: 'opportunity_status', name: '商机状态', labels: ['线索阶段', '商机阶段', '提案阶段', '谈判阶段', '成交', '关闭'] },
+  { code: 'service_type', name: '服务类型', labels: ['猎头', 'RPO', '其他'] },
   { code: 'position_level', name: '职位级别', labels: ['初级', '中级', '高级', '专家', '管理'] },
   { code: 'invoice_type', name: '发票类型', labels: ['增值税专用发票', '增值税普通发票'] },
   { code: 'verification_result', name: '核销结果', labels: ['已核销', '未核销', '部分核销'] },
+  { code: 'knowledge_category', name: '知识分类', labels: ['案例分享', '行业资料', '培训资料', '知识便条', '制度流程模板'] },
+  { code: 'knowledge_tag', name: '知识标签', labels: ['技术知识', '市场知识', '交付知识', '管理知识', '产品与服务知识'] },
 ]
 
 /**

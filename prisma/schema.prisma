@@ -55,17 +55,6 @@ enum RecommendationStatus {
   @@map("recommendation_status")
 }
 
-enum OpportunityStatus {
-  LEAD       @map("线索阶段")
-  PROSPECT   @map("商机阶段")
-  PROPOSAL   @map("提案阶段")
-  NEGOTIATE  @map("谈判阶段")
-  CLOSED_WON @map("成交")
-  CLOSED     @map("关闭")
-
-  @@map("opportunity_status")
-}
-
 enum OpportunityNature {
   DIRECT   @map("直接客户")
   INDIRECT @map("间接客户")
@@ -377,7 +366,7 @@ model Opportunity {
   name                     String                @db.VarChar(200)
   description              String                @db.Text
   region                   String                @db.VarChar(100)
-  status                   OpportunityStatus     @default(LEAD)
+  status                   String                @default("线索阶段") @db.VarChar(50)
   nature                   OpportunityNature     @default(DIRECT)
   contactName              String?               @map("contact_name") @db.VarChar(100)
   contactTitle             String?               @map("contact_title") @db.VarChar(100)

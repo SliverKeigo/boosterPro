@@ -86,7 +86,6 @@ export type {
   SchoolTier,
   GenderType,
   RecommendationStatus,
-  OpportunityStatus,
   OpportunityNature,
 } from '@prisma/client'
 

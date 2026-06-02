@@ -14,18 +14,21 @@ import {
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
+import { useDict } from '@/lib/useDict'
 
 const RES = 'REQUIREMENT'
 
 // ─── 枚举 / 选项映射 ────────────────────────────────────────────────────────────
 const GENDER_LABELS: Record<string, string> = { MALE: '男', FEMALE: '女', ANY: '不限' }
 
-const STATUS_OPTIONS = ['开放中', '暂停', '关闭', '紧急']
 const STATUS_BADGE: Record<string, string> = {
-  开放中: 'badge-success',
-  暂停: 'badge-warning',
-  关闭: 'badge-ghost',
-  紧急: 'badge-error',
+  新增: 'badge-info',
+  正常: 'badge-success',
+  重启: 'badge-warning',
+  暂停: 'badge-ghost',
+  加急: 'badge-error',
+  关闭: 'badge-neutral',
+  售前岗位: 'badge-accent',
 }
 
 const opts = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }))
@@ -37,7 +40,7 @@ const EMPTY_FORM: any = {
   customerId: '', recruiter: '', positionName: '', headcount: '',
   monthlySalaryMin: '', monthlySalaryMax: '', annualSalaryMin: '', annualSalaryMax: '',
   ageMin: '', ageMax: '', genderRequirement: '', educationRequirement: '',
-  languageRequirement: '', status: '开放中', deadline: '', baseCity: '',
+  languageRequirement: '', status: '', deadline: '', baseCity: '',
   jobDescription: '', talentProfile: '', projectExperience: '',
   closeReason: '', notes: '', industry: '',
   followDate: '', latestUpdate: '', attachmentUrl: '',
@@ -47,6 +50,7 @@ const EMPTY_FORM: any = {
 export default function RequirementsPage() {
   const toast = useToast()
   const { can, isOwner } = useMyPermissions()
+  const { items: statusOptions } = useDict('requirement_status')
   const [data, setData] = useState<any[]>([])
   const [customers, setCustomers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -324,7 +328,8 @@ export default function RequirementsPage() {
           {/* 岗位状态 / 招聘重启日期 */}
           <Field label="岗位状态" required>
             <select className="select select-bordered w-full" value={form.status} onChange={(e) => setField('status', e.target.value)}>
-              {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+              <option value="" disabled hidden>请选择状态</option>
+              {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Field>
           <Field label="招聘重启日期" required>

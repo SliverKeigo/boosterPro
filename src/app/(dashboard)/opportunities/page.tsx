@@ -11,29 +11,15 @@ import {
   Popconfirm,
   Field,
   FileUpload,
+  RegionCascade,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
+import { useDict } from '@/lib/useDict'
 
 const RES = 'OPPORTUNITY'
 
 // ─── 枚举映射 ──────────────────────────────────────────────────────────────────
-const STATUS_LABELS: Record<string, string> = {
-  LEAD: '线索阶段',
-  PROSPECT: '商机阶段',
-  PROPOSAL: '提案阶段',
-  NEGOTIATE: '谈判阶段',
-  CLOSED_WON: '成交',
-  CLOSED: '关闭',
-}
-const STATUS_BADGE: Record<string, string> = {
-  LEAD: 'badge-ghost',
-  PROSPECT: 'badge-info',
-  PROPOSAL: 'badge-primary',
-  NEGOTIATE: 'badge-warning',
-  CLOSED_WON: 'badge-success',
-  CLOSED: 'badge-error',
-}
 const NATURE_LABELS: Record<string, string> = {
   DIRECT: '直接客户',
   INDIRECT: '间接客户',
@@ -51,7 +37,7 @@ const EMPTY_FORM: any = {
   name: '',
   description: '',
   region: '',
-  status: 'LEAD',
+  status: '线索阶段',
   nature: 'DIRECT',
   contactName: '',
   contactTitle: '',
@@ -67,6 +53,7 @@ const EMPTY_FORM: any = {
 export default function OpportunitiesPage() {
   const toast = useToast()
   const { can, isOwner } = useMyPermissions()
+  const { items: statusOptions } = useDict('opportunity_status')
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -113,6 +100,7 @@ export default function OpportunitiesPage() {
     setForm({
       ...EMPTY_FORM,
       ...r,
+      status: r.status ?? '',
       contactName: r.contactName ?? '',
       contactTitle: r.contactTitle ?? '',
       contactInfo: r.contactInfo ?? '',
@@ -166,7 +154,7 @@ export default function OpportunitiesPage() {
     { key: 'name', title: '商机名称', render: (v) => <span className="font-medium text-primary">{v}</span> },
     { key: 'region', title: '所属区域' },
     { key: 'status', title: '状态',
-      render: (v) => <span className={`badge ${STATUS_BADGE[v] ?? 'badge-ghost'} badge-sm`}>{STATUS_LABELS[v] ?? v}</span> },
+      render: (v) => v ? <span className="badge badge-ghost badge-sm">{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'nature', title: '商机性质',
       render: (v) => <span className={`badge ${NATURE_BADGE[v] ?? 'badge-ghost'} badge-sm`}>{NATURE_LABELS[v] ?? v}</span> },
     { key: 'contactName', title: '联系人', render: (v) => v || <span className="text-base-content/30">—</span> },
@@ -245,11 +233,12 @@ export default function OpportunitiesPage() {
           </Field>
           {/* 所属区域 / 商机状态 */}
           <Field label="所属区域" required>
-            <input className="input input-bordered w-full" value={form.region} onChange={(e) => setField('region', e.target.value)} placeholder="请选择" />
+            <RegionCascade value={form.region} onChange={(v) => setField('region', v)} />
           </Field>
           <Field label="商机状态" required>
             <select className="select select-bordered w-full" value={form.status} onChange={(e) => setField('status', e.target.value)}>
-              {opts(STATUS_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              <option value="" disabled hidden>请选择状态</option>
+              {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Field>
           {/* 商机性质 / 商机联系人 */}

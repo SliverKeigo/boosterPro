@@ -15,6 +15,7 @@ import {
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
+import { useDict } from '@/lib/useDict'
 
 const RES = 'KNOWLEDGE'
 
@@ -42,6 +43,9 @@ export default function KnowledgePage() {
   const [form, setForm] = useState<any>(EMPTY_FORM)
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
+
+  const { items: categoryOptions } = useDict('knowledge_category')
+  const { items: tagOptions } = useDict('knowledge_tag')
 
   const fetchData = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true)
@@ -216,10 +220,48 @@ export default function KnowledgePage() {
       >
         <div className="grid grid-cols-2 gap-4">
           <Field label="知识分类" required>
-            <input className="input input-bordered w-full" value={form.category} onChange={(e) => setField('category', e.target.value)} placeholder="请输入" />
+            <select className="select select-bordered w-full" value={form.category} onChange={(e) => setField('category', e.target.value)}>
+              <option value="" disabled hidden>请选择分类</option>
+              {categoryOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
           </Field>
-          <Field label="知识标签（逗号分隔）" required>
-            <input className="input input-bordered w-full" value={form.tags} onChange={(e) => setField('tags', e.target.value)} placeholder="如：制度, 流程, 模板" />
+          <Field label="知识标签" required>
+            {(() => {
+              const selected = new Set(
+                String(form.tags || '')
+                  .split(/[,、]/)
+                  .map((s: string) => s.trim())
+                  .filter(Boolean),
+              )
+              const toggle = (val: string, checked: boolean) => {
+                if (checked) selected.add(val)
+                else selected.delete(val)
+                setField(
+                  'tags',
+                  tagOptions
+                    .map((o) => o.value)
+                    .filter((v) => selected.has(v))
+                    .join(', '),
+                )
+              }
+              return (
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                  {tagOptions.map((o) => (
+                    <label key={o.value} className="label cursor-pointer gap-2 py-0">
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-sm"
+                        checked={selected.has(o.value)}
+                        onChange={(e) => toggle(o.value, e.target.checked)}
+                      />
+                      <span className="label-text">{o.label}</span>
+                    </label>
+                  ))}
+                </div>
+              )
+            })()}
           </Field>
           <Field label="关键词" required>
             <input className="input input-bordered w-full" value={form.keywords} onChange={(e) => setField('keywords', e.target.value)} placeholder="请输入" />
