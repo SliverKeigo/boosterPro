@@ -2,152 +2,191 @@
 
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { Zap, User, Lock, Users, Target, ShieldCheck } from 'lucide-react'
-import { useToast } from '@/components/ui'
+import { User, Lock, Eye, EyeOff, AlertCircle, Check } from 'lucide-react'
+import './login.css'
 
-const FEATURES = [
-  { icon: Users, title: '全流程候选人管理', desc: '挖猎进度、推荐状态一目了然' },
-  { icon: Target, title: '商机与客户洞察', desc: 'AI 辅助分析岗位画像与对标企业' },
-  { icon: ShieldCheck, title: '精细化权限控制', desc: '按部门、人员、数据多维授权' },
-]
+// 品牌标识：圆角方块 + 向上箭头(boost)，浅色(玻璃背景)版
+function BrandMark({ size = 32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <rect x="2" y="2" width="32" height="32" rx="9" fill="rgba(255,255,255,0.14)" />
+      <path
+        d="M18 25.5 V13 M12.5 18.5 L18 12.5 L23.5 18.5"
+        stroke="#ffffff"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
 
 export default function LoginPage() {
   const router = useRouter()
-  const toast = useToast()
-  const [username, setUsername] = useState('')
+  const [account, setAccount] = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [showPw, setShowPw] = useState(false)
+  const [remember, setRemember] = useState(true)
+  const [error, setError] = useState('')
+  const [errKey, setErrKey] = useState(0) // 每次报错 +1，强制重挂横幅以重放抖动动画
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle')
+  const [touched, setTouched] = useState(false)
+
+  const acctEmpty = touched && !account.trim()
+  const pwEmpty = touched && !password
+  const loading = status === 'loading'
+
+  const fail = (msg: string) => {
+    setStatus('idle')
+    setError(msg)
+    setErrKey((k) => k + 1)
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setTouched(true)
+    if (!account.trim() || !password) {
+      fail('请输入账号和密码')
+      return
+    }
+    setError('')
+    setStatus('loading')
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: account.trim(), password, remember }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        toast.error(data.error || '登录失败')
+        fail(data.error || '账号或密码错误，请重试')
         return
       }
-      toast.success('登录成功')
+      setStatus('success')
       router.push('/')
       router.refresh()
     } catch {
-      toast.error('网络错误，请重试')
-    } finally {
-      setLoading(false)
+      fail('网络错误，请重试')
     }
   }
 
   return (
-    <div className="flex min-h-screen">
-      {/* ── 左侧品牌区 ── */}
-      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden p-12 text-white lg:flex bg-[radial-gradient(125%_125%_at_0%_0%,#1E3A5F_0%,#0F172A_52%,#082F49_100%)]">
-        {/* 柔光球 */}
-        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-sky-400/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-28 -left-20 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl" />
-        {/* 点阵纹理 */}
-        <div className="pointer-events-none absolute inset-0 opacity-[0.06] [background-image:radial-gradient(circle,white_1px,transparent_1px)] [background-size:24px_24px]" />
+    <div className="vc-stage">
+      {/* 全屏背景：渐变 + 光晕球 + 网格 */}
+      <div className="vc-bg" aria-hidden="true">
+        <span className="vc-orb vc-orb-1" />
+        <span className="vc-orb vc-orb-2" />
+        <span className="vc-grid" />
+      </div>
 
-        <div className="relative flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20 backdrop-blur">
-            <Zap className="h-6 w-6" />
+      {/* 左上品牌 */}
+      <div className="vc-brandbar">
+        <BrandMark size={32} />
+        <span>BoosterPro</span>
+      </div>
+
+      {/* 玻璃浮层卡片 */}
+      <div className="vc-card">
+        {status === 'success' && (
+          <div className="bp-success">
+            <div className="bp-success-badge">
+              <Check size={28} strokeWidth={2.4} />
+            </div>
+            <h3>登录成功</h3>
+            <p>正在进入工作台…</p>
           </div>
-          <span className="text-2xl font-bold tracking-wide">BoosterPro</span>
-        </div>
+        )}
 
-        <div className="relative">
-          <span className="mb-5 inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/70 backdrop-blur">
-            一站式猎头招聘交付平台
-          </span>
-          <h1 className="mb-4 text-[2.1rem] font-bold leading-[1.2]">
-            专业的猎头 CRM
-            <br />
-            <span className="bg-gradient-to-r from-sky-300 to-indigo-300 bg-clip-text text-transparent">
-              管理平台
-            </span>
-          </h1>
-          <p className="mb-9 max-w-sm leading-relaxed text-white/60">
-            从候选人挖猎到商机成交，一站式管理招聘交付全流程。
-          </p>
-          <div className="space-y-3.5">
-            {FEATURES.map((f) => (
-              <div
-                key={f.title}
-                className="flex items-start gap-3.5 rounded-xl border border-white/10 bg-white/5 p-3.5 backdrop-blur-sm transition-colors hover:bg-white/10"
+        <h1 className="vc-title">登录</h1>
+        <p className="vc-sub">猎头 · 招聘交付 CRM 管理系统</p>
+
+        <form className="bp-form bp-form--glass" onSubmit={handleSubmit} noValidate>
+          {error && (
+            <div className="bp-error" role="alert" key={errKey}>
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* 账号 */}
+          <div className="bp-field">
+            <label className="bp-label" htmlFor="login-account">账号</label>
+            <div className={'bp-input-wrap' + (acctEmpty ? ' is-invalid' : '')}>
+              <span className="bp-input-icon"><User size={18} /></span>
+              <input
+                id="login-account"
+                className="bp-input"
+                type="text"
+                autoComplete="username"
+                placeholder="请输入账号"
+                value={account}
+                onChange={(e) => {
+                  setAccount(e.target.value)
+                  if (error) setError('')
+                }}
+              />
+            </div>
+            {acctEmpty && <span className="bp-field-msg">请输入账号</span>}
+          </div>
+
+          {/* 密码 */}
+          <div className="bp-field">
+            <label className="bp-label" htmlFor="login-password">密码</label>
+            <div className={'bp-input-wrap' + (pwEmpty ? ' is-invalid' : '')}>
+              <span className="bp-input-icon"><Lock size={18} /></span>
+              <input
+                id="login-password"
+                className="bp-input"
+                type={showPw ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="请输入密码"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  if (error) setError('')
+                }}
+              />
+              <button
+                type="button"
+                className="bp-eye"
+                tabIndex={-1}
+                aria-label={showPw ? '隐藏密码' : '显示密码'}
+                onClick={() => setShowPw((v) => !v)}
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-400/30 to-indigo-500/30 ring-1 ring-white/15">
-                  <f.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="font-semibold">{f.title}</div>
-                  <div className="mt-0.5 text-sm text-white/55">{f.desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="relative text-xs text-white/40">© 2026 BoosterPro · 猎头招聘管理系统</div>
-      </div>
-
-      {/* ── 右侧表单区 ── */}
-      <div className="flex w-full items-center justify-center bg-base-200 p-6 lg:w-1/2">
-        <div className="w-full max-w-sm rounded-2xl bg-base-100 p-8 shadow-xl ring-1 ring-base-300/60">
-          {/* 移动端 Logo */}
-          <div className="mb-6 flex items-center gap-2.5 lg:hidden">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
-              <Zap className="h-5 w-5 text-white" />
+                {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
-            <span className="text-xl font-bold text-primary">BoosterPro</span>
+            {pwEmpty && <span className="bp-field-msg">请输入密码</span>}
           </div>
 
-          <h2 className="text-2xl font-bold text-base-content">欢迎回来 👋</h2>
-          <p className="mb-7 mt-1.5 text-sm text-base-content/50">请登录您的账号以继续</p>
+          {/* 记住我 */}
+          <div className="bp-remember">
+            <label className="bp-check">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+              />
+              <span className="bp-check-box">
+                <Check className="bp-check-tick" strokeWidth={3} />
+              </span>
+              <span>记住我</span>
+            </label>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-base-content/70">账号</label>
-              <label className="input input-bordered flex w-full items-center gap-2">
-                <User className="h-4 w-4 shrink-0 text-base-content/40" />
-                <input
-                  type="text"
-                  required
-                  className="grow"
-                  placeholder="请输入账号"
-                  autoComplete="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                />
-              </label>
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-base-content/70">密码</label>
-              <label className="input input-bordered flex w-full items-center gap-2">
-                <Lock className="h-4 w-4 shrink-0 text-base-content/40" />
-                <input
-                  type="password"
-                  required
-                  className="grow"
-                  placeholder="请输入密码"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </label>
-            </div>
-
-            <button type="submit" className="btn btn-primary mt-2 w-full" disabled={loading}>
-              {loading && <span className="loading loading-spinner loading-sm" />}
-              登 录
-            </button>
-          </form>
-        </div>
+          {/* 登录按钮 */}
+          <button
+            type="submit"
+            className={'bp-btn' + (loading ? ' is-loading' : '')}
+            disabled={loading}
+          >
+            {loading && <span className="bp-spinner" />}
+            <span>{loading ? '登录中…' : '登 录'}</span>
+          </button>
+        </form>
       </div>
+
+      <footer className="vc-foot">© 2026 BoosterPro · 企业内部系统</footer>
     </div>
   )
 }

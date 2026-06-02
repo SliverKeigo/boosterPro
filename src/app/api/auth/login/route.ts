@@ -4,7 +4,7 @@ import { signToken, AUTH_COOKIE } from '@/lib/auth'
 
 export async function POST(req: Request) {
   try {
-    const { username, password } = await req.json()
+    const { username, password, remember = true } = await req.json()
 
     if (!username || !password) {
       return NextResponse.json({ error: '请输入账号和密码' }, { status: 400 })
@@ -52,8 +52,9 @@ export async function POST(req: Request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
       path: '/',
+      // 记住我：7 天持久 cookie；不勾选则为会话 cookie（关闭浏览器即登出）
+      ...(remember ? { maxAge: 7 * 24 * 60 * 60 } : {}),
     })
     return response
   } catch (e) {
