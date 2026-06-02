@@ -132,11 +132,14 @@ export default function KnowledgePage() {
   }
 
   const columns: BoostColumn<any>[] = [
-    { key: 'category', title: '知识分类', render: (v) => <span className="font-medium">{v}</span> },
+    // 知识分类：表单用 useDict('knowledge_category') 下拉，列无 accessor 比较原始值（字典 value）→ 用同一份字典项
+    { key: 'category', title: '知识分类', filterType: 'select', filterOptions: categoryOptions, render: (v) => <span className="font-medium">{v}</span> },
     {
       key: 'tags',
       title: '标签',
       sortable: false,
+      // 标签为多值数组，accessor 拼接成字符串；按自由文本筛选（包含匹配单个标签）
+      filterType: 'text',
       accessor: (r) => (Array.isArray(r.tags) ? r.tags.join(' ') : ''),
       render: (_v, r) => (
         <div className="flex flex-wrap gap-1">
@@ -176,12 +179,13 @@ export default function KnowledgePage() {
       key: 'createdAt',
       title: '创建时间',
       defaultVisible: false,
+      filterType: 'date',
       render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span>,
     },
     // 以下默认隐藏，可在“显示列”开启
     { key: 'fileUrl', title: '知识文件 URL', defaultVisible: false },
     { key: 'notes', title: '知识便条', defaultVisible: false, render: (v) => stripHtml(v) },
-    { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span> },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span> },
   ]
 
   return (

@@ -134,12 +134,12 @@ export default function SupplementsPage() {
     { key: 'demandCustomer', title: '需求客户', render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'openingSpeech', title: '开聊话术', sortable: false, render: (v) => clip(v) },
     { key: 'companyCultureWelfare', title: '企业文化福利等说明', sortable: false, render: (v) => stripHtml(v) },
-    { key: 'createdAt', title: '创建时间', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
+    { key: 'createdAt', title: '创建时间', filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
     // 以下默认隐藏，可在“显示列”开启
-    { key: 'customerId', title: '客户 ID', defaultVisible: false },
+    { key: 'customerId', title: '客户 ID', defaultVisible: false, filterType: 'number' },
     { key: 'notes', title: '备注', defaultVisible: false },
     { key: 'attachmentUrl', title: '附件', defaultVisible: false, sortable: false, render: (v) => v ? '已上传' : '—' },
-    { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => fmtDateTime(v) },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => fmtDateTime(v) },
     { key: 'demandUpdates', title: '需求更新', defaultVisible: false, sortable: false,
       accessor: (r) => (r.demandUpdates ?? []).map((x: any) => x.content).filter(Boolean).join(' '),
       render: (_v, r) => (

@@ -155,19 +155,25 @@ export default function UsersPage() {
   }
 
   const columns: BoostColumn<any>[] = [
-    { key: 'id', title: 'ID', width: 70 },
+    { key: 'id', title: 'ID', width: 70, filterType: 'number' },
     { key: 'name', title: '用户名', render: (v) => <span className="font-medium">{v}</span> },
     { key: 'username', title: '账号' },
     { key: 'email', title: '邮箱' },
-    { key: 'departmentName', title: '部门', accessor: (r) => r.department?.name },
+    // 部门 / 角色：列 accessor 输出名称，filterOptions 的 value 必须等于该名称（取自下拉数据源 departments / roles）
+    { key: 'departmentName', title: '部门', accessor: (r) => r.department?.name,
+      filterType: 'select', filterOptions: departments.map((d) => ({ label: d.name, value: d.name })) },
     { key: 'roleName', title: '角色', accessor: (r) => r.role?.name,
+      filterType: 'select', filterOptions: roles.map((r) => ({ label: r.name, value: r.name })),
       render: (v) => v ? <span className="badge badge-info badge-sm">{v}</span> : <span className="text-base-content/30">—</span> },
+    // 是否管理员：补 accessor 输出 是/否，使 filterOptions 的 value 与该列取值一致
     { key: 'isAdmin', title: '管理员', defaultVisible: false,
-      render: (v) => v ? <span className="badge badge-warning badge-sm">是</span> : <span className="text-base-content/50">否</span> },
-    { key: 'departmentId', title: '部门 ID', defaultVisible: false },
-    { key: 'roleId', title: '角色 ID', defaultVisible: false },
-    { key: 'createdAt', title: '创建时间', defaultVisible: false, render: (v) => v?.slice(0, 10) },
-    { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => v?.slice(0, 10) },
+      accessor: (r) => (r.isAdmin ? '是' : '否'),
+      filterType: 'select', filterOptions: [{ label: '是', value: '是' }, { label: '否', value: '否' }],
+      render: (v) => v === '是' ? <span className="badge badge-warning badge-sm">是</span> : <span className="text-base-content/50">否</span> },
+    { key: 'departmentId', title: '部门 ID', defaultVisible: false, filterType: 'number' },
+    { key: 'roleId', title: '角色 ID', defaultVisible: false, filterType: 'number' },
+    { key: 'createdAt', title: '创建时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
   ]
 
   return (

@@ -164,7 +164,7 @@ export default function ClientsPage() {
   const columns: BoostColumn<any>[] = [
     { key: 'fullName', title: '客户名称', render: (v) => v ? <span className="font-medium">{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'shortName', title: '客户简称', render: (v) => <span className="font-medium text-primary">{v}</span> },
-    { key: 'industry', title: '所属行业', render: (v) => v || <span className="text-base-content/30">—</span> },
+    { key: 'industry', title: '所属行业', filterType: 'select', filterOptions: industryOptions, render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'region', title: '所属区域' },
     { key: 'address', title: '公司地址', render: (v) => v ? <span className="line-clamp-1 max-w-[200px]">{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'officeAddresses', title: '办公地址', sortable: false,
@@ -173,15 +173,15 @@ export default function ClientsPage() {
         <SubTableCell rows={r.officeAddresses} title="办公地址"
           columns={[{ key: 'address', title: '办公地址' }]} />
       ) },
-    { key: 'createdAt', title: '创建时间', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
+    { key: 'createdAt', title: '创建时间', filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
     // 以下默认隐藏，可在"显示列"开启
     { key: 'formerName', title: '客户曾用名', defaultVisible: false },
     { key: 'detailedAddress', title: '详细地址', defaultVisible: false },
     { key: 'companyCulture', title: '企业文化与福利', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{stripHtml(v)}</span> : '—' },
     { key: 'openingSpeech', title: '开聊话术', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{v}</span> : '—' },
     { key: 'benchmarkCompanies', title: '对标企业', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{v}</span> : '—' },
-    { key: 'locationLat', title: '纬度', defaultVisible: false, render: (v) => (v ?? '') === '' ? '—' : String(v) },
-    { key: 'locationLng', title: '经度', defaultVisible: false, render: (v) => (v ?? '') === '' ? '—' : String(v) },
+    { key: 'locationLat', title: '纬度', defaultVisible: false, filterType: 'number', render: (v) => (v ?? '') === '' ? '—' : String(v) },
+    { key: 'locationLng', title: '经度', defaultVisible: false, filterType: 'number', render: (v) => (v ?? '') === '' ? '—' : String(v) },
     { key: 'attachmentUrl', title: '客户附件资料', defaultVisible: false, sortable: false, render: (v) => v ? '已上传' : '—' },
   ]
 

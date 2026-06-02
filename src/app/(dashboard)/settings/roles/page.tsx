@@ -120,14 +120,14 @@ export default function RolesPage() {
   }
 
   const columns: BoostColumn<any>[] = [
-    { key: 'id', title: 'ID', width: 70 },
+    { key: 'id', title: 'ID', width: 70, filterType: 'number' },
     { key: 'name', title: '角色名称', render: (v) => <span className="font-medium">{v}</span> },
     { key: 'description', title: '描述',
       render: (v) => v ? <span className="line-clamp-1 max-w-[280px]">{v}</span> : <span className="text-base-content/30">—</span> },
-    { key: 'userCount', title: '用户数', accessor: (r) => r._count?.users ?? 0,
+    { key: 'userCount', title: '用户数', accessor: (r) => r._count?.users ?? 0, filterType: 'number',
       render: (v) => <span className="badge badge-ghost badge-sm">{v}</span> },
-    { key: 'createdAt', title: '创建时间', defaultVisible: false, render: (v) => v?.slice(0, 10) },
-    { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => v?.slice(0, 10) },
+    { key: 'createdAt', title: '创建时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
   ]
 
   return (

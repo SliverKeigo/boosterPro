@@ -157,15 +157,18 @@ export default function OpportunitiesPage() {
 
   const columns: BoostColumn<any>[] = [
     { key: 'name', title: '商机名称', render: (v) => <span className="font-medium text-primary">{v}</span> },
-    { key: 'region', title: '所属区域' },
-    { key: 'status', title: '状态',
+    // 所属区域：表单用 RegionCascade 自由拼接的省市区字符串，非字典/枚举 → 文本筛选
+    { key: 'region', title: '所属区域', filterType: 'text' },
+    // 商机状态：表单用 useDict('opportunity_status') 下拉，列无 accessor 比较原始值（即字典 value）→ 用同一份字典项
+    { key: 'status', title: '状态', filterType: 'select', filterOptions: statusOptions,
       render: (v) => v ? <span className="badge badge-ghost badge-sm">{v}</span> : <span className="text-base-content/30">—</span> },
-    { key: 'nature', title: '商机性质',
+    // 商机性质：列无 accessor 比较原始标识（DIRECT/INDIRECT），与表单 opts(NATURE_LABELS) 的 value 一致
+    { key: 'nature', title: '商机性质', filterType: 'select', filterOptions: opts(NATURE_LABELS),
       render: (v) => <span className={`badge ${NATURE_BADGE[v] ?? 'badge-ghost'} badge-sm`}>{NATURE_LABELS[v] ?? v}</span> },
     { key: 'contactName', title: '联系人', render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'salesOwnerName', title: '销售负责人', accessor: (r) => r.salesOwner?.name,
       render: (v) => v || <span className="text-base-content/30">—</span> },
-    { key: 'createdAt', title: '创建时间', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
+    { key: 'createdAt', title: '创建时间', filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
     // 以下默认隐藏，可在"显示列"开启
     { key: 'description', title: '商机描述', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{v}</span> : '—' },
     { key: 'contactTitle', title: '联系人职务', defaultVisible: false },
@@ -184,7 +187,7 @@ export default function OpportunitiesPage() {
           ]} />
       ) },
     { key: 'attachmentUrl', title: '附件', defaultVisible: false, render: (v) => (v ? '有' : '—') },
-    { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
   ]
 
   return (

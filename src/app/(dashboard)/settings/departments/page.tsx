@@ -120,12 +120,12 @@ export default function DepartmentsPage() {
   }
 
   const columns: BoostColumn<any>[] = [
-    { key: 'id', title: 'ID', width: 70 },
+    { key: 'id', title: 'ID', width: 70, filterType: 'number' },
     { key: 'name', title: '部门名称', render: (v) => <span className="font-medium">{v}</span> },
-    { key: 'userCount', title: '用户数', accessor: (r) => r._count?.users ?? 0,
+    { key: 'userCount', title: '用户数', accessor: (r) => r._count?.users ?? 0, filterType: 'number',
       render: (v) => <span className="badge badge-ghost badge-sm">{v}</span> },
-    { key: 'createdAt', title: '创建时间', defaultVisible: false, render: (v) => v?.slice(0, 10) },
-    { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => v?.slice(0, 10) },
+    { key: 'createdAt', title: '创建时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
   ]
 
   return (

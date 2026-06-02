@@ -114,15 +114,17 @@ export default function TalentPoolPage() {
 
   const columns: BoostColumn<any>[] = [
     { key: 'name', title: '姓名', render: (v) => <span className="font-medium">{v}</span> },
-    { key: 'gender', title: '性别', accessor: (r) => GENDER_LABELS[r.gender] ?? '' },
+    { key: 'gender', title: '性别', accessor: (r) => GENDER_LABELS[r.gender] ?? '',
+      filterType: 'select', filterOptions: Object.values(GENDER_LABELS).map((l) => ({ label: l, value: l })) },
     { key: 'currentPosition', title: '当前职位' },
     { key: 'targetPosition', title: '意向职位' },
-    { key: 'positionType', title: '所属行业' },
-    { key: 'positionLevel', title: '职位级别' },
-    { key: 'education', title: '学历' },
+    { key: 'positionType', title: '所属行业', filterType: 'select', filterOptions: industryOptions },
+    { key: 'positionLevel', title: '职位级别', filterType: 'select', filterOptions: positionLevelOptions },
+    { key: 'education', title: '学历', filterType: 'select',
+      filterOptions: ['大专', '本科', '硕士', '博士'].map((l) => ({ label: l, value: l })) },
     { key: 'phone', title: '电话' },
-    { key: 'birthYear', title: '出生年份', defaultVisible: false },
-    { key: 'age', title: '年龄', defaultVisible: false },
+    { key: 'birthYear', title: '出生年份', defaultVisible: false, filterType: 'number' },
+    { key: 'age', title: '年龄', defaultVisible: false, filterType: 'number' },
     { key: 'resumeUrl', title: '简历URL', defaultVisible: false,
       render: (v) => v ? <a href={v} target="_blank" rel="noreferrer" className="link link-primary line-clamp-1 max-w-[200px]">{v}</a> : <span className="text-base-content/30">—</span> },
     { key: 'tags', title: '人才标签', sortable: false,
@@ -134,8 +136,8 @@ export default function TalentPoolPage() {
           ))}
         </div>
       ) },
-    { key: 'createdAt', title: '创建时间', defaultVisible: false, render: (v) => v?.slice(0, 10) },
-    { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => v?.slice(0, 10) },
+    { key: 'createdAt', title: '创建时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
   ]
 
   return (

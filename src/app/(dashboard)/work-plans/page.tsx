@@ -123,6 +123,9 @@ export default function WorkPlansPage() {
     {
       key: 'status',
       title: '状态',
+      // 表单用 STATUS_OPTIONS 下拉，列无 accessor 比较原始值（中文状态串），value 与之一致
+      filterType: 'select',
+      filterOptions: STATUS_OPTIONS.map((s) => ({ label: s, value: s })),
       render: (v) =>
         v ? (
           <span className={`badge ${STATUS_BADGE[v] ?? 'badge-ghost'} badge-sm`}>{v}</span>
@@ -131,18 +134,19 @@ export default function WorkPlansPage() {
         ),
     },
     { key: 'ownerName', title: '负责人', accessor: (r) => r.owner?.name },
-    { key: 'startDate', title: '开始日期', render: (v) => fmtDate(v) || '—' },
-    { key: 'endDate', title: '结束日期', render: (v) => fmtDate(v) || '—' },
+    { key: 'startDate', title: '开始日期', filterType: 'date', render: (v) => fmtDate(v) || '—' },
+    { key: 'endDate', title: '结束日期', filterType: 'date', render: (v) => fmtDate(v) || '—' },
     {
       key: 'createdAt',
       title: '创建时间',
       defaultVisible: false,
+      filterType: 'date',
       render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span>,
     },
     // 以下默认隐藏，可在“显示列”开启
-    { key: 'ownerId', title: '负责人 ID', defaultVisible: false },
+    { key: 'ownerId', title: '负责人 ID', defaultVisible: false, filterType: 'number' },
     { key: 'notes', title: '备注', defaultVisible: false },
-    { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span> },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span> },
   ]
 
   // 权限守卫：work-plans 接口要求管理员，非管理员直达页面只显示无权提示
