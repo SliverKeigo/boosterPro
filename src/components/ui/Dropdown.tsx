@@ -22,6 +22,7 @@ export function Dropdown({
   className = '',
 }: DropdownProps) {
   const [open, setOpen] = useState(false)
+  const [effAlign, setEffAlign] = useState<'left' | 'right'>(align)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -33,15 +34,32 @@ export function Dropdown({
     return () => document.removeEventListener('mousedown', onClick)
   }, [open])
 
+  // 开启时按可用空间选择展开方向，避免面板溢出视口（如靠右的列）
+  const toggle = () => {
+    if (!open) {
+      const rect = ref.current?.getBoundingClientRect()
+      if (rect) {
+        const m = 8
+        const fitsLeft = rect.left + width <= window.innerWidth - m // 左对齐(向右展开)放得下
+        const fitsRight = rect.right - width >= m // 右对齐(向左展开)放得下
+        let a: 'left' | 'right' = align
+        if (a === 'left' && !fitsLeft && fitsRight) a = 'right'
+        else if (a === 'right' && !fitsRight && fitsLeft) a = 'left'
+        setEffAlign(a)
+      }
+    }
+    setOpen((o) => !o)
+  }
+
   return (
     <div className={`relative ${className}`} ref={ref}>
-      <button type="button" onClick={() => setOpen((o) => !o)} className="contents">
+      <button type="button" onClick={toggle} className="contents">
         {trigger}
       </button>
       {open && (
         <div
           className={`absolute top-full z-[60] mt-1.5 rounded-xl border border-base-300 bg-base-100 p-1.5 shadow-xl animate-[fadeIn_.15s_ease] ${
-            align === 'right' ? 'right-0' : 'left-0'
+            effAlign === 'right' ? 'right-0' : 'left-0'
           }`}
           style={{ width }}
         >

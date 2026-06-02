@@ -208,41 +208,31 @@ export function BoostTable<T extends Record<string, any>>({
   const [page, setPage] = useState(1)
   const [size, setSize] = useState(pageSize)
   const [fullscreen, setFullscreen] = useState(false)
-  const [visible, setVisible] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(columns.map((c) => [c.key, c.defaultVisible !== false])),
-  )
-  // 列显示状态的持久化：初始化保持 SSR 安全（不读 localStorage，避免表头水合不一致），
-  // 挂载后异步载入；loadedRef 防止载入前的保存 effect 用默认值覆盖已存配置。
-  const loadedRef = useRef(false)
-
-  useEffect(() => {
+  const [visible, setVisible] = useState<Record<string, boolean>>(() => {
+    const defaults: Record<string, boolean> = Object.fromEntries(
+      columns.map((c) => [c.key, c.defaultVisible !== false]),
+    )
+    // 初始化即同步读入持久化的列显示配置：visible 一开始就是正确值，
+    // 避免「异步载入」与「保存 effect」竞争导致客户端路由切换时被默认值覆盖。
     const key = storageKey ?? title
-    if (!key || typeof window === 'undefined') {
-      loadedRef.current = true
-      return
-    }
-    void (async () => {
+    if (key && typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem('bp:cols:' + key)
         if (raw) {
           const saved = JSON.parse(raw) as Record<string, boolean>
-          setVisible((prev) => {
-            const next = { ...prev }
-            for (const c of columns) if (typeof saved[c.key] === 'boolean') next[c.key] = saved[c.key]
-            return next
-          })
+          for (const c of columns) if (typeof saved[c.key] === 'boolean') defaults[c.key] = saved[c.key]
         }
       } catch {
         /* ignore corrupt storage */
       }
-      loadedRef.current = true
-    })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    }
+    return defaults
+  })
 
+  // 列显示变更时写回（visible 初始化时已读入，故无需载入 effect 与 loadedRef 守卫）
   useEffect(() => {
     const key = storageKey ?? title
-    if (!key || !loadedRef.current || typeof window === 'undefined') return
+    if (!key || typeof window === 'undefined') return
     try {
       window.localStorage.setItem('bp:cols:' + key, JSON.stringify(visible))
     } catch {

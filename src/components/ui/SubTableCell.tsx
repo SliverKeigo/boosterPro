@@ -32,7 +32,7 @@ export function SubTableCell({
 
   return (
     <Dropdown
-      align="left"
+      align="right"
       width={440}
       trigger={
         <button type="button" className="btn btn-ghost btn-xs gap-1 font-normal text-primary">
