@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react'
 import { Dropdown } from './Dropdown'
+import { exportToExcel } from '@/lib/exportExcel'
 
 export interface BoostColumn<T> {
   key: string
@@ -42,6 +43,8 @@ export interface BoostColumn<T> {
   filterType?: 'text' | 'date' | 'select' | 'number'
   /** 当 filterType 为 select 时的候选项；不传则取该列在当前 data 中出现过的去重值 */
   filterOptions?: { label: string; value: string }[]
+  /** 导出 Excel 时的取值；不传则用 accessor（适合 render 与原始值不同的列，如状态码 → 中文） */
+  exportValue?: (record: T) => unknown
 }
 
 interface MoreAction {
@@ -60,7 +63,7 @@ interface BoostTableProps<T> {
   onCreate?: () => void
   createText?: string
   onImport?: () => void
-  /** 不传则使用内置 CSV 导出（按可见列 + 当前筛选结果） */
+  /** 不传则使用内置 Excel 导出（.xlsx，按可见列 + 当前筛选/排序结果） */
   onExport?: () => void
   /** 是否显示导出按钮（受导出权限控制），默认 true */
   showExport?: boolean
@@ -454,25 +457,14 @@ export function BoostTable<T extends Record<string, any>>({
   }
 
   const builtinExport = () => {
-    const cols = visibleColumns
-    const header = cols.map((c) => c.title).join(',')
-    const lines = sorted.map((r) =>
-      cols
-        .map((c) => {
-          const v = accessorOf(c)(r)
-          const s = v == null ? '' : String(v)
-          return `"${s.replace(/"/g, '""')}"`
-        })
-        .join(','),
-    )
-    const csv = '﻿' + [header, ...lines].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${title || 'export'}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    void exportToExcel({
+      title: title || '导出',
+      columns: visibleColumns.map((c) => ({
+        header: c.title,
+        getValue: c.exportValue ?? accessorOf(c),
+      })),
+      rows: sorted,
+    })
   }
 
   const sortableColumns = columns.filter((c) => c.sortable !== false)
