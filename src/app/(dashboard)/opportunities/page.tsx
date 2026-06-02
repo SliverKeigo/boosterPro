@@ -73,6 +73,11 @@ export default function OpportunitiesPage() {
   const [editing, setEditing] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState<any>(EMPTY_FORM)
+  const [users, setUsers] = useState<any[]>([])
+
+  useEffect(() => {
+    fetch('/api/users').then((r) => r.json()).then((j) => setUsers(j.data || [])).catch(() => {})
+  }, [])
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
@@ -274,8 +279,11 @@ export default function OpportunitiesPage() {
           <Field label="决策人相关信息描述" required>
             <textarea className="textarea textarea-bordered w-full" rows={3} value={form.decisionMakerDescription} onChange={(e) => setField('decisionMakerDescription', e.target.value)} placeholder="请输入" />
           </Field>
-          <Field label="销售负责人 ID" required>
-            <input type="number" className="input input-bordered w-full" value={form.salesOwnerId} onChange={(e) => setField('salesOwnerId', e.target.value)} placeholder="请选择（用户 ID）" />
+          <Field label="销售负责人" required>
+            <select className="select select-bordered w-full" value={form.salesOwnerId} onChange={(e) => setField('salesOwnerId', e.target.value)}>
+              <option value="">请选择</option>
+              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
           </Field>
         </div>
 

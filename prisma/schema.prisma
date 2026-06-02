@@ -292,7 +292,7 @@ model Candidate {
   requirementId            Int?                              @map("requirement_id")
   recruitmentParty         String?                           @map("recruitment_party") @db.VarChar(200)
   recruitmentChannel       String                            @map("recruitment_channel") @db.VarChar(200)
-  recommendationTime       DateTime?                         @map("recommendation_time") @db.Date
+  recommendationTime       DateTime?                         @map("recommendation_time")
   recommendationStatus     RecommendationStatus              @default(PENDING) @map("recommendation_status")
   recommendationReportUrl  String?                           @map("recommendation_report_url") @db.Text
   recommendationReason     String?                           @map("recommendation_reason") @db.Text

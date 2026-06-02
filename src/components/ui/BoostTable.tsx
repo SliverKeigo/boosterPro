@@ -1,13 +1,14 @@
 'use client'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   Plus,
   Upload,
   Download,
   MoreHorizontal,
   Search,
+  Filter,
   Columns3,
   ArrowUpDown,
   ArrowUp,
@@ -18,6 +19,7 @@ import {
   Inbox,
   ChevronLeft,
   ChevronRight,
+  X,
 } from 'lucide-react'
 import { Dropdown } from './Dropdown'
 
@@ -34,6 +36,12 @@ export interface BoostColumn<T> {
   defaultVisible?: boolean
   width?: number
   align?: 'left' | 'center' | 'right'
+  /** 是否可作为筛选字段，默认 true */
+  filterable?: boolean
+  /** 筛选控件类型；不传则按 key 名 / 取值自动推断 */
+  filterType?: 'text' | 'date' | 'select' | 'number'
+  /** 当 filterType 为 select 时的候选项；不传则取该列在当前 data 中出现过的去重值 */
+  filterOptions?: { label: string; value: string }[]
 }
 
 interface MoreAction {
@@ -80,6 +88,64 @@ function flatten(value: unknown, out: string[]) {
 const ICON_BTN =
   'btn btn-ghost btn-sm gap-1.5 font-medium text-base-content/70 hover:text-base-content'
 
+// ── 筛选相关类型与工具 ──
+type FilterKind = 'text' | 'date' | 'number'
+type LogicOp = 'and' | 'or'
+type FilterOp =
+  | 'contains' // 文本：包含
+  | 'eq' // 等于
+  | 'neq' // 不等于
+  | 'before' // 日期：早于
+  | 'after' // 日期：晚于
+  | 'in' // 等于任意（多选）
+
+interface FilterCondition {
+  /** 行内唯一标识 */
+  id: number
+  /** 与上一条的逻辑连接（首条忽略） */
+  logic: LogicOp
+  /** 对应列的 key */
+  field: string
+  op: FilterOp
+  /** 单值（文本 / 日期 / 数字）输入 */
+  value: string
+  /** "等于任意" 的多选值 */
+  values: string[]
+}
+
+const DATE_KEY_RE = /[Tt]ime|[Dd]ate|时间|日期/
+/** 取值后去重选项的上限 */
+const SELECT_OPTION_LIMIT = 50
+
+/** 各类型可用的运算符（label 用于下拉显示） */
+const OP_LABELS: Record<FilterKind, { value: FilterOp; label: string }[]> = {
+  text: [
+    { value: 'contains', label: '包含' },
+    { value: 'eq', label: '等于' },
+    { value: 'neq', label: '不等于' },
+    { value: 'in', label: '等于任意' },
+  ],
+  date: [
+    { value: 'eq', label: '等于' },
+    { value: 'before', label: '早于' },
+    { value: 'after', label: '晚于' },
+  ],
+  number: [
+    { value: 'eq', label: '等于' },
+    { value: 'neq', label: '不等于' },
+    { value: 'before', label: '小于' },
+    { value: 'after', label: '大于' },
+    { value: 'in', label: '等于任意' },
+  ],
+}
+
+/** 把任意取值规整为可比较 / 展示的字符串 */
+function toStr(v: unknown): string {
+  if (v == null) return ''
+  if (v instanceof Date) return v.toISOString()
+  return String(v)
+}
+
 export function BoostTable<T extends Record<string, any>>({
   title,
   columns,
@@ -109,20 +175,121 @@ export function BoostTable<T extends Record<string, any>>({
   const [visible, setVisible] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(columns.map((c) => [c.key, c.defaultVisible !== false])),
   )
+  /** 已生效的筛选条件（驱动管线） */
+  const [conditions, setConditions] = useState<FilterCondition[]>([])
+  /** 面板内正在编辑的草稿条件 */
+  const [draft, setDraft] = useState<FilterCondition[]>([])
+  const condId = useRef(0)
 
   const accessorOf = (col: BoostColumn<T>) =>
     col.accessor ?? ((r: T) => (r as any)[col.key])
 
+  // 可筛选列
+  const filterableColumns = useMemo(
+    () => columns.filter((c) => c.filterable !== false),
+    [columns],
+  )
+
+  // 推断某列的筛选类型
+  const kindOf = (col: BoostColumn<T>): FilterKind => {
+    if (col.filterType === 'date') return 'date'
+    if (col.filterType === 'number') return 'number'
+    if (col.filterType === 'text' || col.filterType === 'select') return 'text'
+    return DATE_KEY_RE.test(col.key) ? 'date' : 'text'
+  }
+
+  // 某列在当前 data 中出现过的去重值（用于"等于任意" / select）
+  const optionsOf = (col: BoostColumn<T>): { label: string; value: string }[] => {
+    if (col.filterOptions) return col.filterOptions
+    const acc = accessorOf(col)
+    const seen = new Set<string>()
+    const out: { label: string; value: string }[] = []
+    for (const row of data) {
+      const s = toStr(acc(row)).trim()
+      if (!s || seen.has(s)) continue
+      seen.add(s)
+      out.push({ label: s, value: s })
+      if (out.length >= SELECT_OPTION_LIMIT) break
+    }
+    return out
+  }
+
+  const newCondition = (logic: LogicOp): FilterCondition => {
+    const col = filterableColumns[0]
+    const field = col?.key ?? ''
+    const op = col ? OP_LABELS[kindOf(col)][0].value : 'contains'
+    return { id: condId.current++, logic, field, op, value: '', values: [] }
+  }
+
+  // 多条件筛选：先按生效条件过滤，再进全字段搜索
+  const colByKey = useMemo(() => {
+    const m = new Map<string, BoostColumn<T>>()
+    columns.forEach((c) => m.set(c.key, c))
+    return m
+  }, [columns])
+
+  const conditionFiltered = useMemo(() => {
+    // 仅保留"有效"条件：字段存在 + 值已填
+    const active = conditions.filter((c) => {
+      if (!colByKey.has(c.field)) return false
+      if (c.op === 'in') return c.values.length > 0
+      return c.value.trim() !== ''
+    })
+    if (active.length === 0) return data
+
+    const evalOne = (cond: FilterCondition, row: T): boolean => {
+      const col = colByKey.get(cond.field)
+      if (!col) return true
+      const raw = (col.accessor ?? ((r: T) => (r as any)[cond.field]))(row)
+      const kind = kindOf(col)
+      const cell = toStr(raw)
+
+      switch (cond.op) {
+        case 'in':
+          return cond.values.includes(cell)
+        case 'contains':
+          return cell.toLowerCase().includes(cond.value.trim().toLowerCase())
+        case 'eq':
+          if (kind === 'number') return Number(cell) === Number(cond.value)
+          if (kind === 'date') return cell.slice(0, 10) === cond.value.slice(0, 10)
+          return cell === cond.value
+        case 'neq':
+          if (kind === 'number') return Number(cell) !== Number(cond.value)
+          return cell !== cond.value
+        case 'before': // 日期早于 / 数字小于
+          if (kind === 'number') return Number(cell) < Number(cond.value)
+          return cell.slice(0, 10) < cond.value.slice(0, 10)
+        case 'after': // 日期晚于 / 数字大于
+          if (kind === 'number') return Number(cell) > Number(cond.value)
+          return cell.slice(0, 10) > cond.value.slice(0, 10)
+        default:
+          return true
+      }
+    }
+
+    return data.filter((row) => {
+      // 从左到右按各条件自身的 and/or 归并；首条 logic 忽略
+      let acc = evalOne(active[0], row)
+      for (let i = 1; i < active.length; i++) {
+        const r = evalOne(active[i], row)
+        acc = active[i].logic === 'or' ? acc || r : acc && r
+      }
+      return acc
+    })
+    // kindOf 依赖 columns（已通过 colByKey）；显式列出主要依赖
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, conditions, colByKey])
+
   // 全字段模糊搜索
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return data
-    return data.filter((row) => {
+    if (!q) return conditionFiltered
+    return conditionFiltered.filter((row) => {
       const parts: string[] = []
       flatten(row, parts)
       return parts.join(' ').toLowerCase().includes(q)
     })
-  }, [data, search])
+  }, [conditionFiltered, search])
 
   // 排序
   const sorted = useMemo(() => {
@@ -171,6 +338,45 @@ export function BoostTable<T extends Record<string, any>>({
     }
   }
 
+  // ── 筛选面板操作 ──
+  // 打开面板时把已生效条件载入草稿；若没有则给一行空条件
+  const initDraft = () => {
+    if (conditions.length > 0) {
+      setDraft(conditions.map((c) => ({ ...c, values: [...c.values] })))
+    } else {
+      setDraft(filterableColumns.length > 0 ? [newCondition('and')] : [])
+    }
+  }
+
+  const patchRow = (id: number, patch: Partial<FilterCondition>) =>
+    setDraft((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+
+  // 切换字段时重置运算符与值（保持类型合法）
+  const changeField = (id: number, field: string) => {
+    const col = colByKey.get(field)
+    const ops = col ? OP_LABELS[kindOf(col)] : OP_LABELS.text
+    patchRow(id, { field, op: ops[0].value, value: '', values: [] })
+  }
+
+  const changeOp = (id: number, op: FilterOp) =>
+    patchRow(id, { op, value: '', values: [] })
+
+  const addRow = () => setDraft((rows) => [...rows, newCondition('and')])
+
+  const removeRow = (id: number) =>
+    setDraft((rows) => rows.filter((r) => r.id !== id))
+
+  // 清空所有条件的值（保留行结构）
+  const clearValues = () =>
+    setDraft((rows) => rows.map((r) => ({ ...r, value: '', values: [] })))
+
+  // 应用：写入生效条件并回到第一页
+  const applyFilters = (close: () => void) => {
+    setConditions(draft.map((c) => ({ ...c, values: [...c.values] })))
+    setPage(1)
+    close()
+  }
+
   const builtinExport = () => {
     const cols = visibleColumns
     const header = cols.map((c) => c.title).join(',')
@@ -194,6 +400,12 @@ export function BoostTable<T extends Record<string, any>>({
   }
 
   const sortableColumns = columns.filter((c) => c.sortable !== false)
+
+  // 已生效（有值）的条件数 → 决定"筛选"按钮高亮 / 徽标
+  const activeFilterCount = conditions.filter((c) => {
+    if (!colByKey.has(c.field)) return false
+    return c.op === 'in' ? c.values.length > 0 : c.value.trim() !== ''
+  }).length
 
   return (
     <div
@@ -276,6 +488,205 @@ export function BoostTable<T extends Record<string, any>>({
             }}
           />
         </label>
+
+        {/* 筛选 */}
+        {filterableColumns.length > 0 && (
+          <Dropdown
+            width={520}
+            trigger={
+              <span
+                className={`${ICON_BTN} relative ${
+                  activeFilterCount > 0 ? 'text-primary' : ''
+                }`}
+                onMouseDown={initDraft}
+              >
+                <Filter className="h-4 w-4" />
+                筛选
+                {activeFilterCount > 0 && (
+                  <span className="badge badge-primary badge-xs ml-0.5">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </span>
+            }
+          >
+            {(close) => (
+              <div className="flex flex-col gap-2 p-1">
+                <div className="px-1 py-0.5 text-xs font-semibold text-base-content/50">
+                  设置筛选条件（满足条件的行才显示）
+                </div>
+
+                {draft.length === 0 ? (
+                  <div className="px-1 py-4 text-center text-sm text-base-content/40">
+                    暂无条件，点击下方“添加筛选条件”
+                  </div>
+                ) : (
+                  <div className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-0.5">
+                    {draft.map((cond, idx) => {
+                      const col = colByKey.get(cond.field)
+                      const kind = col ? kindOf(col) : 'text'
+                      const ops = OP_LABELS[kind]
+                      return (
+                        <div
+                          key={cond.id}
+                          className="flex flex-wrap items-center gap-1.5"
+                        >
+                          {/* 行首：当 / 且·或 */}
+                          {idx === 0 ? (
+                            <span className="w-14 shrink-0 text-center text-sm text-base-content/60">
+                              当
+                            </span>
+                          ) : (
+                            <select
+                              className="select select-bordered select-sm w-14 shrink-0 px-1"
+                              value={cond.logic}
+                              onChange={(e) =>
+                                patchRow(cond.id, {
+                                  logic: e.target.value as LogicOp,
+                                })
+                              }
+                            >
+                              <option value="and">且</option>
+                              <option value="or">或</option>
+                            </select>
+                          )}
+
+                          {/* 字段 */}
+                          <select
+                            className="select select-bordered select-sm w-32 shrink-0"
+                            value={cond.field}
+                            onChange={(e) => changeField(cond.id, e.target.value)}
+                          >
+                            {filterableColumns.map((c) => (
+                              <option key={c.key} value={c.key}>
+                                {c.title}
+                              </option>
+                            ))}
+                          </select>
+
+                          {/* 运算符 */}
+                          <select
+                            className="select select-bordered select-sm w-24 shrink-0"
+                            value={cond.op}
+                            onChange={(e) =>
+                              changeOp(cond.id, e.target.value as FilterOp)
+                            }
+                          >
+                            {ops.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </select>
+
+                          {/* 值 */}
+                          {cond.op === 'in' ? (
+                            <div className="flex grow basis-full flex-col gap-1 rounded-lg border border-base-300 bg-base-200/40 p-1.5">
+                              <div className="px-0.5 text-xs text-base-content/50">
+                                {cond.values.length > 0
+                                  ? `已选 ${cond.values.length} 项`
+                                  : '勾选要匹配的值（任一命中即可）'}
+                              </div>
+                              <div className="grid max-h-40 grid-cols-2 gap-x-2 gap-y-0.5 overflow-y-auto">
+                                {col && optionsOf(col).length > 0 ? (
+                                  optionsOf(col).map((o) => (
+                                    <label
+                                      key={o.value}
+                                      className="flex cursor-pointer items-center gap-1.5 rounded px-1 py-0.5 hover:bg-base-200"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        className="checkbox checkbox-xs checkbox-primary"
+                                        checked={cond.values.includes(o.value)}
+                                        onChange={(e) =>
+                                          patchRow(cond.id, {
+                                            values: e.target.checked
+                                              ? [...cond.values, o.value]
+                                              : cond.values.filter(
+                                                  (v) => v !== o.value,
+                                                ),
+                                          })
+                                        }
+                                      />
+                                      <span className="truncate text-xs">
+                                        {o.label}
+                                      </span>
+                                    </label>
+                                  ))
+                                ) : (
+                                  <div className="col-span-2 px-1 py-2 text-center text-xs text-base-content/40">
+                                    无可选值
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : kind === 'date' ? (
+                            <input
+                              type="date"
+                              className="input input-bordered input-sm grow"
+                              value={cond.value}
+                              onChange={(e) =>
+                                patchRow(cond.id, { value: e.target.value })
+                              }
+                            />
+                          ) : (
+                            <input
+                              type={kind === 'number' ? 'number' : 'text'}
+                              className="input input-bordered input-sm grow"
+                              placeholder="输入值"
+                              value={cond.value}
+                              onChange={(e) =>
+                                patchRow(cond.id, { value: e.target.value })
+                              }
+                            />
+                          )}
+
+                          {/* 删除行 */}
+                          <button
+                            type="button"
+                            aria-label="删除条件"
+                            className="btn btn-ghost btn-sm btn-square shrink-0 text-base-content/50 hover:text-error"
+                            onClick={() => removeRow(cond.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* 底部操作 */}
+                <div className="flex items-center justify-between gap-2 border-t border-base-300 pt-2">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm gap-1 text-primary"
+                    onClick={addRow}
+                  >
+                    <Plus className="h-4 w-4" />
+                    添加筛选条件
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={clearValues}
+                    >
+                      清空值
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => applyFilters(close)}
+                    >
+                      筛选
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Dropdown>
+        )}
 
         {/* 显示列 */}
         <Dropdown

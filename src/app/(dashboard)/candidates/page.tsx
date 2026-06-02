@@ -97,6 +97,7 @@ const ALL_FLOW_FIELDS = Array.from(new Set(Object.values(STATUS_FIELDS).flat()))
 
 const opts = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }))
 const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
+const fmtDateTime = (s?: string | null) => (s ? String(s).slice(0, 16) : '')
 
 const EMPTY_FORM: any = {
   name: '', birthYear: '', phone: '', email: '',
@@ -175,7 +176,7 @@ export default function CandidatesPage() {
       submitDepartmentId: r.submitDepartmentId ?? '',
       submitterId: r.submitterId ?? '',
       guaranteePeriodMonths: r.guaranteePeriodMonths ?? '',
-      recommendationTime: fmtDate(r.recommendationTime),
+      recommendationTime: fmtDateTime(r.recommendationTime),
       offerDate: fmtDate(r.offerDate),
       offerOnboardDate: fmtDate(r.offerOnboardDate),
       actualOnboardDate: fmtDate(r.actualOnboardDate),
@@ -244,7 +245,7 @@ export default function CandidatesPage() {
     { key: 'positionName', title: '岗位名称', accessor: (r) => r.requirement?.positionName },
     { key: 'name', title: '候选人姓名', render: (v) => <span className="font-medium">{v}</span> },
     { key: 'recommendationTime', title: '推荐时间', accessor: (r) => r.recommendationTime,
-      render: (v) => <span className="text-base-content/60">{fmtDate(v) || '—'}</span> },
+      render: (v) => <span className="text-base-content/60">{v ? String(v).slice(0, 16).replace('T', ' ') : '—'}</span> },
     { key: 'recommendationStatus', title: '推荐状态',
       render: (v) => <span className={`badge ${STATUS_BADGE[v] ?? 'badge-ghost'} badge-sm`}>{STATUS_LABELS[v] ?? v}</span> },
     { key: 'submitterName', title: '提交人', accessor: (r) => r.submitter?.name },
@@ -421,7 +422,7 @@ export default function CandidatesPage() {
             </select>
           </Field>
           <Field label="推荐时间">
-            <input type="date" className="input input-bordered w-full" value={form.recommendationTime} onChange={(e) => setField('recommendationTime', e.target.value)} />
+            <input type="datetime-local" className="input input-bordered w-full" value={form.recommendationTime} onChange={(e) => setField('recommendationTime', e.target.value)} />
           </Field>
           <Field label="招聘渠道" required>
             <input className="input input-bordered w-full" value={form.recruitmentChannel} onChange={(e) => setField('recruitmentChannel', e.target.value)} placeholder="如：猎聘、内推、Boss直聘" />

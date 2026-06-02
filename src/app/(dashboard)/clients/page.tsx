@@ -12,9 +12,11 @@ import {
   Field,
   FileUpload,
   RichText,
+  RegionCascade,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
+import { INDUSTRIES } from '@/lib/industries'
 
 const RES = 'CUSTOMER'
 
@@ -264,13 +266,18 @@ export default function ClientsPage() {
             <input className="input input-bordered w-full" value={form.formerName} onChange={(e) => setField('formerName', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="所属行业">
-            <input className="input input-bordered w-full" value={form.industry} onChange={(e) => setField('industry', e.target.value)} placeholder="请输入" />
+            <select className="select select-bordered w-full" value={form.industry} onChange={(e) => setField('industry', e.target.value)}>
+              <option value="">请选择</option>
+              {INDUSTRIES.map((it) => (
+                <option key={it} value={it}>{it}</option>
+              ))}
+            </select>
           </Field>
           <Field label="所属区域" required>
             <input className="input input-bordered w-full" value={form.region} onChange={(e) => setField('region', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="公司地址" required>
-            <input className="input input-bordered w-full" value={form.address} onChange={(e) => setField('address', e.target.value)} placeholder="请输入" />
+            <RegionCascade value={form.address} onChange={(v) => setField('address', v)} />
           </Field>
           <Field label="详细地址" required>
             <input className="input input-bordered w-full" value={form.detailedAddress} onChange={(e) => setField('detailedAddress', e.target.value)} placeholder="请输入" />
