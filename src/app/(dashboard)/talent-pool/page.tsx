@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
-import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, FileUpload, YearSelect, useToast } from '@/components/ui'
+import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, FileUpload, YearSelect, yearOptions, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
 
@@ -123,7 +123,7 @@ export default function TalentPoolPage() {
     { key: 'education', title: '学历', filterType: 'select',
       filterOptions: ['大专', '本科', '硕士', '博士'].map((l) => ({ label: l, value: l })) },
     { key: 'phone', title: '电话' },
-    { key: 'birthYear', title: '出生年份', defaultVisible: false, filterType: 'number' },
+    { key: 'birthYear', title: '出生年份', defaultVisible: false, filterType: 'select', filterOptions: yearOptions(1950, 0) },
     { key: 'age', title: '年龄', defaultVisible: false, filterType: 'number' },
     { key: 'resumeUrl', title: '简历URL', defaultVisible: false,
       render: (v) => v ? <a href={v} target="_blank" rel="noreferrer" className="link link-primary line-clamp-1 max-w-[200px]">{v}</a> : <span className="text-base-content/30">—</span> },

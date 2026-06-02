@@ -13,6 +13,7 @@ import {
   Field,
   FileUpload,
   YearSelect,
+  yearOptions,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -35,11 +36,6 @@ const SCHOOL_TIER_LABELS: Record<string, string> = {
   GENERAL: '普通',
   OVERSEAS: '海外留学',
 }
-// 出生年份下拉：当前年份至 1950，降序
-const BIRTH_YEARS = ((): number[] => {
-  const y = new Date().getFullYear()
-  return Array.from({ length: y - 1950 + 1 }, (_, i) => y - i)
-})()
 const STATUS_LABELS: Record<string, string> = {
   PENDING: '已推荐待反馈',
   INTERVIEWING: '面试中',
@@ -287,8 +283,7 @@ export default function CandidatesPage() {
     { key: 'recruitmentChannel', title: '招聘渠道', defaultVisible: false, filterType: 'select', filterOptions: channelOptions },
     { key: 'phone', title: '联系电话', defaultVisible: false },
     { key: 'email', title: '邮箱', defaultVisible: false },
-    { key: 'birthYear', title: '出生年份', defaultVisible: false, filterType: 'select',
-      filterOptions: BIRTH_YEARS.map((y) => ({ label: String(y), value: String(y) })) },
+    { key: 'birthYear', title: '出生年份', defaultVisible: false, filterType: 'select', filterOptions: yearOptions(1950, 0) },
     { key: 'education', title: '教育经历', defaultVisible: false, accessor: (r) => EDUCATION_LABELS[r.education] ?? '',
       filterType: 'select', filterOptions: Object.values(EDUCATION_LABELS).map((l) => ({ label: l, value: l })) },
     { key: 'schoolTier', title: '院校', defaultVisible: false, accessor: (r) => SCHOOL_TIER_LABELS[r.schoolTier] ?? '',

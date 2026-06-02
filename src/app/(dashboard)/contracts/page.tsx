@@ -13,6 +13,7 @@ import {
   Field,
   FileUpload,
   YearSelect,
+  yearOptions,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -176,7 +177,7 @@ export default function ContractsPage() {
     },
     { key: 'contractName', title: '合同名称', render: (v) => <span className="font-medium">{v}</span> },
     { key: 'serviceType', title: '服务类型', filterType: 'select', filterOptions: serviceTypeOptions },
-    { key: 'signingYear', title: '签订年份', filterType: 'number' },
+    { key: 'signingYear', title: '签订年份', filterType: 'select', filterOptions: yearOptions(1990, 10) },
     { key: 'effectiveStart', title: '生效开始', filterType: 'date', render: (v) => fmtDate(v) || '—' },
     { key: 'effectiveEnd', title: '生效结束', filterType: 'date', render: (v) => fmtDate(v) || '—' },
     { key: 'expiryDate', title: '到期日期', filterType: 'date', render: (v) => fmtDate(v) || '—' },

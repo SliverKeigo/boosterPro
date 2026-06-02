@@ -11,6 +11,19 @@ interface YearSelectProps {
   className?: string
 }
 
+// 生成年份数字列表：[今年+maxFuture … minYear]，降序。
+export function yearList(minYear = 1950, maxFuture = 0): number[] {
+  const max = new Date().getFullYear() + maxFuture
+  const ys: number[] = []
+  for (let y = max; y >= minYear; y--) ys.push(y)
+  return ys
+}
+
+// 供 BoostTable 列筛选用的年份下拉选项（与 YearSelect 同口径，保证筛选与表单一致）。
+export function yearOptions(minYear = 1950, maxFuture = 0): { label: string; value: string }[] {
+  return yearList(minYear, maxFuture).map((y) => ({ label: String(y), value: String(y) }))
+}
+
 /**
  * 通用「年份」下拉。
  * - 范围：[minYear, 今年 + maxFuture]，降序。
@@ -25,9 +38,7 @@ export function YearSelect({
   placeholder = '请选择年份',
   className = 'select select-bordered w-full',
 }: YearSelectProps) {
-  const max = new Date().getFullYear() + maxFuture
-  const years: number[] = []
-  for (let y = max; y >= minYear; y--) years.push(y)
+  const years = yearList(minYear, maxFuture)
 
   const v = value === '' || value == null ? null : Number(value)
   if (v != null && !Number.isNaN(v) && !years.includes(v)) {
