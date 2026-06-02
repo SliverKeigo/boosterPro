@@ -176,6 +176,9 @@ export default function ClientsPage() {
     { key: 'companyCulture', title: '企业文化与福利', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{stripHtml(v)}</span> : '—' },
     { key: 'openingSpeech', title: '开聊话术', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{v}</span> : '—' },
     { key: 'benchmarkCompanies', title: '对标企业', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{v}</span> : '—' },
+    { key: 'locationLat', title: '纬度', defaultVisible: false, render: (v) => (v ?? '') === '' ? '—' : String(v) },
+    { key: 'locationLng', title: '经度', defaultVisible: false, render: (v) => (v ?? '') === '' ? '—' : String(v) },
+    { key: 'attachmentUrl', title: '客户附件资料', defaultVisible: false, sortable: false, render: (v) => v ? '已上传' : '—' },
     { key: 'officeAddresses', title: '办公地址明细', defaultVisible: false, sortable: false,
       accessor: (r) => (r.officeAddresses ?? []).map((x: any) => x.address).join(' '),
       render: (_v, r) => (

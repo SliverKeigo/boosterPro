@@ -204,7 +204,25 @@ export default function ContractsPage() {
     { key: 'deliveryOwnerId', title: '交付负责人 ID', defaultVisible: false },
     { key: 'contractFileUrl', title: '合同附件 URL', defaultVisible: false },
     { key: 'invoiceInfoText', title: '开票信息', defaultVisible: false },
+    { key: 'invoiceInfoFileUrl', title: '开票信息（文件）', defaultVisible: false, sortable: false, render: (v) => v ? '已上传' : '—' },
     { key: 'notes', title: '备注', defaultVisible: false },
+    {
+      key: 'invoices',
+      title: '发票明细',
+      defaultVisible: false,
+      sortable: false,
+      accessor: (r) => (r.invoices ?? []).map((x: any) => x.invoiceType).filter(Boolean).join(' '),
+      render: (_v, r) => {
+        const list = (r.invoices ?? []) as any[]
+        return list.length ? (
+          <div className="flex flex-wrap gap-1">
+            {list.map((x, i) => (
+              <span key={i} className="badge badge-ghost badge-sm">{x.invoiceType || '—'}</span>
+            ))}
+          </div>
+        ) : '—'
+      },
+    },
   ]
 
   return (

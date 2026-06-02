@@ -10,12 +10,15 @@ describe('candidateData - INCLUDE 常量', () => {
     expect(typeof CANDIDATE_LIST_INCLUDE).toBe('object')
     expect(typeof CANDIDATE_INCLUDE).toBe('object')
   })
-  it('详情 INCLUDE 在列表基础上追加子表', () => {
-    expect(CANDIDATE_INCLUDE.customer).toBeDefined()
-    expect(CANDIDATE_INCLUDE.guaranteeCommunications).toBe(true)
-    expect(CANDIDATE_INCLUDE.riskEvents).toBe(true)
-    // 列表 INCLUDE 不应含子表
-    expect((CANDIDATE_LIST_INCLUDE as Record<string, unknown>).guaranteeCommunications).toBeUndefined()
+  it('LIST 与详情 INCLUDE 均含 customer 与子表（列表“显示列”的子表摘要列依赖其数据）', () => {
+    const list = CANDIDATE_LIST_INCLUDE as Record<string, unknown>
+    const detail = CANDIDATE_INCLUDE as Record<string, unknown>
+    expect(list.customer).toBeDefined()
+    expect(list.guaranteeCommunications).toBe(true)
+    expect(list.riskEvents).toBe(true)
+    expect(detail.customer).toBeDefined()
+    expect(detail.guaranteeCommunications).toBe(true)
+    expect(detail.riskEvents).toBe(true)
   })
 })
 

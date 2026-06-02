@@ -135,6 +135,7 @@ export default function TalentPoolPage() {
         </div>
       ) },
     { key: 'createdAt', title: '创建时间', defaultVisible: false, render: (v) => v?.slice(0, 10) },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => v?.slice(0, 10) },
   ]
 
   return (

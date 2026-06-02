@@ -142,6 +142,7 @@ export default function WorkPlansPage() {
     // 以下默认隐藏，可在“显示列”开启
     { key: 'ownerId', title: '负责人 ID', defaultVisible: false },
     { key: 'notes', title: '备注', defaultVisible: false },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span> },
   ]
 
   // 权限守卫：work-plans 接口要求管理员，非管理员直达页面只显示无权提示

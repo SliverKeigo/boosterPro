@@ -162,6 +162,10 @@ export default function UsersPage() {
     { key: 'departmentName', title: '部门', accessor: (r) => r.department?.name },
     { key: 'roleName', title: '角色', accessor: (r) => r.role?.name,
       render: (v) => v ? <span className="badge badge-info badge-sm">{v}</span> : <span className="text-base-content/30">—</span> },
+    { key: 'isAdmin', title: '管理员', defaultVisible: false,
+      render: (v) => v ? <span className="badge badge-warning badge-sm">是</span> : <span className="text-base-content/50">否</span> },
+    { key: 'departmentId', title: '部门 ID', defaultVisible: false },
+    { key: 'roleId', title: '角色 ID', defaultVisible: false },
     { key: 'createdAt', title: '创建时间', defaultVisible: false, render: (v) => v?.slice(0, 10) },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => v?.slice(0, 10) },
   ]

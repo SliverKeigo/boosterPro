@@ -139,6 +139,12 @@ export default function SupplementsPage() {
     { key: 'notes', title: '备注', defaultVisible: false },
     { key: 'attachmentUrl', title: '附件', defaultVisible: false, sortable: false, render: (v) => v ? '已上传' : '—' },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => fmtDateTime(v) },
+    { key: 'demandUpdates', title: '需求更新', defaultVisible: false, sortable: false,
+      accessor: (r) => (r.demandUpdates ?? []).map((x: any) => x.content).filter(Boolean).join(' '),
+      render: (_v, r) => ((r.demandUpdates ?? []).length ? `${r.demandUpdates.length} 条` : '—') },
+    { key: 'customerProfiles', title: '客户画像', defaultVisible: false, sortable: false,
+      accessor: (r) => (r.customerProfiles ?? []).map((x: any) => x.specialty).filter(Boolean).join('、'),
+      render: (v) => v || '—' },
   ]
 
   return (

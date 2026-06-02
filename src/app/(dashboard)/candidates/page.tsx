@@ -293,6 +293,16 @@ export default function CandidatesPage() {
         </div>
       ) },
     { key: 'notes', title: '备注', defaultVisible: false },
+    { key: 'customerShortName', title: '客户简称(填写)', defaultVisible: false },
+    { key: 'recommendationReportUrl', title: '推荐报告', defaultVisible: false, render: (v) => (v ? '有' : '—') },
+    { key: 'offerFileUrl', title: 'Offer 文件', defaultVisible: false, render: (v) => (v ? '有' : '—') },
+    { key: 'backgroundCheckReportUrl', title: '背景调查报告', defaultVisible: false, render: (v) => (v ? '有' : '—') },
+    { key: 'guaranteeCommunications', title: '保证期沟通', defaultVisible: false, accessor: (r) => ((r.guaranteeCommunications ?? []).length ? `${r.guaranteeCommunications.length} 条` : ''), render: (v) => v || '—' },
+    { key: 'riskEvents', title: '风险事件', defaultVisible: false, accessor: (r) => ((r.riskEvents ?? []).length ? `${r.riskEvents.length} 条` : ''), render: (v) => v || '—' },
+    { key: 'customerId', title: '客户 ID', defaultVisible: false },
+    { key: 'requirementId', title: '需求 ID', defaultVisible: false },
+    { key: 'submitDepartmentId', title: '提交人部门 ID', defaultVisible: false },
+    { key: 'submitterId', title: '提交人 ID', defaultVisible: false },
   ]
 
   return (

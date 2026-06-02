@@ -176,6 +176,8 @@ export default function OpportunitiesPage() {
     { key: 'progressRecords', title: '商机进展数', defaultVisible: false, sortable: false,
       accessor: (r) => (r.progressRecords?.length ?? 0),
       render: (_v, r) => <span className="badge badge-ghost badge-sm">{r.progressRecords?.length ?? 0}</span> },
+    { key: 'attachmentUrl', title: '附件', defaultVisible: false, render: (v) => (v ? '有' : '—') },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
   ]
 
   return (

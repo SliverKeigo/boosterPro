@@ -169,6 +169,7 @@ export default function KnowledgePage() {
     // 以下默认隐藏，可在“显示列”开启
     { key: 'fileUrl', title: '知识文件 URL', defaultVisible: false },
     { key: 'notes', title: '知识便条', defaultVisible: false, render: (v) => stripHtml(v) },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span> },
   ]
 
   return (

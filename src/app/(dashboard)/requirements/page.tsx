@@ -221,6 +221,9 @@ export default function RequirementsPage() {
     { key: 'notes', title: '其他备注', defaultVisible: false },
     { key: 'talentProfile', title: '人才画像', defaultVisible: false },
     { key: 'projectExperience', title: '项目经验', defaultVisible: false },
+    { key: 'attachmentUrl', title: '附件', defaultVisible: false, render: (v) => (v ? '有' : '—') },
+    { key: 'positionProfiles', title: '岗位画像', defaultVisible: false, accessor: (r) => (r.positionProfiles ?? []).map((p: any) => p.knowledgeCategory).filter(Boolean).join('、'), render: (v) => v || '—' },
+    { key: 'urgentRecords', title: '加急记录', defaultVisible: false, accessor: (r) => ((r.urgentRecords ?? []).length ? `${r.urgentRecords.length} 次` : ''), render: (v) => v || '—' },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => fmtDateTime(v) },
   ]
 
