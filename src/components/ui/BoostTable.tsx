@@ -89,7 +89,7 @@ const ICON_BTN =
   'btn btn-ghost btn-sm gap-1.5 font-medium text-base-content/70 hover:text-base-content'
 
 // ── 筛选相关类型与工具 ──
-type FilterKind = 'text' | 'date' | 'number'
+type FilterKind = 'text' | 'date' | 'number' | 'select'
 type LogicOp = 'and' | 'or'
 type FilterOp =
   | 'contains' // 文本：包含
@@ -97,6 +97,8 @@ type FilterOp =
   | 'neq' // 不等于
   | 'before' // 日期：早于
   | 'after' // 日期：晚于
+  | 'gt' // 数字：大于
+  | 'lt' // 数字：小于
   | 'in' // 等于任意（多选）
 
 interface FilterCondition {
@@ -113,14 +115,21 @@ interface FilterCondition {
   values: string[]
 }
 
-const DATE_KEY_RE = /[Tt]ime|[Dd]ate|时间|日期/
 /** 取值后去重选项的上限 */
-const SELECT_OPTION_LIMIT = 50
+const SELECT_OPTION_LIMIT = 100
+/** 自动推断为 select（分类字段）的去重值数量上限 */
+const SELECT_INFER_LIMIT = 20
+/** 从数据推断类型时最多采样的非空值数量 */
+const INFER_SAMPLE_LIMIT = 200
 
 /** 各类型可用的运算符（label 用于下拉显示） */
 const OP_LABELS: Record<FilterKind, { value: FilterOp; label: string }[]> = {
   text: [
     { value: 'contains', label: '包含' },
+    { value: 'eq', label: '等于' },
+    { value: 'neq', label: '不等于' },
+  ],
+  select: [
     { value: 'eq', label: '等于' },
     { value: 'neq', label: '不等于' },
     { value: 'in', label: '等于任意' },
@@ -133,9 +142,8 @@ const OP_LABELS: Record<FilterKind, { value: FilterOp; label: string }[]> = {
   number: [
     { value: 'eq', label: '等于' },
     { value: 'neq', label: '不等于' },
-    { value: 'before', label: '小于' },
-    { value: 'after', label: '大于' },
-    { value: 'in', label: '等于任意' },
+    { value: 'gt', label: '大于' },
+    { value: 'lt', label: '小于' },
   ],
 }
 
@@ -144,6 +152,28 @@ function toStr(v: unknown): string {
   if (v == null) return ''
   if (v instanceof Date) return v.toISOString()
   return String(v)
+}
+
+/** 看起来像日期（yyyy-mm-dd 开头的 ISO 串，或可被 Date 解析的字符串） */
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}/
+function looksLikeDate(v: unknown): boolean {
+  if (v instanceof Date) return !isNaN(v.getTime())
+  if (typeof v !== 'string') return false
+  const s = v.trim()
+  if (!s) return false
+  if (ISO_DATE_RE.test(s)) return true
+  // 仅当含日期分隔符时再尝试 Date 解析，避免把纯数字 / 普通文本误判为日期
+  if (!/[-/T:]/.test(s)) return false
+  return !isNaN(Date.parse(s))
+}
+
+/** 看起来像数字（数字本身，或能被完整解析为数字的字符串） */
+function looksLikeNumber(v: unknown): boolean {
+  if (typeof v === 'number') return !isNaN(v)
+  if (typeof v !== 'string') return false
+  const s = v.trim()
+  if (!s) return false
+  return !isNaN(Number(s))
 }
 
 export function BoostTable<T extends Record<string, any>>({
@@ -190,28 +220,72 @@ export function BoostTable<T extends Record<string, any>>({
     [columns],
   )
 
-  // 推断某列的筛选类型
-  const kindOf = (col: BoostColumn<T>): FilterKind => {
-    if (col.filterType === 'date') return 'date'
-    if (col.filterType === 'number') return 'number'
-    if (col.filterType === 'text' || col.filterType === 'select') return 'text'
-    return DATE_KEY_RE.test(col.key) ? 'date' : 'text'
-  }
+  // 推断某列的筛选类型：① 显式 filterType 优先；② 否则按当前 data 的样本值推断。
+  // 用 data + columns 记忆化，避免每次渲染都重新扫描全表。
+  const kindByKey = useMemo(() => {
+    const m = new Map<string, FilterKind>()
+    for (const col of columns) {
+      // ① 显式配置优先（向后兼容）
+      if (
+        col.filterType === 'date' ||
+        col.filterType === 'number' ||
+        col.filterType === 'select' ||
+        col.filterType === 'text'
+      ) {
+        m.set(col.key, col.filterType)
+        continue
+      }
+      // ② 从数据自动推断：采样该列非空样本值
+      const acc = col.accessor ?? ((r: T) => (r as any)[col.key])
+      const distinct = new Set<string>()
+      let sampled = 0
+      let dateHits = 0
+      let allNumber = true
+      for (const row of data) {
+        const raw = acc(row)
+        const s = toStr(raw).trim()
+        if (!s) continue
+        sampled++
+        distinct.add(s)
+        if (looksLikeDate(raw)) dateHits++
+        if (!looksLikeNumber(raw)) allNumber = false
+        if (sampled >= INFER_SAMPLE_LIMIT) break
+      }
+      let kind: FilterKind
+      if (sampled === 0) {
+        kind = 'text'
+      } else if (dateHits / sampled >= 0.5) {
+        // 多数样本是日期 → date（覆盖 deadline / followDate 等不含 date 字样的列）
+        kind = 'date'
+      } else if (allNumber) {
+        kind = 'number'
+      } else if (distinct.size <= SELECT_INFER_LIMIT) {
+        // 去重后非空值较少 → 分类字段（提交人 / 所属行业 / 状态 / 性别…）
+        kind = 'select'
+      } else {
+        kind = 'text'
+      }
+      m.set(col.key, kind)
+    }
+    return m
+  }, [columns, data])
 
-  // 某列在当前 data 中出现过的去重值（用于"等于任意" / select）
+  const kindOf = (col: BoostColumn<T>): FilterKind => kindByKey.get(col.key) ?? 'text'
+
+  // 某列在当前 data 中出现过的去重值（用于 select / "等于任意"）：
+  // 优先用页面提供的 filterOptions；否则取 accessor 值、转字符串、去空、排序、限量。
   const optionsOf = (col: BoostColumn<T>): { label: string; value: string }[] => {
     if (col.filterOptions) return col.filterOptions
     const acc = accessorOf(col)
     const seen = new Set<string>()
-    const out: { label: string; value: string }[] = []
     for (const row of data) {
       const s = toStr(acc(row)).trim()
-      if (!s || seen.has(s)) continue
-      seen.add(s)
-      out.push({ label: s, value: s })
-      if (out.length >= SELECT_OPTION_LIMIT) break
+      if (s) seen.add(s)
     }
-    return out
+    return Array.from(seen)
+      .sort((a, b) => a.localeCompare(b, 'zh-CN', { numeric: true }))
+      .slice(0, SELECT_OPTION_LIMIT)
+      .map((s) => ({ label: s, value: s }))
   }
 
   const newCondition = (logic: LogicOp): FilterCondition => {
@@ -245,23 +319,25 @@ export function BoostTable<T extends Record<string, any>>({
       const cell = toStr(raw)
 
       switch (cond.op) {
-        case 'in':
+        case 'in': // select：值 ∈ 选中集合
           return cond.values.includes(cell)
-        case 'contains':
+        case 'contains': // text：子串
           return cell.toLowerCase().includes(cond.value.trim().toLowerCase())
-        case 'eq':
+        case 'eq': // 全等（number 按数值、date 按 yyyy-mm-dd、其余按字符串）
           if (kind === 'number') return Number(cell) === Number(cond.value)
           if (kind === 'date') return cell.slice(0, 10) === cond.value.slice(0, 10)
           return cell === cond.value
         case 'neq':
           if (kind === 'number') return Number(cell) !== Number(cond.value)
           return cell !== cond.value
-        case 'before': // 日期早于 / 数字小于
-          if (kind === 'number') return Number(cell) < Number(cond.value)
+        case 'before': // 日期早于
           return cell.slice(0, 10) < cond.value.slice(0, 10)
-        case 'after': // 日期晚于 / 数字大于
-          if (kind === 'number') return Number(cell) > Number(cond.value)
+        case 'after': // 日期晚于
           return cell.slice(0, 10) > cond.value.slice(0, 10)
+        case 'lt': // 数字小于
+          return Number(cell) < Number(cond.value)
+        case 'gt': // 数字大于
+          return Number(cell) > Number(cond.value)
         default:
           return true
       }
@@ -492,7 +568,7 @@ export function BoostTable<T extends Record<string, any>>({
         {/* 筛选 */}
         {filterableColumns.length > 0 && (
           <Dropdown
-            width={520}
+            width={600}
             trigger={
               <span
                 className={`${ICON_BTN} relative ${
@@ -526,70 +602,126 @@ export function BoostTable<T extends Record<string, any>>({
                       const col = colByKey.get(cond.field)
                       const kind = col ? kindOf(col) : 'text'
                       const ops = OP_LABELS[kind]
+                      const opts = cond.op === 'in' && col ? optionsOf(col) : []
                       return (
-                        <div
-                          key={cond.id}
-                          className="flex flex-wrap items-center gap-1.5"
-                        >
-                          {/* 行首：当 / 且·或 */}
-                          {idx === 0 ? (
-                            <span className="w-14 shrink-0 text-center text-sm text-base-content/60">
-                              当
-                            </span>
-                          ) : (
+                        <div key={cond.id} className="flex flex-col gap-1">
+                          {/* 紧凑单行：逻辑 · 字段 · 运算符 · 值 · 删除 */}
+                          <div className="flex flex-nowrap items-center gap-1.5">
+                            {/* 行首：当 / 且·或 */}
+                            {idx === 0 ? (
+                              <span className="w-12 shrink-0 text-center text-sm text-base-content/60">
+                                当
+                              </span>
+                            ) : (
+                              <select
+                                className="select select-bordered select-sm w-12 shrink-0 px-1"
+                                value={cond.logic}
+                                onChange={(e) =>
+                                  patchRow(cond.id, {
+                                    logic: e.target.value as LogicOp,
+                                  })
+                                }
+                              >
+                                <option value="and">且</option>
+                                <option value="or">或</option>
+                              </select>
+                            )}
+
+                            {/* 字段 */}
                             <select
-                              className="select select-bordered select-sm w-14 shrink-0 px-1"
-                              value={cond.logic}
+                              className="select select-bordered select-sm w-[120px] shrink-0"
+                              value={cond.field}
+                              onChange={(e) => changeField(cond.id, e.target.value)}
+                            >
+                              {filterableColumns.map((c) => (
+                                <option key={c.key} value={c.key}>
+                                  {c.title}
+                                </option>
+                              ))}
+                            </select>
+
+                            {/* 运算符 */}
+                            <select
+                              className="select select-bordered select-sm w-[110px] shrink-0"
+                              value={cond.op}
                               onChange={(e) =>
-                                patchRow(cond.id, {
-                                  logic: e.target.value as LogicOp,
-                                })
+                                changeOp(cond.id, e.target.value as FilterOp)
                               }
                             >
-                              <option value="and">且</option>
-                              <option value="or">或</option>
+                              {ops.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                  {o.label}
+                                </option>
+                              ))}
                             </select>
-                          )}
 
-                          {/* 字段 */}
-                          <select
-                            className="select select-bordered select-sm w-32 shrink-0"
-                            value={cond.field}
-                            onChange={(e) => changeField(cond.id, e.target.value)}
-                          >
-                            {filterableColumns.map((c) => (
-                              <option key={c.key} value={c.key}>
-                                {c.title}
-                              </option>
-                            ))}
-                          </select>
+                            {/* 值控件：随 kind 自动切换，占满剩余宽度 */}
+                            {cond.op === 'in' ? (
+                              <span className="min-w-0 flex-1 truncate text-xs text-base-content/50">
+                                {cond.values.length > 0
+                                  ? `已选 ${cond.values.length} 项（下方勾选）`
+                                  : '请在下方勾选要匹配的值'}
+                              </span>
+                            ) : kind === 'select' ? (
+                              <select
+                                className="select select-bordered select-sm min-w-0 flex-1"
+                                value={cond.value}
+                                onChange={(e) =>
+                                  patchRow(cond.id, { value: e.target.value })
+                                }
+                              >
+                                <option value="" disabled hidden>
+                                  请选择
+                                </option>
+                                {(col ? optionsOf(col) : []).map((o) => (
+                                  <option key={o.value} value={o.value}>
+                                    {o.label}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : kind === 'date' ? (
+                              <input
+                                type="date"
+                                className="input input-bordered input-sm min-w-0 flex-1"
+                                value={cond.value}
+                                onChange={(e) =>
+                                  patchRow(cond.id, { value: e.target.value })
+                                }
+                              />
+                            ) : (
+                              <input
+                                type={kind === 'number' ? 'number' : 'text'}
+                                className="input input-bordered input-sm min-w-0 flex-1"
+                                placeholder="输入值"
+                                value={cond.value}
+                                onChange={(e) =>
+                                  patchRow(cond.id, { value: e.target.value })
+                                }
+                              />
+                            )}
 
-                          {/* 运算符 */}
-                          <select
-                            className="select select-bordered select-sm w-24 shrink-0"
-                            value={cond.op}
-                            onChange={(e) =>
-                              changeOp(cond.id, e.target.value as FilterOp)
-                            }
-                          >
-                            {ops.map((o) => (
-                              <option key={o.value} value={o.value}>
-                                {o.label}
-                              </option>
-                            ))}
-                          </select>
+                            {/* 删除行 */}
+                            <button
+                              type="button"
+                              aria-label="删除条件"
+                              className="btn btn-ghost btn-sm btn-square shrink-0 text-base-content/50 hover:text-error"
+                              onClick={() => removeRow(cond.id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
 
-                          {/* 值 */}
-                          {cond.op === 'in' ? (
-                            <div className="flex grow basis-full flex-col gap-1 rounded-lg border border-base-300 bg-base-200/40 p-1.5">
+                          {/* “等于任意”多选：在该行下方展开 */}
+                          {cond.op === 'in' && (
+                            <div className="ml-[54px] flex flex-col gap-1 rounded-lg border border-base-300 bg-base-200/40 p-1.5">
                               <div className="px-0.5 text-xs text-base-content/50">
                                 {cond.values.length > 0
                                   ? `已选 ${cond.values.length} 项`
                                   : '勾选要匹配的值（任一命中即可）'}
                               </div>
                               <div className="grid max-h-40 grid-cols-2 gap-x-2 gap-y-0.5 overflow-y-auto">
-                                {col && optionsOf(col).length > 0 ? (
-                                  optionsOf(col).map((o) => (
+                                {opts.length > 0 ? (
+                                  opts.map((o) => (
                                     <label
                                       key={o.value}
                                       className="flex cursor-pointer items-center gap-1.5 rounded px-1 py-0.5 hover:bg-base-200"
@@ -620,36 +752,7 @@ export function BoostTable<T extends Record<string, any>>({
                                 )}
                               </div>
                             </div>
-                          ) : kind === 'date' ? (
-                            <input
-                              type="date"
-                              className="input input-bordered input-sm grow"
-                              value={cond.value}
-                              onChange={(e) =>
-                                patchRow(cond.id, { value: e.target.value })
-                              }
-                            />
-                          ) : (
-                            <input
-                              type={kind === 'number' ? 'number' : 'text'}
-                              className="input input-bordered input-sm grow"
-                              placeholder="输入值"
-                              value={cond.value}
-                              onChange={(e) =>
-                                patchRow(cond.id, { value: e.target.value })
-                              }
-                            />
                           )}
-
-                          {/* 删除行 */}
-                          <button
-                            type="button"
-                            aria-label="删除条件"
-                            className="btn btn-ghost btn-sm btn-square shrink-0 text-base-content/50 hover:text-error"
-                            onClick={() => removeRow(cond.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
                         </div>
                       )
                     })}
