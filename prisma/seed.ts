@@ -14,7 +14,7 @@
  */
 import bcrypt from 'bcryptjs'
 import { prisma } from '../src/lib/prisma'
-import { INDUSTRIES } from '../src/lib/industries'
+import { INDUSTRIES, TALENT_INDUSTRIES } from '../src/lib/industries'
 import { resetSequences } from './fix-sequences'
 
 const ADMIN_EMAIL = 'admin@boosterpro.com'
@@ -30,6 +30,8 @@ const DEFAULT_ROLE_NAME = '超级管理员'
  */
 const DICT_SEEDS: { code: string; name: string; remark?: string; labels: string[] }[] = [
   { code: 'industry', name: '所属行业', labels: INDUSTRIES },
+  // 人才库「所属行业」专用（与上面客户信息的 industry 是两套不同列表，均客户提供）
+  { code: 'talent_industry', name: '所属行业（人才库）', labels: TALENT_INDUSTRIES },
   {
     code: 'recruitment_channel',
     name: '招聘渠道',

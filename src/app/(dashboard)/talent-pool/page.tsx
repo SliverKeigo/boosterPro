@@ -26,7 +26,7 @@ const EMPTY_FORM: any = {
 export default function TalentPoolPage() {
   const toast = useToast()
   const { can, isOwner } = useMyPermissions()
-  const { items: industryOptions } = useDict('industry')
+  const { items: talentIndustryOptions } = useDict('talent_industry')
   const { items: positionLevelOptions } = useDict('position_level')
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -124,7 +124,7 @@ export default function TalentPoolPage() {
       filterType: 'select', filterOptions: Object.values(GENDER_LABELS).map((l) => ({ label: l, value: l })) },
     { key: 'currentPosition', title: '当前职位' },
     { key: 'targetPosition', title: '意向职位' },
-    { key: 'positionType', title: '所属行业', filterType: 'select', filterOptions: industryOptions },
+    { key: 'positionType', title: '所属行业', filterType: 'select', filterOptions: talentIndustryOptions },
     { key: 'positionLevel', title: '职位级别', filterType: 'select', filterOptions: positionLevelOptions },
     { key: 'education', title: '学历', filterType: 'select',
       filterOptions: ['大专', '本科', '硕士', '博士'].map((l) => ({ label: l, value: l })) },
@@ -236,7 +236,7 @@ export default function TalentPoolPage() {
           <Field label="所属行业">
             <select className="select select-bordered w-full" value={form.positionType} onChange={(e) => setField('positionType', e.target.value)}>
               <option value="" disabled hidden>请选择</option>
-              {industryOptions.map((o) => (
+              {talentIndustryOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
