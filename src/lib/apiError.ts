@@ -49,7 +49,10 @@ export function handleApiError(e: unknown) {
   const code = prismaCode(e)
   if (code && PRISMA_MESSAGES[code]) {
     const { msg, status } = PRISMA_MESSAGES[code]
-    return NextResponse.json({ error: msg, code }, { status })
+    // P2000 超长：附上具体字段名，便于定位是哪个字段超限
+    const col = code === 'P2000' ? (e as any)?.meta?.column_name : null
+    const full = typeof col === 'string' && col ? `${msg}（字段：${col}）` : msg
+    return NextResponse.json({ error: full, code }, { status })
   }
 
   // Prisma 校验错误（字段类型/缺失/非法枚举等）属客户端入参问题 → 400，且不外泄内部细节

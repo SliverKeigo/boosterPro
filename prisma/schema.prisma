@@ -204,8 +204,8 @@ model Requirement {
   id                   Int                          @id @default(autoincrement())
   customer             Customer                     @relation(fields: [customerId], references: [id])
   customerId           Int                          @map("customer_id")
-  recruiter            String?                      @db.VarChar(200)
-  positionName         String                       @map("position_name") @db.VarChar(200)
+  recruiter            String?                      @db.VarChar(255)
+  positionName         String                       @map("position_name") @db.VarChar(255)
   headcount            Int
   monthlySalaryMin     Int?                         @map("monthly_salary_min")
   monthlySalaryMax     Int?                         @map("monthly_salary_max")
@@ -214,11 +214,11 @@ model Requirement {
   ageMin               Int?                         @map("age_min")
   ageMax               Int?                         @map("age_max")
   genderRequirement    GenderType?                  @default(ANY) @map("gender_requirement")
-  educationRequirement String?                      @map("education_requirement") @db.VarChar(100)
-  languageRequirement  String?                      @map("language_requirement") @db.VarChar(100)
-  status               String                       @db.VarChar(100)
+  educationRequirement String?                      @map("education_requirement") @db.Text
+  languageRequirement  String?                      @map("language_requirement") @db.Text
+  status               String                       @db.VarChar(255)
   deadline             DateTime                     @db.Date
-  baseCity             String                       @map("base_city") @db.VarChar(100)
+  baseCity             String                       @map("base_city") @db.VarChar(255)
   jobDescription       String?                      @map("job_description") @db.Text
   talentProfile        String?                      @map("talent_profile") @db.Text
   projectExperience    String?                      @map("project_experience") @db.Text
@@ -226,7 +226,7 @@ model Requirement {
   notes                String?                      @db.Text
   attachmentUrl        String?                      @map("attachment_url") @db.Text
   latestUpdate         String?                      @map("latest_update") @db.Text
-  industry             String?                      @db.VarChar(100)
+  industry             String?                      @db.VarChar(255)
   followDate           DateTime?                    @map("follow_date") @db.Date
   positionProfiles     RequirementPositionProfile[]
   urgentRecords        RequirementUrgentRecord[]
