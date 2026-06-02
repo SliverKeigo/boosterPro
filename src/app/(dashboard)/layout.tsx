@@ -62,7 +62,7 @@ const GROUPS: NavGroup[] = [
   },
   {
     key: 'sales',
-    label: '销售客户',
+    label: '市场中心',
     icon: Target,
     items: [
       { href: '/opportunities', label: '商机管理', icon: Target },
