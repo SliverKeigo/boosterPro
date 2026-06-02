@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { Zap, Mail, Lock, Users, Target, ShieldCheck } from 'lucide-react'
+import { Zap, User, Lock, Users, Target, ShieldCheck } from 'lucide-react'
 import { useToast } from '@/components/ui'
 
 const FEATURES = [
@@ -14,7 +14,7 @@ const FEATURES = [
 export default function LoginPage() {
   const router = useRouter()
   const toast = useToast()
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -25,7 +25,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -103,17 +103,17 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-base-content/70">邮箱</label>
+              <label className="mb-1.5 block text-sm font-medium text-base-content/70">账号</label>
               <label className="input input-bordered flex items-center gap-2">
-                <Mail className="h-4 w-4 text-base-content/40" />
+                <User className="h-4 w-4 text-base-content/40" />
                 <input
-                  type="email"
+                  type="text"
                   required
                   className="grow"
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="请输入账号"
+                  autoComplete="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                 />
               </label>
             </div>

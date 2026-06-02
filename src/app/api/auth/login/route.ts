@@ -4,17 +4,18 @@ import { signToken, AUTH_COOKIE } from '@/lib/auth'
 
 export async function POST(req: Request) {
   try {
-    const { email, password } = await req.json()
+    const { username, password } = await req.json()
 
-    if (!email || !password) {
-      return NextResponse.json({ error: '请输入邮箱和密码' }, { status: 400 })
+    if (!username || !password) {
+      return NextResponse.json({ error: '请输入账号和密码' }, { status: 400 })
     }
 
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { username },
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
         passwordHash: true,
         department: { select: { name: true } },
@@ -22,19 +23,19 @@ export async function POST(req: Request) {
     })
 
     if (!user || !user.passwordHash) {
-      return NextResponse.json({ error: '邮箱或密码错误' }, { status: 401 })
+      return NextResponse.json({ error: '账号或密码错误' }, { status: 401 })
     }
 
     const bcrypt = (await import('bcryptjs')).default
     const valid = await bcrypt.compare(password, user.passwordHash)
     if (!valid) {
-      return NextResponse.json({ error: '邮箱或密码错误' }, { status: 401 })
+      return NextResponse.json({ error: '账号或密码错误' }, { status: 401 })
     }
 
     const token = await signToken({
       userId: user.id,
-      email: user.email!,
       name: user.name,
+      username: user.username,
     })
 
     const response = NextResponse.json({
@@ -42,6 +43,7 @@ export async function POST(req: Request) {
       user: {
         id: user.id,
         name: user.name,
+        username: user.username,
         email: user.email,
         department: user.department?.name,
       },

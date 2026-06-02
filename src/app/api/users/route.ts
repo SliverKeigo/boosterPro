@@ -39,16 +39,17 @@ export async function POST(req: Request) {
   try {
     await requireAdmin()
     const body = await req.json()
-    const { name, email, password, departmentId, roleId } = body
+    const { name, username, email, password, departmentId, roleId } = body
     if (!name) return NextResponse.json({ error: '用户名不能为空' }, { status: 400 })
-    if (!email) return NextResponse.json({ error: '邮箱不能为空' }, { status: 400 })
+    if (!username) return NextResponse.json({ error: '账号不能为空' }, { status: 400 })
     if (!password) return NextResponse.json({ error: '密码不能为空' }, { status: 400 })
 
     const hashedPassword = await bcrypt.hash(password, 10)
     const user = await prisma.user.create({
       data: {
         name,
-        email,
+        username,
+        email: email || null,
         passwordHash: hashedPassword,
         departmentId: departmentId ? parseInt(departmentId) : null,
         roleId: roleId ? parseInt(roleId) : null,

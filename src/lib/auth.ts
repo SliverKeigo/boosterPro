@@ -7,8 +7,8 @@ const SECRET = new TextEncoder().encode(process.env.JWT_SECRET)
 
 export interface JwtPayload {
   userId: number
-  email: string
   name: string
+  username: string
 }
 
 export async function signToken(payload: JwtPayload): Promise<string> {

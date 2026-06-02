@@ -7,7 +7,7 @@ import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, useToast } from
 import { useMyPermissions } from '@/lib/usePermissions'
 
 const EMPTY_FORM: any = {
-  name: '', email: '', password: '', departmentId: '', roleId: '',
+  name: '', username: '', email: '', password: '', departmentId: '', roleId: '',
 }
 
 export default function UsersPage() {
@@ -102,6 +102,7 @@ export default function UsersPage() {
     setForm({
       ...EMPTY_FORM,
       name: r.name ?? '',
+      username: r.username ?? '',
       email: r.email ?? '',
       password: '',
       departmentId: r.departmentId ?? '',
@@ -123,12 +124,13 @@ export default function UsersPage() {
 
   const handleSubmit = async () => {
     if (!form.name?.trim()) return toast.error('请填写用户名')
-    if (!form.email?.trim()) return toast.error('请填写邮箱')
+    if (!form.username?.trim()) return toast.error('请填写账号')
     if (!editing && !form.password?.trim()) return toast.error('请填写密码')
     setSubmitting(true)
     try {
       const payload: any = {
         name: form.name,
+        username: form.username,
         email: form.email,
         departmentId: form.departmentId,
         roleId: form.roleId,
@@ -155,6 +157,7 @@ export default function UsersPage() {
   const columns: BoostColumn<any>[] = [
     { key: 'id', title: 'ID', width: 70 },
     { key: 'name', title: '用户名', render: (v) => <span className="font-medium">{v}</span> },
+    { key: 'username', title: '账号' },
     { key: 'email', title: '邮箱' },
     { key: 'departmentName', title: '部门', accessor: (r) => r.department?.name },
     { key: 'roleName', title: '角色', accessor: (r) => r.role?.name,
@@ -216,7 +219,10 @@ export default function UsersPage() {
           <Field label="用户名" required>
             <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="请输入" />
           </Field>
-          <Field label="邮箱" required>
+          <Field label="账号" required>
+            <input className="input input-bordered w-full" value={form.username} onChange={(e) => setField('username', e.target.value)} placeholder="登录账号，如 zhangsan" />
+          </Field>
+          <Field label="邮箱(选填)">
             <input type="email" className="input input-bordered w-full" value={form.email} onChange={(e) => setField('email', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="密码" required={!editing}>

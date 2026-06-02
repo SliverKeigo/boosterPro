@@ -19,6 +19,7 @@ import { INDUSTRIES } from '../src/lib/industries'
 const ADMIN_EMAIL = 'admin@boosterpro.com'
 const ADMIN_PASSWORD = 'Admin@123456'
 const ADMIN_NAME = '系统管理员'
+const ADMIN_USERNAME = 'admin'
 const DEFAULT_DEPARTMENT_NAME = '总部'
 const DEFAULT_ROLE_NAME = '超级管理员'
 
@@ -96,6 +97,7 @@ async function main() {
     where: { email: ADMIN_EMAIL },
     update: {
       name: ADMIN_NAME,
+      username: ADMIN_USERNAME,
       passwordHash,
       isAdmin: true,
       departmentId: department.id,
@@ -103,6 +105,7 @@ async function main() {
     },
     create: {
       name: ADMIN_NAME,
+      username: ADMIN_USERNAME,
       email: ADMIN_EMAIL,
       passwordHash,
       isAdmin: true,

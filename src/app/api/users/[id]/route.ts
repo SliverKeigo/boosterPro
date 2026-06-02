@@ -48,11 +48,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const pid = parseInt(id)
     if (!Number.isInteger(pid) || pid <= 0) throw new HttpError(400, '非法的 ID')
     const body = await req.json()
-    const { name, email, password, departmentId, roleId } = body
+    const { name, username, email, password, departmentId, roleId } = body
 
     const updateData: Prisma.UserUncheckedUpdateInput = {}
     if (name) updateData.name = name
-    if (email) updateData.email = email
+    if (username) updateData.username = username
+    if (email !== undefined) updateData.email = email || null
     if (password) updateData.passwordHash = await bcrypt.hash(password, 10)
     if (departmentId !== undefined) updateData.departmentId = departmentId ? parseInt(departmentId) : null
     if (roleId !== undefined) updateData.roleId = roleId ? parseInt(roleId) : null
