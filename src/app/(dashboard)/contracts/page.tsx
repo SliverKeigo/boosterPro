@@ -187,7 +187,11 @@ export default function ContractsPage() {
       key: 'invoices',
       title: '发票',
       sortable: false,
-      accessor: (r) => (r.invoices ?? []).map((x: any) => x.invoiceType).filter(Boolean).join(' '),
+      accessor: (r) =>
+        (r.invoices ?? [])
+          .map((x: any) => [x.invoiceType, x.verificationResult].filter(Boolean).join(' '))
+          .filter(Boolean)
+          .join(' '),
       render: (_v, r) => (
         <SubTableCell
           rows={r.invoices}

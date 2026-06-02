@@ -154,7 +154,11 @@ export default function SupplementsPage() {
         />
       ) },
     { key: 'customerProfiles', title: '客户画像', defaultVisible: false, sortable: false,
-      accessor: (r) => (r.customerProfiles ?? []).map((x: any) => x.specialty).filter(Boolean).join('、'),
+      accessor: (r) =>
+        (r.customerProfiles ?? [])
+          .map((x: any) => [x.specialty, x.description].filter(Boolean).join(' '))
+          .filter(Boolean)
+          .join(' '),
       render: (_v, r) => (
         <SubTableCell
           rows={r.customerProfiles}

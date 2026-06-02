@@ -229,7 +229,11 @@ export default function RequirementsPage() {
       title: '岗位画像',
       defaultVisible: false,
       sortable: false,
-      accessor: (r) => (r.positionProfiles ?? []).map((p: any) => p.knowledgeCategory).filter(Boolean).join('、'),
+      accessor: (r) =>
+        (r.positionProfiles ?? [])
+          .map((p: any) => [p.knowledgeCategory, p.knowledgeAmount].filter(Boolean).join(' '))
+          .filter(Boolean)
+          .join(' '),
       render: (_v, r) => (
         <SubTableCell
           rows={r.positionProfiles}
