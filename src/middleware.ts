@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 import { verifyToken, AUTH_COOKIE } from '@/lib/auth'
 
 // 不需要认证的路径前缀
-const PUBLIC_PATHS = ['/login', '/api/auth/login']
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

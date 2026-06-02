@@ -15,6 +15,7 @@
 import bcrypt from 'bcryptjs'
 import { prisma } from '../src/lib/prisma'
 import { INDUSTRIES } from '../src/lib/industries'
+import { resetSequences } from './fix-sequences'
 
 const ADMIN_EMAIL = 'admin@boosterpro.com'
 const ADMIN_PASSWORD = 'Admin@123456'
@@ -120,6 +121,10 @@ async function main() {
 
   // 字典种子（幂等，置于业务账号 seed 之后）
   await seedDicts()
+
+  // 同步所有自增序列到 max(id)+1，避免后续新建撞种子已用 id（P2002「数据重复」）
+  await resetSequences()
+  console.log('Seed 完成：已重置自增序列到 max(id)+1')
 }
 
 main()

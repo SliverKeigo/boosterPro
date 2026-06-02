@@ -15,8 +15,11 @@ export class HttpError extends Error {
 
 // 常见 Prisma 已知错误码 → 可读中文提示 + 合适状态码
 const PRISMA_MESSAGES: Record<string, { msg: string; status: number }> = {
+  P2000: { msg: '字段值超出长度限制', status: 400 },
   P2002: { msg: '数据重复：存在唯一约束冲突', status: 409 },
   P2003: { msg: '存在关联数据，无法删除或修改（请先处理相关联的记录）', status: 409 },
+  P2011: { msg: '缺少必填字段（存在非空约束）', status: 400 },
+  P2012: { msg: '缺少必填字段', status: 400 },
   P2025: { msg: '记录不存在或已被删除', status: 404 },
 }
 
@@ -47,6 +50,11 @@ export function handleApiError(e: unknown) {
   if (code && PRISMA_MESSAGES[code]) {
     const { msg, status } = PRISMA_MESSAGES[code]
     return NextResponse.json({ error: msg, code }, { status })
+  }
+
+  // Prisma 校验错误（字段类型/缺失/非法枚举等）属客户端入参问题 → 400，且不外泄内部细节
+  if (e instanceof Error && e.name === 'PrismaClientValidationError') {
+    return NextResponse.json({ error: '请求参数有误：请检查必填项与字段格式' }, { status: 400 })
   }
 
   const message = e instanceof Error ? e.message : String(e)

@@ -35,13 +35,24 @@ export function parseAiJson(text: string): any {
  * 联网工具正式名是 `web_search`（GA），不是 `web_search_preview`。
  */
 export async function runWebSearchJson(input: string): Promise<any> {
-  const r = await (openai as any).responses.create({
-    model: MODEL,
-    tools: [{ type: 'web_search' }],
-    input,
-  })
-  const text = r.output_text || ''
-  const data = parseAiJson(text)
-  if (!data) throw new HttpError(502, 'AI 返回解析失败')
-  return data
+  // 上游偶发以 SSE 流式返回（即便未请求 stream），SDK 解析时会抛错；
+  // 这里显式非流式 + 最多重试 3 次，最终失败统一抛 502（上游异常语义，不污染成 500）。
+  let lastErr: unknown = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r = await (openai as any).responses.create({
+        model: MODEL,
+        tools: [{ type: 'web_search' }],
+        input,
+        stream: false,
+      })
+      const data = parseAiJson(r.output_text || '')
+      if (data) return data
+      lastErr = new HttpError(502, 'AI 返回解析失败')
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  if (lastErr instanceof HttpError) throw lastErr
+  throw new HttpError(502, 'AI 服务暂时不可用，请稍后重试')
 }

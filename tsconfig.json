@@ -37,7 +37,9 @@
     "**/*.spec.ts",
     "**/*.spec.tsx",
     "**/__tests__/**",
+    "e2e/**",
     "vitest.config.ts",
-    "vitest.setup.ts"
+    "vitest.setup.ts",
+    "vitest.e2e.config.ts"
   ]
 }
