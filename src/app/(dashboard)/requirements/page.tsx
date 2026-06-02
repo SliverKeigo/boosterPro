@@ -10,6 +10,7 @@ import {
   SubTableCell,
   Modal,
   Popconfirm,
+  Dropdown,
   Field,
   FileUpload,
   useToast,
@@ -42,7 +43,7 @@ const EMPTY_FORM: any = {
   customerId: '', recruiter: '', positionName: '', headcount: '',
   monthlySalaryMin: '', monthlySalaryMax: '', annualSalaryMin: '', annualSalaryMax: '',
   ageMin: '', ageMax: '', genderRequirement: '', educationRequirement: '',
-  languageRequirement: '', status: '', deadline: '', baseCity: '',
+  languageRequirement: '', status: [], deadline: '', baseCity: '',
   jobDescription: '', talentProfile: '', projectExperience: '',
   closeReason: '', notes: '', industry: '',
   followDate: '', latestUpdate: '', attachmentUrl: '',
@@ -132,6 +133,7 @@ export default function RequirementsPage() {
     setForm({
       ...EMPTY_FORM,
       ...r,
+      status: Array.isArray(r.status) ? r.status : r.status ? [r.status] : [],
       customerId: r.customerId ?? '',
       headcount: r.headcount ?? '',
       monthlySalaryMin: r.monthlySalaryMin ?? '',
@@ -170,7 +172,7 @@ export default function RequirementsPage() {
     if (!form.customerId || String(form.customerId).trim() === '') return toast.error('请填写关联客户 ID')
     if (!form.positionName?.trim()) return toast.error('请填写岗位名称')
     if (form.headcount === '' || form.headcount === null) return toast.error('请填写需求人数')
-    if (!form.status?.trim()) return toast.error('请选择状态')
+    if (!Array.isArray(form.status) || form.status.length === 0) return toast.error('请选择岗位状态')
     if (!form.deadline) return toast.error('请选择截止日期')
     if (!form.baseCity?.trim()) return toast.error('请填写 Base 城市')
     setSubmitting(true)
@@ -197,8 +199,15 @@ export default function RequirementsPage() {
       render: (v) => v ? <span className="font-medium text-primary">{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'positionName', title: '岗位名称', render: (v) => <span className="font-medium">{v}</span> },
     { key: 'headcount', title: '需求人数', filterType: 'number' },
-    { key: 'status', title: '状态', filterType: 'select', filterOptions: statusOptions,
-      render: (v) => <span className={`badge ${STATUS_BADGE[v] ?? 'badge-ghost'} badge-sm`}>{v}</span> },
+    { key: 'status', title: '岗位状态', sortable: false, filterable: false,
+      accessor: (r) => (Array.isArray(r.status) ? r.status.join(' ') : (r.status ?? '')),
+      render: (_v, r) => (
+        <div className="flex flex-wrap gap-1">
+          {(Array.isArray(r.status) ? r.status : [r.status]).filter(Boolean).map((s: string, i: number) => (
+            <span key={i} className={`badge ${STATUS_BADGE[s] ?? 'badge-ghost'} badge-sm`}>{s}</span>
+          ))}
+        </div>
+      ) },
     { key: 'baseCity', title: 'Base 城市' },
     { key: 'deadline', title: '招聘重启日期', filterType: 'date', render: (v) => fmtDate(v) || '—' },
     { key: 'recruiter', title: '招聘需求方', render: (v) => v || <span className="text-base-content/30">—</span> },
@@ -370,11 +379,49 @@ export default function RequirementsPage() {
             <input className="input input-bordered w-full" value={form.languageRequirement} onChange={(e) => setField('languageRequirement', e.target.value)} placeholder="非中文" />
           </Field>
           {/* 岗位状态 / 招聘重启日期 */}
-          <Field label="岗位状态" required>
-            <select className="select select-bordered w-full" value={form.status} onChange={(e) => setField('status', e.target.value)}>
-              <option value="" disabled hidden>请选择状态</option>
-              {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+          <Field label="岗位状态（可多选）" required>
+            {(() => {
+              const selected = new Set<string>(Array.isArray(form.status) ? form.status : [])
+              const toggle = (val: string, checked: boolean) => {
+                const next = new Set(selected)
+                if (checked) next.add(val)
+                else next.delete(val)
+                // 按字典顺序回写为数组
+                setField('status', statusOptions.map((o) => o.value).filter((v) => next.has(v)))
+              }
+              const selectedLabels = statusOptions.filter((o) => selected.has(o.value)).map((o) => o.label)
+              return (
+                <Dropdown
+                  align="left"
+                  width={280}
+                  className="w-full"
+                  trigger={
+                    <span className="select select-bordered flex w-full cursor-pointer items-center font-normal">
+                      <span className={selectedLabels.length ? 'truncate' : 'truncate text-base-content/40'}>
+                        {selectedLabels.length ? selectedLabels.join('、') : '请选择岗位状态'}
+                      </span>
+                    </span>
+                  }
+                >
+                  <div className="max-h-64 overflow-auto">
+                    {statusOptions.map((o) => (
+                      <label
+                        key={o.value}
+                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-base-200"
+                      >
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-sm checkbox-primary"
+                          checked={selected.has(o.value)}
+                          onChange={(e) => toggle(o.value, e.target.checked)}
+                        />
+                        <span className="text-sm">{o.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </Dropdown>
+              )
+            })()}
           </Field>
           <Field label="招聘重启日期" required>
             <input type="date" className="input input-bordered w-full" value={form.deadline} onChange={(e) => setField('deadline', e.target.value)} />

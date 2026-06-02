@@ -92,6 +92,11 @@ export function buildRequirementData(body: any, mode: 'create' | 'update') {
     data.genderRequirement = null
   }
 
+  // 岗位状态：多选数组（兼容历史单值字符串 / 空值）
+  if (Array.isArray(data.status)) data.status = data.status.filter(Boolean)
+  else if (typeof data.status === 'string' && data.status.trim()) data.status = [data.status.trim()]
+  else data.status = []
+
   const profiles = (positionProfiles as any[])
     .filter((r) => r.knowledgeCategory || r.knowledgeAmount)
     .map((r) => ({

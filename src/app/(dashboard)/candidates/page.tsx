@@ -106,6 +106,14 @@ const opts = (m: Record<string, string>) => Object.entries(m).map(([value, label
 const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
 const fmtDateTime = (s?: string | null) => (s ? String(s).slice(0, 16) : '')
 
+// 岗位"不再招聘"的状态：候选人选岗位时，岗位若仅含这些状态则不可选；
+// 只要还有任一其它（在招）状态即可选（OR 关系，配合需求侧多选状态）。
+const REQUIREMENT_CLOSED_STATUSES = ['关闭', '暂停']
+const isRecruitingReq = (r: any): boolean => {
+  const st = Array.isArray(r.status) ? r.status : r.status ? [r.status] : []
+  return st.length === 0 || st.some((s: string) => !REQUIREMENT_CLOSED_STATUSES.includes(s))
+}
+
 const EMPTY_FORM: any = {
   name: '', birthYear: '', phone: '', email: '',
   education: '', schoolTier: '', customerId: '', customerShortName: '', requirementId: '',
@@ -449,7 +457,7 @@ export default function CandidatesPage() {
               {[
                 ...new Set(
                   requirements
-                    .filter((r) => String(r.customerId) === String(form.customerId) && r.recruiter)
+                    .filter((r) => String(r.customerId) === String(form.customerId) && r.recruiter && isRecruitingReq(r))
                     .map((r) => r.recruiter),
                 ),
               ].map((rc: any) => (
@@ -469,7 +477,8 @@ export default function CandidatesPage() {
                 .filter(
                   (r) =>
                     String(r.customerId) === String(form.customerId) &&
-                    (!form.recruitmentParty || r.recruiter === form.recruitmentParty),
+                    (!form.recruitmentParty || r.recruiter === form.recruitmentParty) &&
+                    isRecruitingReq(r),
                 )
                 .map((r) => (
                   <option key={r.id} value={r.id}>{r.positionName}</option>

@@ -216,7 +216,7 @@ model Requirement {
   genderRequirement    GenderType?                  @default(ANY) @map("gender_requirement")
   educationRequirement String?                      @map("education_requirement") @db.Text
   languageRequirement  String?                      @map("language_requirement") @db.Text
-  status               String                       @db.VarChar(255)
+  status               String[]
   deadline             DateTime                     @db.Date
   baseCity             String                       @map("base_city") @db.VarChar(255)
   jobDescription       String?                      @map("job_description") @db.Text

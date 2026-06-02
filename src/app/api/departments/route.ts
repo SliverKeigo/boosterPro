@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   try {
     const data = await prisma.department.findMany({
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { createdAt: 'asc' },
       include: { _count: { select: { users: true } } },
     })
     return NextResponse.json({ data, total: data.length })

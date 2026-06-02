@@ -16,7 +16,8 @@ export function useDict(code: string) {
   const [loading, setLoading] = useState(!cache[code])
 
   useEffect(() => {
-    if (cache[code]) return // 已缓存：state 由 useState 初值兜底（code 为常量字面量，稳定）
+    // 每次挂载都后台 revalidate：useState 初值已用缓存兜底（无闪烁），这里拉最新字典覆盖缓存——
+    // 避免管理员改了字典后，长开的页面仍显示旧选项（旧实现命中缓存就 return，需整页刷新才更新）。
     let active = true
     // IIFE 首条语句即 await，effect 同步路径不含 setState（规避 react-hooks/set-state-in-effect）
     void (async () => {

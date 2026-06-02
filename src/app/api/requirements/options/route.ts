@@ -12,7 +12,7 @@ export async function GET() {
     if (!me) throw new HttpError(401, '未登录或登录已过期')
     const data = await prisma.requirement.findMany({
       orderBy: { updatedAt: 'desc' },
-      select: { id: true, positionName: true, customerId: true, recruiter: true },
+      select: { id: true, positionName: true, customerId: true, recruiter: true, status: true },
     })
     return NextResponse.json({ data, total: data.length })
   } catch (e) {

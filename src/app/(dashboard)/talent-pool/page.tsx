@@ -11,6 +11,12 @@ const RES = 'TALENT_POOL'
 
 const GENDER_LABELS: Record<string, string> = { MALE: '男', FEMALE: '女', ANY: '不限' }
 
+// 出生年份下拉：当前年份至 1950，降序（与候选人页一致）
+const BIRTH_YEARS = ((): number[] => {
+  const y = new Date().getFullYear()
+  return Array.from({ length: y - 1950 + 1 }, (_, i) => y - i)
+})()
+
 const EMPTY_FORM: any = {
   name: '', gender: '', birthYear: '', age: '', education: '', phone: '',
   currentPosition: '', targetPosition: '', positionType: '', positionLevel: '',
@@ -194,7 +200,10 @@ export default function TalentPoolPage() {
             <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="出生年份">
-            <input type="number" className="input input-bordered w-full" value={form.birthYear} onChange={(e) => setField('birthYear', e.target.value)} placeholder="请选择" />
+            <select className="select select-bordered w-full" value={form.birthYear} onChange={(e) => setField('birthYear', e.target.value)}>
+              <option value="" disabled hidden>请选择年份</option>
+              {BIRTH_YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
           </Field>
           {/* 最高学历 / 性别 */}
           <Field label="最高学历">

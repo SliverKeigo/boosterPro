@@ -12,11 +12,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - 本项目只用 `public` schema（约 24 张表）。数据库内的 `novel` / `真寻` schema 是**其他无关项目**，忽略、勿删。
 - Prisma 7：连接走 `src/lib/prisma.ts` 的 `@prisma/adapter-pg`（`schema.prisma` 的 datasource **不写 url**）。改完 schema 跑 `npx prisma generate`，dev server 需重启才会加载新 client。CLI（`prisma db push` 等）经 `prisma.config.ts` 读 `.env` 的 `DATABASE_URL`；本机改库结构也可直接用 `psql` 跑 `ALTER`/`CREATE INDEX`（adapter 模式下 db push 受限时的备选）。
 - 八个业务主表均有 `created_by_id`（数据所有权外键 → `users`），`users` 有 `is_admin`；权限组在 `permission_groups` / `permission_group_members`。**旧 `permissions` 表已废弃删除，勿再使用。**
+- `requirements.status`（岗位状态）是**多值** `text[]`（Prisma `String[]`，一个岗位可同时多状态，如「新增/加急/正常」）。升级既有库用 `npm run db:migrate-req-status`（幂等；全新库由 `prisma db push` 直接建为 `text[]`）。候选人选岗位时按「含任一非『关闭/暂停』状态」过滤（OR，见 `candidates/page.tsx` 的 `isRecruitingReq`）。
 - 字段完整说明见 `docs/数据字典.md`。
 
 ## 通用约定
 - 列表页一律用 `BoostTable`，列定义需**覆盖该模型所有字段**（不常用的设 `defaultVisible:false`）。
 - 列表 API 的 GET 返回**全量数据** `{ data, total }`，搜索 / 排序 / 分页由前端 BoostTable 负责；返回的每行需含 `createdById`，前端据此判断行级归属。
+- 列表默认排序：业务列表按 `updatedAt desc`；**系统管理菜单（users/roles/departments/permission-groups）按 `createdAt asc`**（稳定、不随编辑跳动）；`dict-types` 按 `code`、`dict-items` 按 `sort`（字典项展示顺序，勿改成时间）。
+- 字典下拉用 `useDict(code)`：每次挂载会后台 revalidate（无 TTL 卡死），管理员改字典后无需整页刷新即可在一个导航周期内更新。
 - 文件字段用 `FileUpload`（上传到 `UPLOAD_DIR`，经 `/api/files/[name]` 下载）；富文本字段用 `RichText`；表单内的"子表 / 表中表"用 `SubTable`。
 - **表单里"引用别的实体"的下拉**（选客户 / 选岗位 / 选用户等）一律走轻量选项接口 `/api/<resource>/options`（仅返回 `id` + 名称等下拉必要字段，**只要求登录、不要求该资源 VIEW**），不要复用会 `requirePermission(...,'VIEW')` 的列表 GET——否则"有新增权限、无目标资源只读权限"的用户会拿到空下拉。已建 `clients/options`、`requirements/options`；用户 / 部门的 GET 本就登录可取。
 - **"提交人 / 负责人"类字段默认填当前登录用户**：前端打开新增弹窗时预填（仍可在下拉改），后端候选人 POST 再对 `submitterId/submitDepartmentId` 做"为空则归当前用户"兜底。`useMyPermissions()` 暴露 `userId` / `departmentId` 供预填。
