@@ -251,7 +251,15 @@ export function BoostTable<T extends Record<string, any>>({
 
   // 可筛选列
   const filterableColumns = useMemo(
-    () => columns.filter((c) => c.filterable !== false),
+    () =>
+      columns.filter((c) => {
+        if (c.filterable === false) return false
+        if (c.filterable === true) return true // 显式开启，覆盖下面的默认排除
+        // 默认排除对筛选无意义的技术列：主键 / 外键 id（如 customerId）、URL / 文件链接列
+        if (c.key === 'id' || /Id$/.test(c.key)) return false
+        if (/Url$/i.test(c.key)) return false
+        return true
+      }),
     [columns],
   )
 
