@@ -36,7 +36,8 @@ const DICT_SEEDS: { code: string; name: string; remark?: string; labels: string[
     labels: ['BOSS直聘', '猎聘', '脉脉', '内推', '智联招聘', '前程无忧', '其他'],
   },
   { code: 'requirement_status', name: '岗位状态', labels: ['新增', '正常', '重启', '暂停', '加急', '关闭', '售前岗位'] },
-  { code: 'opportunity_status', name: '商机状态', labels: ['线索阶段', '商机阶段', '提案阶段', '谈判阶段', '成交', '关闭'] },
+  // 客户仅提供「线索阶段」一个取值；勿臆造其它阶段，需新增由客户确认后在「字典管理」补充。
+  { code: 'opportunity_status', name: '商机状态', labels: ['线索阶段'] },
   { code: 'service_type', name: '服务类型', labels: ['猎头', 'RPO', '其他'] },
   { code: 'position_level', name: '职位级别', labels: ['初级', '中级', '高级', '专家', '管理'] },
   { code: 'invoice_type', name: '发票类型', labels: ['增值税专用发票', '增值税普通发票'] },
