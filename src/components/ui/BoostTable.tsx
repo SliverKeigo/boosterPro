@@ -120,10 +120,6 @@ interface FilterCondition {
   values: string[]
 }
 
-/** 取值后去重选项的上限 */
-const SELECT_OPTION_LIMIT = 100
-/** 自动推断为 select（分类字段）的去重值数量上限 */
-const SELECT_INFER_LIMIT = 20
 /** 从数据推断类型时最多采样的非空值数量 */
 const INFER_SAMPLE_LIMIT = 200
 
@@ -280,7 +276,6 @@ export function BoostTable<T extends Record<string, any>>({
       }
       // ② 从数据自动推断：采样该列非空样本值
       const acc = col.accessor ?? ((r: T) => (r as any)[col.key])
-      const distinct = new Set<string>()
       let sampled = 0
       let dateHits = 0
       let allNumber = true
@@ -289,7 +284,6 @@ export function BoostTable<T extends Record<string, any>>({
         const s = toStr(raw).trim()
         if (!s) continue
         sampled++
-        distinct.add(s)
         if (looksLikeDate(raw)) dateHits++
         if (!looksLikeNumber(raw)) allNumber = false
         if (sampled >= INFER_SAMPLE_LIMIT) break
@@ -302,10 +296,8 @@ export function BoostTable<T extends Record<string, any>>({
         kind = 'date'
       } else if (allNumber) {
         kind = 'number'
-      } else if (distinct.size <= SELECT_INFER_LIMIT) {
-        // 去重后非空值较少 → 分类字段（提交人 / 所属行业 / 状态 / 性别…）
-        kind = 'select'
       } else {
+        // 不再按「数据去重值少」自动判为下拉：select 必须由列显式 filterType:'select' + filterOptions 指定(对齐表单)
         kind = 'text'
       }
       m.set(col.key, kind)
@@ -315,21 +307,9 @@ export function BoostTable<T extends Record<string, any>>({
 
   const kindOf = (col: BoostColumn<T>): FilterKind => kindByKey.get(col.key) ?? 'text'
 
-  // 某列在当前 data 中出现过的去重值（用于 select / "等于任意"）：
-  // 优先用页面提供的 filterOptions；否则取 accessor 值、转字符串、去空、排序、限量。
-  const optionsOf = (col: BoostColumn<T>): { label: string; value: string }[] => {
-    if (col.filterOptions) return col.filterOptions
-    const acc = accessorOf(col)
-    const seen = new Set<string>()
-    for (const row of data) {
-      const s = toStr(acc(row)).trim()
-      if (s) seen.add(s)
-    }
-    return Array.from(seen)
-      .sort((a, b) => a.localeCompare(b, 'zh-CN', { numeric: true }))
-      .slice(0, SELECT_OPTION_LIMIT)
-      .map((s) => ({ label: s, value: s }))
-  }
+  // select 候选项只来自列显式 filterOptions（对齐表单），不从列表数据现取
+  const optionsOf = (col: BoostColumn<T>): { label: string; value: string }[] =>
+    col.filterOptions ?? []
 
   const newCondition = (logic: LogicOp): FilterCondition => {
     const col = filterableColumns[0]
