@@ -216,7 +216,7 @@ export default function WorkPlansPage() {
           </Field>
           <Field label="状态">
             <select className="select select-bordered w-full" value={form.status} onChange={(e) => setField('status', e.target.value)}>
-              <option value="">请选择</option>
+              <option value="" disabled hidden>请选择</option>
               {STATUS_OPTIONS.map((o) => (
                 <option key={o} value={o}>
                   {o}

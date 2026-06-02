@@ -224,13 +224,13 @@ export default function UsersPage() {
           </Field>
           <Field label="部门">
             <select className="select select-bordered w-full" value={form.departmentId} onChange={(e) => setField('departmentId', e.target.value)}>
-              <option value="">请选择</option>
+              <option value="" disabled hidden>请选择</option>
               {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </Field>
           <Field label="角色">
             <select className="select select-bordered w-full" value={form.roleId} onChange={(e) => setField('roleId', e.target.value)}>
-              <option value="">请选择</option>
+              <option value="" disabled hidden>请选择</option>
               {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </Field>
@@ -261,7 +261,7 @@ export default function UsersPage() {
               value={transferTargetId}
               onChange={(e) => setTransferTargetId(e.target.value)}
             >
-              <option value="">请选择</option>
+              <option value="" disabled hidden>请选择</option>
               {data
                 .filter((u) => u.id !== transferSource?.id)
                 .map((u) => (

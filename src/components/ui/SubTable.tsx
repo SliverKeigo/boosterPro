@@ -67,7 +67,7 @@ function Field({
           value={v}
           onChange={(e) => onChange(e.target.value)}
         >
-          <option value="">请选择</option>
+          <option value="" disabled hidden>请选择</option>
           {col.options?.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}

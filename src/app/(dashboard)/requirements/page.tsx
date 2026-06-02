@@ -275,7 +275,7 @@ export default function RequirementsPage() {
           {/* 客户名称 / 招聘需求方 */}
           <Field label="客户名称" required>
             <select className="select select-bordered w-full" value={form.customerId} onChange={(e) => setField('customerId', e.target.value)}>
-              <option value="">与我司签署服务合同的客户</option>
+              <option value="" disabled hidden>与我司签署服务合同的客户</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.shortName}</option>)}
             </select>
           </Field>
@@ -314,7 +314,7 @@ export default function RequirementsPage() {
           </Field>
           <Field label="性别要求">
             <select className="select select-bordered w-full" value={form.genderRequirement} onChange={(e) => setField('genderRequirement', e.target.value)}>
-              <option value="">请选择</option>
+              <option value="" disabled hidden>请选择</option>
               {opts(GENDER_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Field>

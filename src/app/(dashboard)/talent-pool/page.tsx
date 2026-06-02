@@ -196,7 +196,7 @@ export default function TalentPoolPage() {
           {/* 最高学历 / 性别 */}
           <Field label="最高学历">
             <select className="select select-bordered w-full" value={form.education} onChange={(e) => setField('education', e.target.value)}>
-              <option value="">请选择</option>
+              <option value="" disabled hidden>请选择</option>
               <option value="大专">大专</option>
               <option value="本科">本科</option>
               <option value="硕士">硕士</option>
@@ -205,7 +205,7 @@ export default function TalentPoolPage() {
           </Field>
           <Field label="性别">
             <select className="select select-bordered w-full" value={form.gender} onChange={(e) => setField('gender', e.target.value)}>
-              <option value="">请选择</option>
+              <option value="" disabled hidden>请选择</option>
               <option value="MALE">男</option>
               <option value="FEMALE">女</option>
             </select>
@@ -232,7 +232,7 @@ export default function TalentPoolPage() {
           {/* 职位级别 / 简历及相关资料 */}
           <Field label="职位级别">
             <select className="select select-bordered w-full" value={form.positionLevel} onChange={(e) => setField('positionLevel', e.target.value)}>
-              <option value="">请选择</option>
+              <option value="" disabled hidden>请选择</option>
               {positionLevelOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}

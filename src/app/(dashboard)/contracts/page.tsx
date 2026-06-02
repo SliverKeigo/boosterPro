@@ -256,7 +256,7 @@ export default function ContractsPage() {
         <div className="grid grid-cols-2 gap-4">
           <Field label="关联客户" required>
             <select className="select select-bordered w-full" value={form.customerId} onChange={(e) => setField('customerId', e.target.value)}>
-              <option value="">请选择客户</option>
+              <option value="" disabled hidden>请选择客户</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.shortName}</option>)}
             </select>
           </Field>
@@ -278,7 +278,7 @@ export default function ContractsPage() {
           </Field>
           <Field label="服务类型" required>
             <select className="select select-bordered w-full" value={form.serviceType} onChange={(e) => setField('serviceType', e.target.value)}>
-              <option value="">请选择</option>
+              <option value="" disabled hidden>请选择</option>
               {serviceTypeOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}

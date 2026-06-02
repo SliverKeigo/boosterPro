@@ -270,7 +270,7 @@ export default function OpportunitiesPage() {
           </Field>
           <Field label="销售负责人" required>
             <select className="select select-bordered w-full" value={form.salesOwnerId} onChange={(e) => setField('salesOwnerId', e.target.value)}>
-              <option value="">请选择</option>
+              <option value="" disabled hidden>请选择</option>
               {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
           </Field>
