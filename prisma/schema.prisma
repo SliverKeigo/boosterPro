@@ -193,7 +193,7 @@ model SupplementCustomerProfile {
   id           Int              @id @default(autoincrement())
   supplement   ClientSupplement @relation(fields: [supplementId], references: [id], onDelete: Cascade)
   supplementId Int              @map("supplement_id")
-  specialty    String?          @db.VarChar(200)
+  specialty    String?          @db.Text
   description  String?          @db.Text
   createdAt    DateTime         @default(now()) @map("created_at")
 
@@ -247,8 +247,8 @@ model RequirementPositionProfile {
   id                Int         @id @default(autoincrement())
   requirement       Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
   requirementId     Int         @map("requirement_id")
-  knowledgeCategory String?     @map("knowledge_category") @db.VarChar(200)
-  knowledgeAmount   String?     @map("knowledge_amount") @db.VarChar(100)
+  knowledgeCategory String?     @map("knowledge_category") @db.Text
+  knowledgeAmount   String?     @map("knowledge_amount") @db.Text
   createdAt         DateTime    @default(now()) @map("created_at")
 
   @@map("requirement_position_profiles")
@@ -439,8 +439,8 @@ model ContractInvoice {
   id                 Int      @id @default(autoincrement())
   contract           Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
   contractId         Int      @map("contract_id")
-  invoiceType        String?  @map("invoice_type") @db.VarChar(100)
-  verificationResult String?  @map("verification_result") @db.VarChar(200)
+  invoiceType        String?  @map("invoice_type") @db.VarChar(255)
+  verificationResult String?  @map("verification_result") @db.Text
   createdAt          DateTime @default(now()) @map("created_at")
 
   @@map("contract_invoices")
