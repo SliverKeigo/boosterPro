@@ -27,12 +27,6 @@ const TAIWAN_AREAS = [
   '台东县', '澎湖县', '金门县', '连江县',
 ]
 
-// 海外 国家/地区
-const OVERSEAS_AREAS = [
-  '美国', '加拿大', '英国', '法国', '德国', '澳大利亚', '新加坡',
-  '日本', '韩国', '马来西亚', '泰国', '越南', '印度', '阿联酋', '其他',
-]
-
 const toLeaves = (labels: string[]): RegionNode[] => labels.map((label) => ({ label }))
 
 /**
@@ -42,5 +36,6 @@ export const extraRegions: RegionNode[] = [
   { label: '香港特别行政区', children: toLeaves(HK_DISTRICTS) },
   { label: '澳门特别行政区', children: toLeaves(MACAO_AREAS) },
   { label: '台湾省', children: toLeaves(TAIWAN_AREAS) },
-  { label: '海外', children: toLeaves(OVERSEAS_AREAS) },
+  // 海外：单层叶子，直接选「海外」即可，不再展开国家/地区
+  { label: '海外' },
 ]
