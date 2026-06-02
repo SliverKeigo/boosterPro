@@ -3,19 +3,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
-import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, FileUpload, useToast } from '@/components/ui'
+import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, FileUpload, YearSelect, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
 
 const RES = 'TALENT_POOL'
 
 const GENDER_LABELS: Record<string, string> = { MALE: '男', FEMALE: '女', ANY: '不限' }
-
-// 出生年份下拉：当前年份至 1950，降序（与候选人页一致）
-const BIRTH_YEARS = ((): number[] => {
-  const y = new Date().getFullYear()
-  return Array.from({ length: y - 1950 + 1 }, (_, i) => y - i)
-})()
 
 const EMPTY_FORM: any = {
   name: '', gender: '', birthYear: '', age: '', education: '', phone: '',
@@ -200,10 +194,7 @@ export default function TalentPoolPage() {
             <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="出生年份">
-            <select className="select select-bordered w-full" value={form.birthYear} onChange={(e) => setField('birthYear', e.target.value)}>
-              <option value="" disabled hidden>请选择年份</option>
-              {BIRTH_YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-            </select>
+            <YearSelect value={form.birthYear} onChange={(v) => setField('birthYear', v)} minYear={1950} />
           </Field>
           {/* 最高学历 / 性别 */}
           <Field label="最高学历">

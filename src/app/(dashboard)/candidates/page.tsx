@@ -12,6 +12,7 @@ import {
   Popconfirm,
   Field,
   FileUpload,
+  YearSelect,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -393,10 +394,7 @@ export default function CandidatesPage() {
             <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="出生年份">
-            <select className="select select-bordered w-full" value={form.birthYear} onChange={(e) => setField('birthYear', e.target.value)}>
-              <option value="" disabled hidden>请选择年份</option>
-              {BIRTH_YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-            </select>
+            <YearSelect value={form.birthYear} onChange={(v) => setField('birthYear', v)} minYear={1950} />
           </Field>
           <Field label="联系电话">
             <input className="input input-bordered w-full" value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="请输入" />

@@ -12,6 +12,7 @@ import {
   Popconfirm,
   Field,
   FileUpload,
+  YearSelect,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -21,12 +22,6 @@ import { refGet } from '@/lib/refCache'
 const RES = 'CONTRACT'
 
 const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
-
-// 签订年份下拉：当前年份+1 至 2010，降序
-const SIGNING_YEARS = ((): number[] => {
-  const y = new Date().getFullYear()
-  return Array.from({ length: y + 1 - 2010 + 1 }, (_, i) => y + 1 - i)
-})()
 
 const EMPTY_FORM: any = {
   customerId: '',
@@ -295,10 +290,7 @@ export default function ContractsPage() {
             <input className="input input-bordered w-full" value={form.contractName} onChange={(e) => setField('contractName', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="签订年份" required>
-            <select className="select select-bordered w-full" value={form.signingYear} onChange={(e) => setField('signingYear', e.target.value)}>
-              <option value="" disabled hidden>请选择年份</option>
-              {SIGNING_YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-            </select>
+            <YearSelect value={form.signingYear} onChange={(v) => setField('signingYear', v)} minYear={1990} maxFuture={10} />
           </Field>
           <Field label="合同有效期" required className="col-span-2">
             <div className="flex items-center gap-2">
