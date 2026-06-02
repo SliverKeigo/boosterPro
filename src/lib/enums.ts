@@ -30,8 +30,7 @@ export const EDUCATION_LEVEL_OPTIONS: EnumOption[] = toOptions(EDUCATION_LEVEL_L
 
 /** SchoolTier —— 院校层次 */
 export const SCHOOL_TIER_LABELS: Record<string, string> = {
-  T985: '985',
-  T211: '211',
+  T985_211: '985/211',
   GENERAL_FIRST: '普通一流',
   GENERAL: '普通',
   OVERSEAS: '海外留学',

@@ -27,12 +27,16 @@ const EDUCATION_LABELS: Record<string, string> = {
   OTHER: '其他',
 }
 const SCHOOL_TIER_LABELS: Record<string, string> = {
-  T985: '985',
-  T211: '211',
+  T985_211: '985/211',
   GENERAL_FIRST: '双一流',
   GENERAL: '普通',
   OVERSEAS: '海外留学',
 }
+// 出生年份下拉：当前年份至 1950，降序
+const BIRTH_YEARS = ((): number[] => {
+  const y = new Date().getFullYear()
+  return Array.from({ length: y - 1950 + 1 }, (_, i) => y - i)
+})()
 const STATUS_LABELS: Record<string, string> = {
   PENDING: '已推荐待反馈',
   INTERVIEWING: '面试中',
@@ -210,6 +214,7 @@ export default function CandidatesPage() {
   const handleSubmit = async () => {
     if (!form.name?.trim()) return toast.error('请填写候选人姓名')
     if (!form.recruitmentChannel?.trim()) return toast.error('请填写招聘渠道')
+    if (form.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return toast.error('邮箱格式不正确')
     setSubmitting(true)
     try {
       const visibleFlow = new Set(STATUS_FIELDS[form.recommendationStatus] ?? [])
@@ -335,7 +340,10 @@ export default function CandidatesPage() {
             <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="出生年份">
-            <input type="number" className="input input-bordered w-full" value={form.birthYear} onChange={(e) => setField('birthYear', e.target.value)} placeholder="如 1990" />
+            <select className="select select-bordered w-full" value={form.birthYear} onChange={(e) => setField('birthYear', e.target.value)}>
+              <option value="" disabled hidden>请选择年份</option>
+              {BIRTH_YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
           </Field>
           <Field label="联系电话">
             <input className="input input-bordered w-full" value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="请输入" />
@@ -345,13 +353,13 @@ export default function CandidatesPage() {
           </Field>
           <Field label="教育经历">
             <select className="select select-bordered w-full" value={form.education} onChange={(e) => setField('education', e.target.value)}>
-              <option value="">请选择</option>
+              <option value="" disabled hidden>请选择</option>
               {opts(EDUCATION_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Field>
           <Field label="院校">
             <select className="select select-bordered w-full" value={form.schoolTier} onChange={(e) => setField('schoolTier', e.target.value)}>
-              <option value="">请选择</option>
+              <option value="" disabled hidden>请选择</option>
               {opts(SCHOOL_TIER_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Field>
@@ -368,7 +376,7 @@ export default function CandidatesPage() {
                 setField('customerShortName', c?.shortName || '')
               }}
             >
-              <option value="">请选择客户</option>
+              <option value="" disabled hidden>请选择客户</option>
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>{c.fullName || c.shortName}</option>
               ))}
@@ -392,7 +400,7 @@ export default function CandidatesPage() {
                 setField('requirementId', '')
               }}
             >
-              <option value="">{form.customerId ? '请选择招聘需求方' : '请先选择客户'}</option>
+              <option value="" disabled hidden>{form.customerId ? '请选择招聘需求方' : '请先选择客户'}</option>
               {[
                 ...new Set(
                   requirements
@@ -411,7 +419,7 @@ export default function CandidatesPage() {
               disabled={!form.customerId}
               onChange={(e) => setField('requirementId', e.target.value)}
             >
-              <option value="">{form.customerId ? '请选择岗位' : '请先选择客户'}</option>
+              <option value="" disabled hidden>{form.customerId ? '请选择岗位' : '请先选择客户'}</option>
               {requirements
                 .filter(
                   (r) =>
@@ -428,7 +436,7 @@ export default function CandidatesPage() {
           </Field>
           <Field label="招聘渠道" required>
             <select className="select select-bordered w-full" value={form.recruitmentChannel} onChange={(e) => setField('recruitmentChannel', e.target.value)}>
-              <option value="">请选择</option>
+              <option value="" disabled hidden>请选择</option>
               {channelOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
@@ -542,15 +550,33 @@ export default function CandidatesPage() {
             <input className="input input-bordered w-full" value={form.tags} onChange={(e) => setField('tags', e.target.value)} placeholder="如：核心人才, 已背调" />
           </Field>
           <Field label="提交人部门">
-            <select className="select select-bordered w-full" value={form.submitDepartmentId} onChange={(e) => setField('submitDepartmentId', e.target.value)}>
-              <option value="">请选择部门</option>
+            <select
+              className="select select-bordered w-full"
+              value={form.submitDepartmentId}
+              onChange={(e) => setForm((f: any) => ({ ...f, submitDepartmentId: e.target.value, submitterId: '' }))}
+            >
+              <option value="" disabled hidden>请选择部门</option>
               {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </Field>
           <Field label="提交人">
-            <select className="select select-bordered w-full" value={form.submitterId} onChange={(e) => setField('submitterId', e.target.value)}>
-              <option value="">请选择提交人</option>
-              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            <select
+              className="select select-bordered w-full"
+              value={form.submitterId}
+              onChange={(e) => {
+                const v = e.target.value
+                const u = users.find((x) => String(x.id) === v)
+                setForm((f: any) => ({
+                  ...f,
+                  submitterId: v,
+                  submitDepartmentId: u?.departmentId != null ? String(u.departmentId) : f.submitDepartmentId,
+                }))
+              }}
+            >
+              <option value="" disabled hidden>请选择提交人</option>
+              {users
+                .filter((u) => !form.submitDepartmentId || String(u.departmentId ?? '') === String(form.submitDepartmentId))
+                .map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
           </Field>
           <Field label="备注" className="col-span-2">

@@ -17,8 +17,7 @@ enum EducationLevel {
 }
 
 enum SchoolTier {
-  T985          @map("985")
-  T211          @map("211")
+  T985_211      @map("985/211")
   GENERAL_FIRST @map("普通一流")
   GENERAL       @map("普通")
   OVERSEAS      @map("海外留学")
