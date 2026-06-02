@@ -14,6 +14,7 @@ import {
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
+import { useDict } from '@/lib/useDict'
 
 const RES = 'CANDIDATE'
 
@@ -115,6 +116,7 @@ const EMPTY_FORM: any = {
 export default function CandidatesPage() {
   const toast = useToast()
   const { can, isOwner } = useMyPermissions()
+  const { items: channelOptions } = useDict('recruitment_channel')
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -425,7 +427,12 @@ export default function CandidatesPage() {
             <input type="datetime-local" className="input input-bordered w-full" value={form.recommendationTime} onChange={(e) => setField('recommendationTime', e.target.value)} />
           </Field>
           <Field label="招聘渠道" required>
-            <input className="input input-bordered w-full" value={form.recruitmentChannel} onChange={(e) => setField('recruitmentChannel', e.target.value)} placeholder="如：猎聘、内推、Boss直聘" />
+            <select className="select select-bordered w-full" value={form.recruitmentChannel} onChange={(e) => setField('recruitmentChannel', e.target.value)}>
+              <option value="">请选择</option>
+              {channelOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
           </Field>
           <Field label="推荐报告">
             <FileUpload value={form.recommendationReportUrl} onChange={(url) => setField('recommendationReportUrl', url)} />
