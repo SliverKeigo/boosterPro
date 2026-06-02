@@ -532,3 +532,32 @@ model PermissionGroupMember {
   @@index([memberType, memberId])
   @@map("permission_group_members")
 }
+
+// 数据字典：类型（如 industry 行业 / recruitment_channel 招聘渠道），软枚举下拉选项集中维护
+model DictType {
+  id        Int        @id @default(autoincrement())
+  code      String     @unique @db.VarChar(50)
+  name      String     @db.VarChar(100)
+  remark    String?    @db.VarChar(200)
+  items     DictItem[]
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@map("dict_types")
+}
+
+// 字典项：归属某字典类型，label 显示值 / value 存储值 / sort 排序 / enabled 启用
+model DictItem {
+  id        Int      @id @default(autoincrement())
+  type      DictType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  typeId    Int      @map("type_id")
+  label     String   @db.VarChar(200)
+  value     String   @db.VarChar(200)
+  sort      Int      @default(0)
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([typeId])
+  @@map("dict_items")
+}

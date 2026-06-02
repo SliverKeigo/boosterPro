@@ -16,7 +16,7 @@ import {
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
-import { INDUSTRIES } from '@/lib/industries'
+import { useDict } from '@/lib/useDict'
 
 const RES = 'CUSTOMER'
 
@@ -41,6 +41,7 @@ const EMPTY_FORM: any = {
 export default function ClientsPage() {
   const toast = useToast()
   const { can, isOwner } = useMyPermissions()
+  const { items: industryOptions } = useDict('industry')
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -268,8 +269,8 @@ export default function ClientsPage() {
           <Field label="所属行业">
             <select className="select select-bordered w-full" value={form.industry} onChange={(e) => setField('industry', e.target.value)}>
               <option value="">请选择</option>
-              {INDUSTRIES.map((it) => (
-                <option key={it} value={it}>{it}</option>
+              {industryOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
           </Field>

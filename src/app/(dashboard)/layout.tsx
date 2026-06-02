@@ -17,6 +17,7 @@ import {
   Network,
   ShieldCheck,
   Lock,
+  BookMarked,
   LogOut,
   Bell,
   ChevronDown,
@@ -79,6 +80,7 @@ const GROUPS: NavGroup[] = [
       { href: '/settings/departments', label: '部门管理', icon: Network },
       { href: '/settings/roles', label: '角色管理', icon: ShieldCheck },
       { href: '/settings/permissions', label: '权限设置', icon: Lock },
+      { href: '/settings/dictionaries', label: '字典管理', icon: BookMarked },
     ],
   },
 ]
