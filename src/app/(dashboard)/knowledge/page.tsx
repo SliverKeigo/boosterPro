@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
-import { ChevronDown, Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import {
   BoostTable,
   type BoostColumn,
@@ -256,11 +256,10 @@ export default function KnowledgePage() {
                   width={300}
                   className="w-full"
                   trigger={
-                    <span className="select select-bordered flex w-full cursor-pointer items-center justify-between font-normal">
+                    <span className="select select-bordered flex w-full cursor-pointer items-center font-normal">
                       <span className={selectedLabels.length ? 'truncate' : 'truncate text-base-content/40'}>
                         {selectedLabels.length ? selectedLabels.join('、') : '请选择标签'}
                       </span>
-                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 text-base-content/50" />
                     </span>
                   }
                 >
