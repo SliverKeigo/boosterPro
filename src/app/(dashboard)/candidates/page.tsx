@@ -15,6 +15,7 @@ import {
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
+import { refGet } from '@/lib/refCache'
 
 const RES = 'CANDIDATE'
 
@@ -132,11 +133,18 @@ export default function CandidatesPage() {
   const [departments, setDepartments] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
 
-  useEffect(() => {
-    fetch('/api/clients').then((r) => r.json()).then((j) => setCustomers(j.data || [])).catch(() => {})
-    fetch('/api/requirements').then((r) => r.json()).then((j) => setRequirements(j.data || [])).catch(() => {})
-    fetch('/api/departments').then((r) => r.json()).then((j) => setDepartments(j.data || [])).catch(() => {})
-    fetch('/api/users').then((r) => r.json()).then((j) => setUsers(j.data || [])).catch(() => {})
+  // 表单引用数据按需加载：打开新增/编辑弹窗时再拉（refGet 按 url 缓存 60s + 在途去重，已缓存则瞬时）
+  const loadFormRefs = useCallback(async () => {
+    const [c, r, d, u] = await Promise.all([
+      refGet('/api/clients'),
+      refGet('/api/requirements'),
+      refGet('/api/departments'),
+      refGet('/api/users'),
+    ])
+    setCustomers(c)
+    setRequirements(r)
+    setDepartments(d)
+    setUsers(u)
   }, [])
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
@@ -165,12 +173,14 @@ export default function CandidatesPage() {
   }, [fetchData])
 
   const openCreate = () => {
+    void loadFormRefs()
     setEditing(null)
     setForm({ ...EMPTY_FORM })
     setOpen(true)
   }
 
   const openEdit = (r: any) => {
+    void loadFormRefs()
     setEditing(r)
     setForm({
       ...EMPTY_FORM,

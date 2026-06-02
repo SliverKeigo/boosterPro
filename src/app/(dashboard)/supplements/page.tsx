@@ -15,6 +15,7 @@ import {
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
+import { refGet } from '@/lib/refCache'
 
 const RES = 'CLIENT_SUPPLEMENT'
 
@@ -42,11 +43,9 @@ export default function SupplementsPage() {
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
-  useEffect(() => {
-    fetch('/api/clients')
-      .then((r) => r.json())
-      .then((j) => setCustomers(j.data || []))
-      .catch(() => {})
+  const loadFormRefs = useCallback(async () => {
+    const c = await refGet('/api/clients')
+    setCustomers(c)
   }, [])
 
   const fetchData = useCallback(async (showLoading = false) => {
@@ -71,12 +70,14 @@ export default function SupplementsPage() {
   }, [fetchData])
 
   const openCreate = () => {
+    void loadFormRefs()
     setEditing(null)
     setForm({ ...EMPTY_FORM })
     setOpen(true)
   }
 
   const openEdit = (r: any) => {
+    void loadFormRefs()
     setEditing(r)
     setForm({
       ...EMPTY_FORM,

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Users,
@@ -160,9 +161,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* 菜单 */}
         <nav className="flex-1 px-3 py-3">
-          <button
-            type="button"
-            onClick={() => router.push('/')}
+          <Link
+            href="/"
             className={`mb-2 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
               pathname === '/'
                 ? 'bg-primary text-white shadow-sm'
@@ -171,7 +171,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             <LayoutDashboard className="h-4 w-4 shrink-0" />
             工作台
-          </button>
+          </Link>
           {GROUPS.filter(canSeeGroup).map((group) => {
             const open = openKeys.includes(group.key)
             return (
@@ -193,9 +193,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       const active = isActive(item.href)
                       return (
                         <li key={item.href}>
-                          <button
-                            type="button"
-                            onClick={() => router.push(item.href)}
+                          <Link
+                            href={item.href}
                             className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
                               active
                                 ? 'bg-primary text-white shadow-sm'
@@ -204,7 +203,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           >
                             <item.icon className="h-4 w-4 shrink-0" />
                             {item.label}
-                          </button>
+                          </Link>
                         </li>
                       )
                     })}

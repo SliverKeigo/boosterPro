@@ -16,6 +16,7 @@ import {
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
+import { refGet } from '@/lib/refCache'
 
 const RES = 'OPPORTUNITY'
 
@@ -62,8 +63,9 @@ export default function OpportunitiesPage() {
   const [form, setForm] = useState<any>(EMPTY_FORM)
   const [users, setUsers] = useState<any[]>([])
 
-  useEffect(() => {
-    fetch('/api/users').then((r) => r.json()).then((j) => setUsers(j.data || [])).catch(() => {})
+  const loadFormRefs = useCallback(async () => {
+    const u = await refGet('/api/users')
+    setUsers(u)
   }, [])
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
@@ -90,12 +92,14 @@ export default function OpportunitiesPage() {
   }, [fetchData])
 
   const openCreate = () => {
+    void loadFormRefs()
     setEditing(null)
     setForm({ ...EMPTY_FORM })
     setOpen(true)
   }
 
   const openEdit = (r: any) => {
+    void loadFormRefs()
     setEditing(r)
     setForm({
       ...EMPTY_FORM,

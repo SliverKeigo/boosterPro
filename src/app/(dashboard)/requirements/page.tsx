@@ -15,6 +15,7 @@ import {
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
+import { refGet } from '@/lib/refCache'
 
 const RES = 'REQUIREMENT'
 
@@ -90,11 +91,10 @@ export default function RequirementsPage() {
     }
   }
 
-  useEffect(() => {
-    fetch('/api/clients')
-      .then((r) => r.json())
-      .then((j) => setCustomers(j.data || []))
-      .catch(() => {})
+  // 客户下拉「引用数据」按需加载：打开新增/编辑弹窗时再拉，带 url 缓存 + 在途去重。
+  const loadFormRefs = useCallback(async () => {
+    const c = await refGet('/api/clients')
+    setCustomers(c)
   }, [])
 
   const fetchData = useCallback(async (showLoading = false) => {
@@ -119,12 +119,14 @@ export default function RequirementsPage() {
   }, [fetchData])
 
   const openCreate = () => {
+    void loadFormRefs()
     setEditing(null)
     setForm({ ...EMPTY_FORM })
     setOpen(true)
   }
 
   const openEdit = (r: any) => {
+    void loadFormRefs()
     setEditing(r)
     setForm({
       ...EMPTY_FORM,

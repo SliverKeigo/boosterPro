@@ -15,6 +15,7 @@ import {
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
+import { refGet } from '@/lib/refCache'
 
 const RES = 'CONTRACT'
 
@@ -56,11 +57,10 @@ export default function ContractsPage() {
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
-  useEffect(() => {
-    fetch('/api/clients')
-      .then((r) => r.json())
-      .then((j) => setCustomers(j.data || []))
-      .catch(() => {})
+  // 表单下拉引用数据按需加载（打开弹窗时调用，带缓存 / 在途去重）
+  const loadFormRefs = useCallback(async () => {
+    const c = await refGet('/api/clients')
+    setCustomers(c)
   }, [])
 
   const fetchData = useCallback(async (showLoading = false) => {
@@ -87,11 +87,13 @@ export default function ContractsPage() {
   const openCreate = () => {
     setEditing(null)
     setForm({ ...EMPTY_FORM })
+    void loadFormRefs()
     setOpen(true)
   }
 
   const openEdit = (r: any) => {
     setEditing(r)
+    void loadFormRefs()
     setForm({
       ...EMPTY_FORM,
       ...r,
