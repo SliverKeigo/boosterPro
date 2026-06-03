@@ -18,6 +18,10 @@
 # 可用环境变量覆盖默认值：
 #   DB_NAME(boosterpro) DB_USER(boosterpro) DB_PASS(随机) DB_HOST(127.0.0.1)
 #   DB_PORT(5432) APP_PORT(3000) NODE_MAJOR(20)
+#
+# 远程数据库（优先复用）：脚本会先探测一个预置的远程 PostgreSQL，若可连则直接使用，
+# 跳过「本地安装 PostgreSQL + 建角色/库/改 pg_hba」。可用环境变量覆盖：
+#   REMOTE_DB_HOST REMOTE_DB_PORT REMOTE_DB_USER REMOTE_DB_NAME REMOTE_DB_PASSWORD
 # ─────────────────────────────────────────────────────────────────────────────
 set -Eeuo pipefail
 
@@ -30,6 +34,17 @@ DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_PORT="${DB_PORT:-5432}"
 APP_PORT="${APP_PORT:-3000}"
 NODE_MAJOR="${NODE_MAJOR:-20}"
+
+# ── 预置远程数据库连接参数（脚本顶部默认值，可被同名环境变量覆盖）──
+# ⚠️ 安全提示：以下默认值（尤其 REMOTE_DB_PASSWORD）属于敏感凭据，仅为开箱即用的便利而内置。
+#    生产环境请务必改用环境变量注入（如 export REMOTE_DB_PASSWORD=...），不要把真实口令写死在脚本里、
+#    更不要随脚本一起提交到代码仓库或对外泄露；如已外泄请立即在数据库侧轮换该口令。
+REMOTE_DB_HOST="${REMOTE_DB_HOST:-192.168.31.225}"
+REMOTE_DB_PORT="${REMOTE_DB_PORT:-5432}"
+REMOTE_DB_USER="${REMOTE_DB_USER:-booster_pro_dba}"
+REMOTE_DB_NAME="${REMOTE_DB_NAME:-booster_pro_db}"
+REMOTE_DB_PASSWORD="${REMOTE_DB_PASSWORD:-1aac814363863b6480dc4353736b53fa58a532bee752d003}"
+USE_REMOTE_DB=0
 
 c_b=$'\033[1;36m'; c_g=$'\033[1;32m'; c_y=$'\033[1;33m'; c_r=$'\033[1;31m'; c_0=$'\033[0m'
 log()  { printf '\n%s==>%s %s\n' "$c_b" "$c_0" "$*"; }
@@ -92,7 +107,37 @@ if [ "$need_node" -eq 1 ]; then
   ok "Node：$(node -v) / npm：$(npm -v)"
 fi
 
+# ═══ 1.5 优先探测预置的远程数据库（可连则复用，跳过本地 PostgreSQL）═══
+# 找一个可用的 psql 客户端：PATH 里的 psql 优先；macOS 上再退而求其次找 libpq 自带的 psql。
+find_psql_client() {
+  if have psql; then command -v psql; return 0; fi
+  if [ "$OS" = "mac" ]; then
+    if [ -x /opt/homebrew/opt/libpq/bin/psql ]; then echo /opt/homebrew/opt/libpq/bin/psql; return 0; fi
+    local lp; lp="$(brew --prefix libpq 2>/dev/null)/bin/psql"
+    if [ -n "$lp" ] && [ -x "$lp" ]; then echo "$lp"; return 0; fi
+  fi
+  return 1
+}
+
+log "探测预置远程数据库（${REMOTE_DB_HOST}:${REMOTE_DB_PORT}/${REMOTE_DB_NAME}）..."
+REMOTE_PSQL="$(find_psql_client || true)"
+if [ -z "$REMOTE_PSQL" ]; then
+  warn "未找到 psql 客户端，跳过远程探测，按本地 PostgreSQL 流程继续。"
+elif PGPASSWORD="$REMOTE_DB_PASSWORD" "$REMOTE_PSQL" -h "$REMOTE_DB_HOST" -p "$REMOTE_DB_PORT" \
+       -U "$REMOTE_DB_USER" -d "$REMOTE_DB_NAME" -tAc 'SELECT 1' >/dev/null 2>&1; then
+  USE_REMOTE_DB=1
+  # 复用远程库：把 DB_* 指向远程，使后续 .env 生成与「本机才建库」判断自然走远程分支
+  DB_HOST="$REMOTE_DB_HOST"; DB_PORT="$REMOTE_DB_PORT"
+  DB_USER="$REMOTE_DB_USER"; DB_NAME="$REMOTE_DB_NAME"; DB_PASS="$REMOTE_DB_PASSWORD"
+  ok "检测到远程数据库 ${REMOTE_DB_NAME}，直接使用，跳过本地 PostgreSQL 安装与本地建库/改 pg_hba。"
+else
+  warn "远程数据库不可连（${REMOTE_DB_HOST}:${REMOTE_DB_PORT}），回退到本地 PostgreSQL 流程。"
+fi
+
 # ═══ 2. PostgreSQL ═══
+if [ "$USE_REMOTE_DB" -eq 1 ]; then
+  ok "已复用远程数据库，跳过本地 PostgreSQL 安装。"
+else
 if [ "$OS" = "mac" ]; then
   PG_PREFIX="$(brew --prefix postgresql@16 2>/dev/null || brew --prefix postgresql@15 2>/dev/null || brew --prefix postgresql 2>/dev/null || true)"
   [ -n "$PG_PREFIX" ] && export PATH="$PG_PREFIX/bin:$PATH"
@@ -115,6 +160,7 @@ else
   esac
   sleep 3
   ok "PostgreSQL 安装完成"
+fi
 fi
 
 # ═══ 3. .env（不存在则生成；存在则沿用并解析其 DATABASE_URL）═══
@@ -145,8 +191,10 @@ EOF
   ok "已生成 .env（DB 密码与 JWT_SECRET 已随机生成）"
 fi
 
-# ═══ 4. 建角色 + 建库（仅当库在本机时）═══
-if [ "$DB_HOST" = "127.0.0.1" ] || [ "$DB_HOST" = "localhost" ]; then
+# ═══ 4. 建角色 + 建库（仅当库在本机、且未复用远程库时）═══
+if [ "$USE_REMOTE_DB" -eq 1 ]; then
+  ok "已复用远程数据库 ${DB_NAME}，跳过本地建角色/建库/改 pg_hba。"
+elif [ "$DB_HOST" = "127.0.0.1" ] || [ "$DB_HOST" = "localhost" ]; then
   log "配置数据库角色与库（${DB_USER} / ${DB_NAME}）..."
   if psql_super -tAc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1; then
     psql_super -c "ALTER ROLE \"${DB_USER}\" WITH LOGIN PASSWORD '${DB_PASS}';"

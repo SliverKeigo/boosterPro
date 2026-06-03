@@ -94,6 +94,7 @@ model User {
   role                 Role?                       @relation(fields: [roleId], references: [id])
   roleId               Int?                        @map("role_id")
   submittedCandidates  Candidate[]                 @relation("CandidateSubmitter")
+  submittedContacts    CustomerContact[]           @relation("CustomerContactSubmitter")
   salesOpportunities   Opportunity[]               @relation("OpportunitySalesOwner")
   contractSales        Contract[]                  @relation("ContractSalesOwner")
   contractDeliveries   Contract[]                  @relation("ContractDeliveryOwner")
@@ -104,6 +105,7 @@ model User {
   createdCandidates    Candidate[]                 @relation("CandidateCreatedBy")
   createdRequirements  Requirement[]               @relation("RequirementCreatedBy")
   createdSupplements   ClientSupplement[]          @relation("ClientSupplementCreatedBy")
+  createdCustomerContacts CustomerContact[]        @relation("CustomerContactCreatedBy")
   createdTalents       TalentPool[]                @relation("TalentPoolCreatedBy")
   createdOpportunities Opportunity[]               @relation("OpportunityCreatedBy")
   createdCustomers     Customer[]                  @relation("CustomerCreatedBy")
@@ -132,6 +134,7 @@ model Customer {
   attachmentUrl      String?                 @map("attachment_url") @db.Text
   officeAddresses    CustomerOfficeAddress[]
   supplements        ClientSupplement[]
+  customerContacts   CustomerContact[]
   requirements       Requirement[]
   candidates         Candidate[]
   contracts          Contract[]
@@ -198,6 +201,42 @@ model SupplementCustomerProfile {
   createdAt    DateTime         @default(now()) @map("created_at")
 
   @@map("supplement_customer_profiles")
+}
+
+model CustomerContact {
+  id                 Int                     @id @default(autoincrement())
+  title              String                  @db.VarChar(200)
+  customer           Customer                @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId         Int                     @map("customer_id")
+  submitter          User?                   @relation("CustomerContactSubmitter", fields: [submitterId], references: [id])
+  submitterId        Int?                    @map("submitter_id")
+  submitDepartmentId Int?                    @map("submit_department_id")
+  contacts           CustomerContactPerson[]
+  createdAt          DateTime                @default(now()) @map("created_at")
+  updatedAt          DateTime                @updatedAt @map("updated_at")
+
+  createdBy   User? @relation("CustomerContactCreatedBy", fields: [createdById], references: [id])
+  createdById Int?  @map("created_by_id")
+
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([createdById])
+  @@map("customer_contacts")
+}
+
+model CustomerContactPerson {
+  id                Int             @id @default(autoincrement())
+  customerContact   CustomerContact @relation(fields: [customerContactId], references: [id], onDelete: Cascade)
+  customerContactId Int             @map("customer_contact_id")
+  contactName       String?         @map("contact_name") @db.VarChar(200)
+  contactTitle      String?         @map("contact_title") @db.VarChar(200)
+  contactPhone      String?         @map("contact_phone") @db.VarChar(255)
+  contactEmail      String?         @map("contact_email") @db.VarChar(255)
+  contactHobby      String?         @map("contact_hobby") @db.Text
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  @@map("customer_contact_persons")
 }
 
 model Requirement {

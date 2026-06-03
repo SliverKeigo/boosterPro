@@ -34,11 +34,11 @@ export const AUTH_COOKIE = 'bp_token'
 // 用于决定登录 cookie 是否加 Secure——内网部署常是明文 HTTP 且非 localhost，
 // 若强加 Secure，浏览器会丢弃该 cookie，导致登录后请求不带 token、被中间件打回登录页。
 export function isSecureRequest(req: Request): boolean {
-  const xfproto = req.headers.get('x-forwarded-proto')
-  if (xfproto) return xfproto.split(',')[0].trim().toLowerCase() === 'https'
   try {
+    const xfproto = req.headers?.get?.('x-forwarded-proto')
+    if (xfproto) return xfproto.split(',')[0].trim().toLowerCase() === 'https'
     return new URL(req.url).protocol === 'https:'
   } catch {
-    return false
+    return false // 取不到协议（如测试 mock / 异常）时按非 HTTPS 处理，不加 Secure
   }
 }

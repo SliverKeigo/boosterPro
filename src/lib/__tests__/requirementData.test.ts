@@ -31,7 +31,7 @@ describe('buildRequirementData - 字段映射与清洗', () => {
     expect(out.positionName).toBe('后端工程师')
     expect(out.recruiter).toBe('招聘者')
     expect(out.baseCity).toBe('杭州')
-    expect(out.status).toBe('OPEN')
+    expect(out.status).toEqual(['OPEN']) // 岗位状态已改为多选数组（单值入参规整为一元数组）
     expect(out).not.toHaveProperty('id')
     expect(out).not.toHaveProperty('customer')
     expect(out).not.toHaveProperty('candidates')

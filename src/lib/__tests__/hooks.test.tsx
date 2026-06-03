@@ -34,16 +34,16 @@ describe('useDict', () => {
     expect((fetch as any).mock.calls[0][0]).toContain('/api/dict/SOURCE')
   })
 
-  it('模块级缓存：相同 code 第二次 renderHook 不再发请求', async () => {
+  it('模块级缓存：第二次 renderHook 立即用缓存（不 loading），并后台 revalidate', async () => {
     const first = renderHook(() => useDict('SOURCE'))
     await waitFor(() => expect(first.result.current.loading).toBe(false))
     expect(fetch).toHaveBeenCalledTimes(1)
 
-    // 第二个组件命中缓存：立即拿到数据、不 loading、不再 fetch
+    // 第二个组件命中缓存：立即拿到数据、不 loading；但每次挂载会后台 revalidate（再发一次请求）
     const second = renderHook(() => useDict('SOURCE'))
     expect(second.result.current.loading).toBe(false)
     expect(second.result.current.items).toEqual([{ label: '猎头', value: 'HUNTER' }])
-    expect(fetch).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
   })
 
   it('clearDictCache 后重新拉取', async () => {

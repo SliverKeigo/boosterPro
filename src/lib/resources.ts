@@ -5,6 +5,7 @@ export const RESOURCES = [
   { key: 'CANDIDATE', label: '候选人管理', path: 'candidates' },
   { key: 'REQUIREMENT', label: '客户需求管理', path: 'requirements' },
   { key: 'CLIENT_SUPPLEMENT', label: '客户补充信息', path: 'supplements' },
+  { key: 'CUSTOMER_CONTACT', label: '客户联系人信息', path: 'customer-contacts' },
   { key: 'TALENT_POOL', label: '人才储备库', path: 'talent-pool' },
   { key: 'OPPORTUNITY', label: '商机管理', path: 'opportunities' },
   { key: 'CUSTOMER', label: '客户基本信息', path: 'clients' },

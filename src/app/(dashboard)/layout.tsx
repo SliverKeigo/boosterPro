@@ -25,6 +25,7 @@ import {
   Briefcase,
   Zap,
   BarChart3,
+  Contact,
   type LucideIcon,
 } from 'lucide-react'
 import { Popconfirm, useToast } from '@/components/ui'
@@ -59,7 +60,10 @@ const GROUPS: NavGroup[] = [
     key: 'analytics',
     label: '数据分析',
     icon: BarChart3,
-    items: [{ href: '/reports', label: '数据报表', icon: BarChart3 }],
+    items: [
+      { href: '/reports', label: '数据报表', icon: BarChart3 },
+      { href: '/reports/candidate-recommendation', label: '候选人推荐报表', icon: BarChart3 },
+    ],
   },
   {
     key: 'sales',
@@ -68,6 +72,7 @@ const GROUPS: NavGroup[] = [
     items: [
       { href: '/opportunities', label: '商机管理', icon: Target },
       { href: '/clients', label: '客户基本信息', icon: Building2 },
+      { href: '/customer-contacts', label: '客户联系人信息', icon: Contact },
       { href: '/contracts', label: '销售合同', icon: FileSignature },
       { href: '/knowledge', label: '公司知识库', icon: BookOpen },
     ],
@@ -124,7 +129,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // 菜单按权限过滤：八个业务菜单看 VIEW 权限，系统管理组限管理员；权限加载中先全显，避免闪烁
   const canSeeItem = (item: NavItem) => {
-    const res = PATH_TO_RESOURCE[item.href.replace(/^\//, '')]
+    // 按首段路径查资源，子路由（如 /reports/candidate-recommendation）继承父级 VIEW 权限
+    const res = PATH_TO_RESOURCE[item.href.replace(/^\//, '').split('/')[0]]
     if (res) return permLoading || can(res, 'VIEW')
     return true
   }

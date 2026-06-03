@@ -70,6 +70,10 @@ describe('getPermissionMap / hasAction', () => {
     expect(map.CANDIDATE).toEqual(
       expect.arrayContaining(['VIEW', 'CREATE', 'EDIT', 'DELETE', 'IMPORT', 'EXPORT']),
     )
+    // 新增资源也应被管理员全量覆盖
+    expect(map.CUSTOMER_CONTACT).toEqual(
+      expect.arrayContaining(['VIEW', 'CREATE', 'EDIT', 'DELETE', 'IMPORT', 'EXPORT']),
+    )
     expect(prisma.permissionGroup.findMany).not.toHaveBeenCalled()
   })
   it('普通用户取匹配权限组动作并集', async () => {

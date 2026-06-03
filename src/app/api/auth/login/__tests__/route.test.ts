@@ -5,7 +5,7 @@ vi.mock('@/lib/prisma', () => ({
 }))
 // bcryptjs 在 route 内以 (await import('bcryptjs')).default 形式取用，需 mock default.compare
 vi.mock('bcryptjs', () => ({ default: { compare: vi.fn() } }))
-vi.mock('@/lib/auth', () => ({ signToken: vi.fn(async () => 'tok'), AUTH_COOKIE: 'bp_token' }))
+vi.mock('@/lib/auth', () => ({ signToken: vi.fn(async () => 'tok'), AUTH_COOKIE: 'bp_token', isSecureRequest: () => false }))
 
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'

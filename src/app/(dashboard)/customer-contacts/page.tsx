@@ -1,0 +1,284 @@
+'use client'
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useCallback, useEffect, useState } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
+import {
+  BoostTable,
+  type BoostColumn,
+  SubTable,
+  SubTableCell,
+  Modal,
+  Popconfirm,
+  Field,
+  useToast,
+} from '@/components/ui'
+import { useMyPermissions } from '@/lib/usePermissions'
+import { refGet } from '@/lib/refCache'
+
+const RES = 'CUSTOMER_CONTACT'
+
+const fmtDateTime = (s?: string | null) => (s ? `${s.slice(0, 10)} ${s.slice(11, 16)}` : '—')
+
+const EMPTY_FORM: any = {
+  title: '', customerId: '', submitterId: '', submitDepartmentId: '',
+  contacts: [],
+}
+
+export default function CustomerContactsPage() {
+  const toast = useToast()
+  const { can, isOwner, userId, departmentId } = useMyPermissions()
+  const [data, setData] = useState<any[]>([])
+  const [customers, setCustomers] = useState<any[]>([])
+  const [departments, setDepartments] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<any>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [form, setForm] = useState<any>(EMPTY_FORM)
+
+  const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
+
+  // 表单引用数据按需加载：打开新增/编辑弹窗时再拉（refGet 按 url 缓存 60s + 在途去重，已缓存则瞬时）
+  const loadFormRefs = useCallback(async () => {
+    const [c, d, u] = await Promise.all([
+      refGet('/api/clients/options'),
+      refGet('/api/departments'),
+      refGet('/api/users'),
+    ])
+    setCustomers(c)
+    setDepartments(d)
+    setUsers(u)
+  }, [])
+
+  const fetchData = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true)
+    try {
+      const res = await fetch('/api/customer-contacts')
+      if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
+      const json = await res.json()
+      setData(json.data)
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : ('加载失败'))
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
+
+  useEffect(() => {
+    // 包一层异步 IIFE（首句即 await），让 effect 同步路径不含 setState（react-hooks/set-state-in-effect）
+    void (async () => {
+      await fetchData()
+    })()
+  }, [fetchData])
+
+  const openCreate = () => {
+    void loadFormRefs()
+    setEditing(null)
+    // 提交人 / 提交人组织默认填当前登录用户（仍可在下拉中改）
+    setForm({
+      ...EMPTY_FORM,
+      submitterId: userId != null ? String(userId) : '',
+      submitDepartmentId: departmentId != null ? String(departmentId) : '',
+    })
+    setOpen(true)
+  }
+
+  const openEdit = (r: any) => {
+    void loadFormRefs()
+    setEditing(r)
+    setForm({
+      ...EMPTY_FORM,
+      ...r,
+      customerId: r.customerId ?? '',
+      submitterId: r.submitterId ?? '',
+      submitDepartmentId: r.submitDepartmentId ?? '',
+      contacts: (r.contacts ?? []).map((x: any) => ({
+        contactName: x.contactName ?? '',
+        contactTitle: x.contactTitle ?? '',
+        contactPhone: x.contactPhone ?? '',
+        contactEmail: x.contactEmail ?? '',
+        contactHobby: x.contactHobby ?? '',
+      })),
+    })
+    setOpen(true)
+  }
+
+  const handleDelete = async (id: number) => {
+    try {
+      const res = await fetch(`/api/customer-contacts/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
+      toast.success('删除成功')
+      void fetchData()
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : ('删除失败'))
+    }
+  }
+
+  const handleSubmit = async () => {
+    if (!form.title?.trim()) return toast.error('请填写实例标题')
+    if (!form.customerId || String(form.customerId).trim() === '') return toast.error('请选择客户名称')
+    setSubmitting(true)
+    try {
+      const url = editing ? `/api/customer-contacts/${editing.id}` : '/api/customer-contacts'
+      const res = await fetch(url, {
+        method: editing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
+      toast.success(editing ? '更新成功' : '创建成功')
+      setOpen(false)
+      void fetchData()
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : (editing ? '更新失败' : '创建失败'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const columns: BoostColumn<any>[] = [
+    { key: 'title', title: '实例标题', render: (v) => <span className="font-medium">{v}</span> },
+    { key: 'customerName', title: '客户名称', accessor: (r) => r.customer?.shortName,
+      render: (v) => v ? <span className="font-medium text-primary">{v}</span> : <span className="text-base-content/30">—</span> },
+    { key: 'submitterName', title: '提交人', accessor: (r) => r.submitter?.name,
+      render: (v) => v || <span className="text-base-content/30">—</span> },
+    { key: 'contacts', title: '客户联系人信息', sortable: false,
+      accessor: (r) =>
+        (r.contacts ?? [])
+          .map((x: any) => [x.contactName, x.contactTitle, x.contactPhone, x.contactEmail, x.contactHobby].filter(Boolean).join(' '))
+          .filter(Boolean)
+          .join(' '),
+      render: (_v, r) => (
+        <SubTableCell
+          rows={r.contacts}
+          title="客户联系人信息"
+          unit="条"
+          columns={[
+            { key: 'contactName', title: '联系人姓名' },
+            { key: 'contactTitle', title: '联系人职务' },
+            { key: 'contactPhone', title: '联系人电话' },
+            { key: 'contactEmail', title: '联系人邮箱' },
+            { key: 'contactHobby', title: '联系人爱好' },
+          ]}
+        />
+      ) },
+    { key: 'createdAt', title: '创建时间', filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
+    // 以下默认隐藏，可在“显示列”开启 —— 覆盖全部字段
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => fmtDateTime(v) },
+    { key: 'customerId', title: '客户 ID', defaultVisible: false, filterType: 'number' },
+    { key: 'submitterId', title: '提交人 ID', defaultVisible: false, filterType: 'number' },
+    { key: 'submitDepartmentId', title: '提交人组织 ID', defaultVisible: false, filterType: 'number' },
+  ]
+
+  return (
+    <div>
+      <div className="mb-4">
+        <h1 className="text-xl font-bold text-base-content">客户联系人信息管理</h1>
+        <p className="mt-0.5 text-sm text-base-content/50">维护客户联系人姓名、职务、电话、邮箱与爱好</p>
+      </div>
+
+      <BoostTable
+        title="客户联系人信息列表"
+        columns={columns}
+        data={data}
+        loading={loading}
+        rowKey="id"
+        onCreate={can(RES, 'CREATE') ? openCreate : undefined}
+        createText="新增"
+        onImport={can(RES, 'IMPORT') ? () => toast.info('导入功能开发中') : undefined}
+        onRefresh={() => fetchData(true)}
+        showExport={can(RES, 'EXPORT')}
+        searchPlaceholder="搜索标题 / 客户 / 提交人 / 联系人…"
+        actions={(r) => (
+          <div className="flex items-center gap-1">
+            {can(RES, 'EDIT') && isOwner(r) && (
+              <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openEdit(r)}>
+                <Pencil className="h-3.5 w-3.5" />
+                编辑
+              </button>
+            )}
+            {can(RES, 'DELETE') && isOwner(r) && (
+              <Popconfirm title="确认删除该客户联系人信息？" onConfirm={() => handleDelete(r.id)}>
+                <button className="btn btn-ghost btn-xs gap-1 text-error">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  删除
+                </button>
+              </Popconfirm>
+            )}
+          </div>
+        )}
+      />
+
+      {/* ── 新建 / 编辑 ── */}
+      <Modal
+        open={open}
+        title={editing ? '编辑客户联系人信息' : '新增客户联系人信息'}
+        onClose={() => setOpen(false)}
+        onOk={handleSubmit}
+        okText={editing ? '保存' : '创建'}
+        confirmLoading={submitting}
+        width={840}
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="实例标题" required>
+            <input className="input input-bordered w-full" value={form.title} onChange={(e) => setField('title', e.target.value)} placeholder="请输入" />
+          </Field>
+          <Field label="客户名称" required>
+            <select className="select select-bordered w-full" value={form.customerId} onChange={(e) => setField('customerId', e.target.value)}>
+              <option value="" disabled hidden>请选择客户</option>
+              {customers.map((c) => <option key={c.id} value={c.id}>{c.shortName}</option>)}
+            </select>
+          </Field>
+          <Field label="提交人组织">
+            <select
+              className="select select-bordered w-full"
+              value={form.submitDepartmentId}
+              onChange={(e) => setForm((f: any) => ({ ...f, submitDepartmentId: e.target.value, submitterId: '' }))}
+            >
+              <option value="" disabled hidden>请选择组织</option>
+              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </Field>
+          <Field label="提交人">
+            <select
+              className="select select-bordered w-full"
+              value={form.submitterId}
+              onChange={(e) => {
+                const v = e.target.value
+                const u = users.find((x) => String(x.id) === v)
+                setForm((f: any) => ({
+                  ...f,
+                  submitterId: v,
+                  submitDepartmentId: u?.departmentId != null ? String(u.departmentId) : f.submitDepartmentId,
+                }))
+              }}
+            >
+              <option value="" disabled hidden>请选择提交人</option>
+              {users
+                .filter((u) => !form.submitDepartmentId || String(u.departmentId ?? '') === String(form.submitDepartmentId))
+                .map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </Field>
+        </div>
+
+        <div className="divider my-3" />
+
+        {/* 子表 */}
+        <SubTable
+          title="客户联系人信息"
+          value={form.contacts}
+          onChange={(rows) => setField('contacts', rows)}
+          columns={[
+            { key: 'contactName', title: '联系人姓名', type: 'text', width: 140 },
+            { key: 'contactTitle', title: '联系人职务', type: 'text', width: 140 },
+            { key: 'contactPhone', title: '联系人电话', type: 'text', width: 160 },
+            { key: 'contactEmail', title: '联系人邮箱', type: 'text', width: 200 },
+            { key: 'contactHobby', title: '联系人爱好', type: 'textarea', width: 200 },
+          ]}
+        />
+      </Modal>
+    </div>
+  )
+}
