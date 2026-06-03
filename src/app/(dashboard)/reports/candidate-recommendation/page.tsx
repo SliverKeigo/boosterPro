@@ -552,7 +552,7 @@ export default function CandidateRecommendationReportPage() {
         </div>
         <div className="mt-3 flex items-center justify-between">
           <p className="text-xs text-base-content/40">
-            「计划日期」当前对应 offer到岗日期(offerOnboardDate)。筛选后命中 {filtered.length} 份简历。
+            「计划日期」当前对应 offer到岗日期
           </p>
           <button className="btn btn-ghost btn-sm gap-1" onClick={resetFilters}>
             <RotateCcw className="h-3.5 w-3.5" />
