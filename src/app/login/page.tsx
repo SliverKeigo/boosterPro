@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
 import { User, Lock, Eye, EyeOff, AlertCircle, Check } from 'lucide-react'
 import './login.css'
 
@@ -22,7 +21,6 @@ function BrandMark({ size = 32 }: { size?: number }) {
 }
 
 export default function LoginPage() {
-  const router = useRouter()
   const [account, setAccount] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
@@ -63,8 +61,9 @@ export default function LoginPage() {
         return
       }
       setStatus('success')
-      router.push('/')
-      router.refresh()
+      // 整页跳转进入工作台：生产构建下 router.push+refresh 跨布局(login→dashboard)导航偶发卡在登录页不跳，
+      // 改用浏览器级跳转更稳——必带刚设置的登录 Cookie，由中间件 + 服务端以最新登录态渲染。
+      window.location.replace('/')
     } catch {
       fail('网络错误，请重试')
     }
