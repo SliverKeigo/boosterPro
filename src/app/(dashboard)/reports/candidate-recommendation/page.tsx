@@ -9,9 +9,6 @@ import {
   Users,
   FileText,
   ShieldAlert,
-  UserCheck,
-  CheckCircle2,
-  Workflow,
   Filter,
   RotateCcw,
 } from 'lucide-react'
@@ -180,35 +177,6 @@ function pieOption(data: { name: string; value: number }[]) {
 }
 
 // ─── UI 小组件 ───────────────────────────────────────────────────────────────────
-function StatCard({
-  title,
-  value,
-  hint,
-  icon: Icon,
-  color = 'text-primary',
-}: {
-  title: string
-  value: number
-  hint?: string
-  icon: any
-  color?: string
-}) {
-  return (
-    <div className="rounded-xl border border-base-300 bg-base-100 p-5 shadow-sm">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-base-content/60">{title}</p>
-          <p className="mt-2 text-3xl font-bold text-base-content">{value}</p>
-          {hint ? <p className="mt-1 text-xs text-base-content/40">{hint}</p> : null}
-        </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <Icon className={`h-5 w-5 ${color}`} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function ChartCard({
   title,
   icon: Icon,
@@ -246,8 +214,7 @@ const EMPTY_FILTERS = {
   customerId: '', // 客户 id
   recommendStart: '', // recommendationTime 起（含）
   recommendEnd: '', // recommendationTime 止（含当天）
-  planStart: '', // 计划日期起 —— 见下方 offerOnboardDate 假设
-  planEnd: '', // 计划日期止
+  planDate: '', // 计划日期（单选一日，对应 offer到岗日期 offerOnboardDate）
   channel: '', // recruitmentChannel 字典 value
 }
 
@@ -302,13 +269,6 @@ export default function CandidateRecommendationReportPage() {
     }
   }, [permLoading, allowed, toast])
 
-  // 字典 value → label 映射（明细表"简历渠道"列展示用）
-  const channelLabel = useMemo(() => {
-    const m = new Map<string, string>()
-    for (const o of channelOptions) m.set(o.value, o.label)
-    return (v: string | null | undefined) => (v ? m.get(v) ?? v : '')
-  }, [channelOptions])
-
   // ── 顶部筛选：作用于下方所有统计 / 明细 ──
   // 日期 input 是 yyyy-mm-dd；止日期用「次日 0 点」做半开区间上界（含当天）。
   const filtered = useMemo(() => {
@@ -316,10 +276,9 @@ export default function CandidateRecommendationReportPage() {
     const recEnd = filters.recommendEnd
       ? new Date(new Date(filters.recommendEnd).getTime() + 86_400_000)
       : null
-    const planStart = filters.planStart ? new Date(filters.planStart) : null
-    const planEnd = filters.planEnd
-      ? new Date(new Date(filters.planEnd).getTime() + 86_400_000)
-      : null
+    // 计划日期：单选一日，按"当天"匹配（对应 offer到岗日期 offerOnboardDate）
+    const planDay = filters.planDate ? new Date(filters.planDate) : null
+    const planNext = planDay ? new Date(planDay.getTime() + 86_400_000) : null
 
     return candidates.filter((c) => {
       if (filters.status && c.recommendationStatus !== filters.status) return false
@@ -330,10 +289,8 @@ export default function CandidateRecommendationReportPage() {
       if (recStart && !inRange(c.recommendationTime, recStart, new Date(8.64e15)))
         return false
       if (recEnd && !inRange(c.recommendationTime, new Date(0), recEnd)) return false
-      // 计划日期窗口（假设 = offerOnboardDate「offer到岗日期」，文档未明确"计划日期"具体字段）
-      if (planStart && !inRange(c.offerOnboardDate, planStart, new Date(8.64e15)))
-        return false
-      if (planEnd && !inRange(c.offerOnboardDate, new Date(0), planEnd)) return false
+      // 计划日期（单日，对应 offer到岗日期 offerOnboardDate）
+      if (planDay && planNext && !inRange(c.offerOnboardDate, planDay, planNext)) return false
       return true
     })
   }, [candidates, filters])
@@ -384,7 +341,6 @@ export default function CandidateRecommendationReportPage() {
       (c) => c.recommendationStatus,
       statusLabel,
     )
-    const myInProgressTotal = myInProgress.length
 
     // 6. 本年度候选人贡献度占比 —— 本年度各推荐人推荐数量占比
     const yearContribution = countBy(
@@ -397,32 +353,36 @@ export default function CandidateRecommendationReportPage() {
       inRange(c.recommendationTime, tmStart, tmEnd),
     )
 
+    // 个人数量类指标合并为一张柱状图（3 根柱：当月推荐 / 当月有效 / 上月有效）
+    const personalCounts = [
+      { name: '当月推荐', value: myThisMonthRecommended },
+      { name: '当月有效', value: myThisMonthValid },
+      { name: '上月有效', value: myLastMonthValid },
+    ]
+
     return {
-      myThisMonthRecommended,
+      personalCounts,
       recentByCustomer,
-      myThisMonthValid,
-      myLastMonthValid,
       myInProgressDist,
-      myInProgressTotal,
       yearContribution,
       thisMonthDetail,
     }
   }, [filtered, userId])
 
   // 明细表列（仅展示需求列出的字段）
+  // 明细表列：严格按需求列出的 5 个字段（推荐日期 / 推荐人 / 客户简称 / 岗位名称 / 推荐状态）
   const detailColumns: BoostColumn<any>[] = useMemo(
     () => [
-      { key: 'name', title: '候选人姓名' },
-      { key: 'customerName', title: '客户', accessor: (r) => r.customer?.shortName ?? '—' },
-      { key: 'positionName', title: '岗位', accessor: (r) => r.requirement?.positionName ?? '—' },
-      { key: 'submitterName', title: '推荐人', accessor: (r) => r.submitter?.name ?? '—' },
       {
         key: 'recommendationTime',
-        title: '推荐时间',
+        title: '推荐日期',
         accessor: (r) => r.recommendationTime,
         filterType: 'date',
         render: (v) => (v ? String(v).slice(0, 10) : '—'),
       },
+      { key: 'submitterName', title: '推荐人', accessor: (r) => r.submitter?.name ?? '—' },
+      { key: 'customerName', title: '客户简称', accessor: (r) => r.customer?.shortName ?? '—' },
+      { key: 'positionName', title: '岗位名称', accessor: (r) => r.requirement?.positionName ?? '—' },
       {
         key: 'recommendationStatus',
         title: '推荐状态',
@@ -434,13 +394,8 @@ export default function CandidateRecommendationReportPage() {
         })),
         render: (v) => <span className="badge badge-info badge-sm">{v}</span>,
       },
-      {
-        key: 'recruitmentChannel',
-        title: '简历渠道',
-        accessor: (r) => channelLabel(r.recruitmentChannel),
-      },
     ],
-    [channelLabel],
+    [],
   )
 
   // ── 守卫：放在所有 hooks 之后，避免破坏 Rules of Hooks ──
@@ -584,28 +539,19 @@ export default function CandidateRecommendationReportPage() {
             />
           </label>
 
-          {/* 计划日期：文档未明确具体字段，暂用 offerOnboardDate「offer到岗日期」 */}
+          {/* 计划日期：单选一个日期（对应 offer到岗日期 offerOnboardDate） */}
           <label className="form-control w-full">
             <span className="label-text mb-1 text-xs text-base-content/60">
-              计划日期(起){' '}
-              <span className="text-base-content/30" title="暂以 offer到岗日期(offerOnboardDate) 为准">
+              计划日期{' '}
+              <span className="text-base-content/30" title="对应 offer到岗日期(offerOnboardDate)">
                 ⓘ
               </span>
             </span>
             <input
               type="date"
               className="input input-bordered input-sm w-full"
-              value={filters.planStart}
-              onChange={(e) => setFilter('planStart', e.target.value)}
-            />
-          </label>
-          <label className="form-control w-full">
-            <span className="label-text mb-1 text-xs text-base-content/60">计划日期(止)</span>
-            <input
-              type="date"
-              className="input input-bordered input-sm w-full"
-              value={filters.planEnd}
-              onChange={(e) => setFilter('planEnd', e.target.value)}
+              value={filters.planDate}
+              onChange={(e) => setFilter('planDate', e.target.value)}
             />
           </label>
         </div>
@@ -620,38 +566,7 @@ export default function CandidateRecommendationReportPage() {
         </div>
       </div>
 
-      {/* ── 关键数字卡片 ── */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="当月(个人)推荐简历"
-          value={metrics.myThisMonthRecommended}
-          hint="我作为推荐人 · 本月推荐时间"
-          icon={UserCheck}
-        />
-        <StatCard
-          title="当月(个人)有效简历"
-          value={metrics.myThisMonthValid}
-          hint="本月 · 排除简历被刷掉"
-          icon={CheckCircle2}
-          color="text-success"
-        />
-        <StatCard
-          title="上月(个人)有效简历"
-          value={metrics.myLastMonthValid}
-          hint="上月 · 排除简历被刷掉"
-          icon={CheckCircle2}
-          color="text-success"
-        />
-        <StatCard
-          title="个人流程中人数"
-          value={metrics.myInProgressTotal}
-          hint="我推荐 · 进行中(面试~保证期)"
-          icon={Workflow}
-          color="text-warning"
-        />
-      </div>
-
-      {/* ── 图表区 ── */}
+      {/* ── 图表区（数量类指标用柱状图，贡献度用饼图） ── */}
       <div className="mb-2 flex items-center gap-2">
         <Users className="h-4 w-4 text-primary" />
         <h2 className="text-sm font-semibold uppercase tracking-wider text-base-content/60">
@@ -659,6 +574,10 @@ export default function CandidateRecommendationReportPage() {
         </h2>
       </div>
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <ChartCard title="个人简历数量（当月推荐 / 当月有效 / 上月有效）" icon={BarChart3}>
+          <ReactECharts option={barOption(metrics.personalCounts, BRAND)} style={ECHART_STYLE} notMerge />
+        </ChartCard>
+
         <ChartCard
           title="最近1月各客户推荐简历数量"
           icon={BarChart3}
@@ -693,14 +612,6 @@ export default function CandidateRecommendationReportPage() {
           empty={metrics.yearContribution.length === 0}
         >
           <ReactECharts option={pieOption(metrics.yearContribution)} style={ECHART_STYLE} notMerge />
-        </ChartCard>
-
-        <ChartCard
-          title="个人流程中状态占比"
-          icon={PieIcon}
-          empty={metrics.myInProgressDist.length === 0}
-        >
-          <ReactECharts option={pieOption(metrics.myInProgressDist)} style={ECHART_STYLE} notMerge />
         </ChartCard>
       </div>
 
