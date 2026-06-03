@@ -36,7 +36,7 @@ describe('enums - LABELS 映射', () => {
 
   it('推荐状态 label 非空且含代表性成员', () => {
     expect(Object.keys(RECOMMENDATION_STATUS_LABELS).length).toBeGreaterThan(5)
-    expect(RECOMMENDATION_STATUS_LABELS.PENDING).toBe('已推荐待反馈')
+    expect(RECOMMENDATION_STATUS_LABELS.PENDING).toBe('已推荐，待反馈')
     expect(RECOMMENDATION_STATUS_LABELS.INTERVIEWING).toBe('面试中')
     expect(RECOMMENDATION_STATUS_LABELS.OFFERING).toBe('Offer中')
   })

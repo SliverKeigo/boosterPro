@@ -9,7 +9,7 @@ import { useMyPermissions } from '@/lib/usePermissions'
 
 // ─── 枚举映射（与 candidates / requirements 页保持一致） ──────────────────────────
 const STATUS_LABELS: Record<string, string> = {
-  PENDING: '已推荐待反馈',
+  PENDING: '已推荐，待反馈',
   INTERVIEWING: '面试中',
   SALARY_NEGO: '谈薪中',
   OFFERING: 'Offer中',
@@ -17,15 +17,15 @@ const STATUS_LABELS: Record<string, string> = {
   GUARANTEE: '保证期',
   POST_GUARANTEE_CLOSED: '过保关闭',
   RESUME_FAILED: '简历失败',
-  INTERNAL_RESUME_FAILED: '简历内推失败',
+  INTERNAL_RESUME_FAILED: '简历(内推)失败',
   INTERVIEW_SCHEDULE_FAILED: '约面失败',
   INTERVIEW_FAILED: '面试失败',
   SALARY_NEGO_FAILED: '谈薪失败',
-  OFFER_FAILED: 'Offer失败',
+  OFFER_FAILED: 'offer失败',
   ONBOARD_FAILED: '入职失败',
   NOT_PASSED_GUARANTEE: '未过保',
-  RESIGNED_POST_GUARANTEE: '离职统计已过保',
-  RESIGNED_LOCAL: '离职统计本地',
+  RESIGNED_POST_GUARANTEE: '简历挂起（已面）',
+  RESIGNED_LOCAL: '简历挂起（未面）',
 }
 
 // 流程中（在途）状态——区别于失败/关闭/离职等终态

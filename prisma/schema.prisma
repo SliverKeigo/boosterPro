@@ -34,7 +34,7 @@ enum GenderType {
 }
 
 enum RecommendationStatus {
-  PENDING                   @map("已推荐待反馈")
+  PENDING                   @map("已推荐，待反馈")
   INTERVIEWING              @map("面试中")
   SALARY_NEGO               @map("谈薪中")
   OFFERING                  @map("Offer中")
@@ -42,15 +42,15 @@ enum RecommendationStatus {
   GUARANTEE                 @map("保证期")
   POST_GUARANTEE_CLOSED     @map("过保关闭")
   RESUME_FAILED             @map("简历失败")
-  INTERNAL_RESUME_FAILED    @map("简历内推失败")
+  INTERNAL_RESUME_FAILED    @map("简历(内推)失败")
   INTERVIEW_SCHEDULE_FAILED @map("约面失败")
   INTERVIEW_FAILED          @map("面试失败")
   SALARY_NEGO_FAILED        @map("谈薪失败")
-  OFFER_FAILED              @map("Offer失败")
+  OFFER_FAILED              @map("offer失败")
   ONBOARD_FAILED            @map("入职失败")
   NOT_PASSED_GUARANTEE      @map("未过保")
-  RESIGNED_POST_GUARANTEE   @map("离职统计已过保")
-  RESIGNED_LOCAL            @map("离职统计本地")
+  RESIGNED_POST_GUARANTEE   @map("简历挂起（已面）")
+  RESIGNED_LOCAL            @map("简历挂起（未面）")
 
   @@map("recommendation_status")
 }
