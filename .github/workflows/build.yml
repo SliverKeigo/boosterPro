@@ -1,0 +1,62 @@
+name: Build Linux artifact
+
+# 在 GitHub 的 ubuntu-latest(linux/x86_64,与生产服务器同平台)上构建，
+# 产出一个「可直接跑」的运行时包(.next + Linux 的 node_modules + 必要文件)，
+# 上传为 artifact 供下载部署。避免在 Mac(darwin/arm64)上构建导致原生件不兼容，
+# 也避免在小内存 prod 机上现 build(峰值约 1.7G)。
+
+on:
+  workflow_dispatch: {}        # 手动触发(Actions 页面点 Run workflow)
+  push:
+    branches: [main]           # 推到 main 自动构建
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # 仅构建期占位：不连库，只为避免「读取 env 的模块」在 build 时报错。
+      # 真正的连接配置在服务器的 .env 里，不随产物走。
+      DATABASE_URL: postgresql://placeholder:placeholder@127.0.0.1:5432/placeholder
+      JWT_SECRET: build-time-placeholder
+      NEXT_PUBLIC_APP_NAME: BoosterPro
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20      # 与服务器 Node 20 对齐
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci             # 装 linux/x64 原生件(sharp / swc / lightningcss 等)
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build
+        run: npm run build      # next build，产出 .next
+
+      - name: Prune dev dependencies
+        run: npm prune --omit=dev   # 裁掉构建期依赖，只留运行时所需，减小体积
+
+      - name: Package runtime bundle
+        run: |
+          tar czf boosterpro-dist.tgz \
+            .next \
+            node_modules \
+            public \
+            package.json \
+            package-lock.json \
+            next.config.ts \
+            prisma
+          echo "产物大小:"; ls -lh boosterpro-dist.tgz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: boosterpro-dist
+          path: boosterpro-dist.tgz
+          retention-days: 14
