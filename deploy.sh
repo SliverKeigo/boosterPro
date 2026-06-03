@@ -52,13 +52,29 @@ ok()   { printf '%s  ✓%s %s\n' "$c_g" "$c_0" "$*"; }
 warn() { printf '%s  !%s %s\n' "$c_y" "$c_0" "$*"; }
 die()  { printf '%s  ✗ %s%s\n' "$c_r" "$*" "$c_0" >&2; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
-randhex() { if have openssl; then openssl rand -hex "$1"; else LC_ALL=C tr -dc 'a-f0-9' </dev/urandom | head -c "$(( $1 * 2 ))"; fi; }
+# 注意：在 set -o pipefail 下不可用 `tr </dev/urandom | head -c N`——head 取够即关管道，
+# 上游 tr 读无限 urandom 会吃 SIGPIPE(退出 141)→ 触发 set -e 中止。改为一次性产足量再截取。
+randhex() {
+  if have openssl; then openssl rand -hex "$1"; return; fi
+  # hex 字符密度仅 ~6.25%，需读足量字节再截取（否则截不够长）
+  local s; s="$(LC_ALL=C tr -dc 'a-f0-9' < <(head -c "$(( $1 * 64 ))" /dev/urandom))"
+  printf '%s' "${s:0:$(( $1 * 2 ))}"
+}
 # 可读强密码：A-Za-z0-9（无 shell 特殊字符 / 空格），用作初始管理员密码
-randpass() { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c "${1:-16}"; }
+randpass() {
+  local n="${1:-16}" s
+  if have openssl; then s="$(openssl rand -base64 "$(( n * 3 ))" | LC_ALL=C tr -dc 'A-Za-z0-9')"
+  else s="$(LC_ALL=C tr -dc 'A-Za-z0-9' < <(head -c "$(( n * 8 ))" /dev/urandom))"; fi
+  printf '%s' "${s:0:n}"
+}
 
 [ -f "$ROOT_DIR/package.json" ] && grep -q '"boosterpro"' "$ROOT_DIR/package.json" || die "请在 BoosterPro 项目根目录运行本脚本"
 
 SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
+# 保留环境变量地以特权运行：root 下直接跑(不能加裸 -E)，非 root 用 sudo -E
+SUDO_E=""; [ "$(id -u)" -ne 0 ] && SUDO_E="sudo -E"
+# apt 非交互：导出到环境，子进程(含 root 直跑的 apt-get、非 root 的 sudo -E)都继承
+export DEBIAN_FRONTEND=noninteractive
 RUN_USER="${SUDO_USER:-$(id -un)}"
 # npm / 构建等以「人类用户」身份执行：即使整脚本被 sudo 跑，产物也归该用户，systemd 服务才读得到
 run_user() { if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then sudo -u "$SUDO_USER" -H "$@"; else "$@"; fi; }
@@ -80,7 +96,7 @@ log "系统=$OS  包管理器=$PKG  运行用户=$RUN_USER  目录=$ROOT_DIR"
 
 pkg_install() {
   case "$PKG" in
-    apt)  $SUDO apt-get update -y -qq; $SUDO DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$@" ;;
+    apt)  $SUDO apt-get update -y -qq; $SUDO_E apt-get install -y -qq "$@" ;;
     dnf)  $SUDO dnf install -y -q "$@" ;;
     yum)  $SUDO yum install -y -q "$@" ;;
     brew) brew install "$@" ;;
@@ -99,7 +115,7 @@ fi
 if [ "$need_node" -eq 1 ]; then
   log "安装 Node ${NODE_MAJOR} ..."
   case "$OS" in
-    debian) curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | $SUDO -E bash - >/dev/null; pkg_install nodejs ;;
+    debian) curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | $SUDO_E bash - >/dev/null; pkg_install nodejs ;;
     rhel)   curl -fsSL "https://rpm.nodesource.com/setup_${NODE_MAJOR}.x" | $SUDO bash - >/dev/null; pkg_install nodejs ;;
     mac)    have brew || die "请先安装 Homebrew：/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
             brew install "node@${NODE_MAJOR}" || brew install node

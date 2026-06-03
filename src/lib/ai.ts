@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { openai, MODEL } from '@/lib/openai'
+import { getOpenAI, MODEL } from '@/lib/openai'
 import { HttpError } from '@/lib/apiError'
 
 /** 从 AI 返回文本中容错解析 JSON（兼容裸 JSON / ```json``` 围栏 / 文本中夹带的 JSON） */
@@ -40,7 +40,7 @@ export async function runWebSearchJson(input: string): Promise<any> {
   let lastErr: unknown = null
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const r = await (openai as any).responses.create({
+      const r = await (getOpenAI() as any).responses.create({
         model: MODEL,
         tools: [{ type: 'web_search' }],
         input,
