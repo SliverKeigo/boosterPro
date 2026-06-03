@@ -61,7 +61,6 @@ const GROUPS: NavGroup[] = [
     label: '数据分析',
     icon: BarChart3,
     items: [
-      { href: '/reports', label: '数据报表', icon: BarChart3 },
       { href: '/reports/candidate-recommendation', label: '候选人推荐报表', icon: BarChart3 },
     ],
   },

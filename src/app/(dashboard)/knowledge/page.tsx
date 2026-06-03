@@ -18,6 +18,7 @@ import {
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
+import { refGet } from '@/lib/refCache'
 
 const RES = 'KNOWLEDGE'
 
@@ -25,12 +26,31 @@ const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
 // 富文本字段去 HTML 标签后截断显示
 const stripHtml = (v?: string | null) => (v ? v.replace(/<[^>]+>/g, '').slice(0, 40) : '—')
 
+// ─── 条件显隐：知识分类 / 知识标签 → 额外字段（仿候选人页 STATUS_FIELDS / visible()） ───
+// 字典项 value === label（见 seed），故直接以中文取值比较。
+const CATEGORY_TRAINING = '培训资料' // 额外显示：培训提纲 / 内部讲师 / 外部讲师
+const CATEGORY_NOTE = '知识便条' // 额外显示：知识便条（富文本 notes）
+const TAG_MANAGEMENT = '管理知识' // 额外显示：管理细则子表（managementRecords）
+
+// 受条件驱动的字段全集（提交前用于清除当前条件不显示的字段，避免脏数据）。
+// 子表（managementRecords）清成 []，内部讲师 id 清成 ''，其余字符串清成 ''。
+const CONDITIONAL_FIELDS = [
+  'trainingOutline',
+  'internalLecturerId',
+  'externalLecturer',
+  'notes',
+  'managementRecords',
+] as const
+
 const EMPTY_FORM: any = {
   category: '',
   tags: '',
   keywords: '',
   fileUrl: '',
   notes: '',
+  trainingOutline: '',
+  internalLecturerId: '',
+  externalLecturer: '',
   managementRecords: [],
 }
 
@@ -43,11 +63,43 @@ export default function KnowledgePage() {
   const [editing, setEditing] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState<any>(EMPTY_FORM)
+  const [users, setUsers] = useState<any[]>([])
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
   const { items: categoryOptions } = useDict('knowledge_category')
   const { items: tagOptions } = useDict('knowledge_tag')
+
+  // 表单引用数据按需加载：打开新增/编辑弹窗时再拉（refGet 按 url 缓存 + 在途去重）
+  const loadFormRefs = useCallback(async () => {
+    const u = await refGet('/api/users')
+    setUsers(u)
+  }, [])
+
+  // 当前表单选中的标签集合
+  const selectedTags = (): Set<string> =>
+    new Set(
+      String(form.tags || '')
+        .split(/[,、]/)
+        .map((s: string) => s.trim())
+        .filter(Boolean),
+    )
+
+  // 某条件字段在当前「分类 / 标签」下是否应显示
+  const visible = (field: string): boolean => {
+    switch (field) {
+      case 'trainingOutline':
+      case 'internalLecturerId':
+      case 'externalLecturer':
+        return form.category === CATEGORY_TRAINING
+      case 'notes':
+        return form.category === CATEGORY_NOTE
+      case 'managementRecords':
+        return selectedTags().has(TAG_MANAGEMENT)
+      default:
+        return false
+    }
+  }
 
   const fetchData = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true)
@@ -71,17 +123,22 @@ export default function KnowledgePage() {
   }, [fetchData])
 
   const openCreate = () => {
+    void loadFormRefs()
     setEditing(null)
     setForm({ ...EMPTY_FORM })
     setOpen(true)
   }
 
   const openEdit = (r: any) => {
+    void loadFormRefs()
     setEditing(r)
     setForm({
       ...EMPTY_FORM,
       ...r,
       tags: Array.isArray(r.tags) ? r.tags.join(', ') : '',
+      trainingOutline: r.trainingOutline ?? '',
+      internalLecturerId: r.internalLecturerId ?? '',
+      externalLecturer: r.externalLecturer ?? '',
       managementRecords: (r.managementRecords ?? []).map((x: any) => ({
         date: fmtDate(x.date),
         submitterId: x.submitterId ?? '',
@@ -107,12 +164,18 @@ export default function KnowledgePage() {
     if (!form.keywords?.trim()) return toast.error('请填写关键词')
     setSubmitting(true)
     try {
-      const payload = {
+      const payload: any = {
         ...form,
         tags: String(form.tags || '')
           .split(',')
           .map((s: string) => s.trim())
           .filter(Boolean),
+      }
+      // 清除当前「分类 / 标签」下不显示的条件字段，避免脏数据入库。
+      // 子表清成 []（而非 ''），内部讲师 id 清成 ''，其余字符串清成 ''。
+      for (const f of CONDITIONAL_FIELDS) {
+        if (visible(f)) continue
+        payload[f] = f === 'managementRecords' ? [] : ''
       }
       const url = editing ? `/api/knowledge/${editing.id}` : '/api/knowledge'
       const res = await fetch(url, {
@@ -185,6 +248,9 @@ export default function KnowledgePage() {
     // 以下默认隐藏，可在“显示列”开启
     { key: 'fileUrl', title: '知识文件 URL', defaultVisible: false },
     { key: 'notes', title: '知识便条', defaultVisible: false, render: (v) => stripHtml(v) },
+    { key: 'trainingOutline', title: '培训提纲', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[260px]">{v}</span> : <span className="text-base-content/30">—</span> },
+    { key: 'internalLecturer', title: '内部讲师', defaultVisible: false, sortable: false, accessor: (r) => r.internalLecturer?.name ?? '', render: (v) => v || <span className="text-base-content/30">—</span> },
+    { key: 'externalLecturer', title: '外部讲师', defaultVisible: false, render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span> },
   ]
 
@@ -306,23 +372,57 @@ export default function KnowledgePage() {
           <Field label="知识文件">
             <FileUpload value={form.fileUrl} onChange={(url) => setField('fileUrl', url)} />
           </Field>
-          <Field label="知识便条" className="col-span-2">
-            <RichText value={form.notes} onChange={(html) => setField('notes', html)} />
-          </Field>
+
+          {/* 分类=培训资料：额外显示 培训提纲 / 内部讲师 / 外部讲师（均非必填） */}
+          {visible('trainingOutline') && (
+            <Field label="培训提纲" className="col-span-2">
+              <textarea className="textarea textarea-bordered w-full" rows={3} value={form.trainingOutline} onChange={(e) => setField('trainingOutline', e.target.value)} placeholder="请填写培训提纲" />
+            </Field>
+          )}
+          {visible('internalLecturerId') && (
+            <Field label="内部讲师">
+              <select
+                className="select select-bordered w-full"
+                value={form.internalLecturerId}
+                onChange={(e) => setField('internalLecturerId', e.target.value)}
+              >
+                <option value="">请选择内部讲师</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </Field>
+          )}
+          {visible('externalLecturer') && (
+            <Field label="外部讲师">
+              <input className="input input-bordered w-full" value={form.externalLecturer} onChange={(e) => setField('externalLecturer', e.target.value)} placeholder="请输入外部讲师姓名" />
+            </Field>
+          )}
+
+          {/* 分类=知识便条：额外显示 知识便条（富文本，非必填） */}
+          {visible('notes') && (
+            <Field label="知识便条" className="col-span-2">
+              <RichText value={form.notes} onChange={(html) => setField('notes', html)} />
+            </Field>
+          )}
         </div>
 
-        <div className="divider my-3" />
-
-        <SubTable
-          title="管理细则"
-          value={form.managementRecords}
-          onChange={(rows) => setField('managementRecords', rows)}
-          columns={[
-            { key: 'date', title: '日期', type: 'date', width: 160 },
-            { key: 'submitterId', title: '提交人 ID', type: 'number', width: 120 },
-            { key: 'details', title: '细则内容', type: 'textarea', width: 320 },
-          ]}
-        />
+        {/* 标签含「管理知识」：额外显示 管理细则子表（非必填） */}
+        {visible('managementRecords') && (
+          <>
+            <div className="divider my-3" />
+            <SubTable
+              title="管理细则"
+              value={form.managementRecords}
+              onChange={(rows) => setField('managementRecords', rows)}
+              columns={[
+                { key: 'date', title: '日期', type: 'date', width: 160 },
+                { key: 'submitterId', title: '提交人 ID', type: 'number', width: 120 },
+                { key: 'details', title: '细则内容', type: 'textarea', width: 320 },
+              ]}
+            />
+          </>
+        )}
       </Modal>
     </div>
   )

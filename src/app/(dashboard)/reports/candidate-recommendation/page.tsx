@@ -353,15 +353,10 @@ export default function CandidateRecommendationReportPage() {
       inRange(c.recommendationTime, tmStart, tmEnd),
     )
 
-    // 个人数量类指标合并为一张柱状图（3 根柱：当月推荐 / 当月有效 / 上月有效）
-    const personalCounts = [
-      { name: '当月推荐', value: myThisMonthRecommended },
-      { name: '当月有效', value: myThisMonthValid },
-      { name: '上月有效', value: myLastMonthValid },
-    ]
-
     return {
-      personalCounts,
+      myThisMonthRecommended,
+      myThisMonthValid,
+      myLastMonthValid,
       recentByCustomer,
       myInProgressDist,
       yearContribution,
@@ -574,8 +569,28 @@ export default function CandidateRecommendationReportPage() {
         </h2>
       </div>
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard title="个人简历数量（当月推荐 / 当月有效 / 上月有效）" icon={BarChart3}>
-          <ReactECharts option={barOption(metrics.personalCounts, BRAND)} style={ECHART_STYLE} notMerge />
+        <ChartCard title="当月(个人)推荐简历数量" icon={BarChart3}>
+          <ReactECharts
+            option={barOption([{ name: '当月推荐', value: metrics.myThisMonthRecommended }], BRAND)}
+            style={ECHART_STYLE}
+            notMerge
+          />
+        </ChartCard>
+
+        <ChartCard title="当月(个人)有效简历数量" icon={BarChart3}>
+          <ReactECharts
+            option={barOption([{ name: '当月有效', value: metrics.myThisMonthValid }], '#16A34A')}
+            style={ECHART_STYLE}
+            notMerge
+          />
+        </ChartCard>
+
+        <ChartCard title="上月(个人)有效简历数量" icon={BarChart3}>
+          <ReactECharts
+            option={barOption([{ name: '上月有效', value: metrics.myLastMonthValid }], '#16A34A')}
+            style={ECHART_STYLE}
+            notMerge
+          />
         </ChartCard>
 
         <ChartCard

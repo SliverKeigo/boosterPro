@@ -101,6 +101,7 @@ model User {
   workPlans            WorkPlan[]
   urgentRecords        RequirementUrgentRecord[]
   knowledgeRecords     KnowledgeManagementRecord[]
+  knowledgeInternalLectures KnowledgeBase[]        @relation("KnowledgeInternalLecturer")
   isAdmin              Boolean                     @default(false) @map("is_admin")
   createdCandidates    Candidate[]                 @relation("CandidateCreatedBy")
   createdRequirements  Requirement[]               @relation("RequirementCreatedBy")
@@ -486,15 +487,19 @@ model ContractInvoice {
 }
 
 model KnowledgeBase {
-  id                Int                         @id @default(autoincrement())
-  category          String                      @db.VarChar(100)
-  tags              String[]
-  keywords          String                      @db.Text
-  fileUrl           String?                     @map("file_url") @db.Text
-  notes             String?                     @db.Text
-  managementRecords KnowledgeManagementRecord[]
-  createdAt         DateTime                    @default(now()) @map("created_at")
-  updatedAt         DateTime                    @updatedAt @map("updated_at")
+  id                 Int                         @id @default(autoincrement())
+  category           String                      @db.VarChar(100)
+  tags               String[]
+  keywords           String                      @db.Text
+  fileUrl            String?                     @map("file_url") @db.Text
+  notes              String?                     @db.Text
+  trainingOutline    String?                     @map("training_outline") @db.Text
+  internalLecturer   User?                       @relation("KnowledgeInternalLecturer", fields: [internalLecturerId], references: [id])
+  internalLecturerId Int?                        @map("internal_lecturer_id")
+  externalLecturer   String?                     @map("external_lecturer") @db.VarChar(255)
+  managementRecords  KnowledgeManagementRecord[]
+  createdAt          DateTime                    @default(now()) @map("created_at")
+  updatedAt          DateTime                    @updatedAt @map("updated_at")
 
   createdBy   User? @relation("KnowledgeBaseCreatedBy", fields: [createdById], references: [id])
   createdById Int?  @map("created_by_id")

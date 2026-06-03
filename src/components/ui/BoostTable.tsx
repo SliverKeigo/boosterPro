@@ -123,6 +123,17 @@ interface FilterCondition {
   values: string[]
 }
 
+// ── 多字段排序：一条规则 = 一个排序字段 + 方向 ──
+type SortDir = 'asc' | 'desc'
+interface SortRule {
+  /** 行内唯一标识（用于 React key / 增删行定位） */
+  id: number
+  /** 对应可排序列的 key */
+  field: string
+  /** 升序 / 降序 */
+  dir: SortDir
+}
+
 /** 从数据推断类型时最多采样的非空值数量 */
 const INFER_SAMPLE_LIMIT = 200
 
@@ -202,8 +213,11 @@ export function BoostTable<T extends Record<string, any>>({
   emptyText = '暂无数据',
 }: BoostTableProps<T>) {
   const [search, setSearch] = useState('')
-  const [sortKey, setSortKey] = useState<string | null>(null)
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  /** 已生效的排序规则（驱动排序管线）；为空数组时保持数据原始（API 默认）顺序 */
+  const [sortRules, setSortRules] = useState<SortRule[]>([])
+  /** 排序面板内正在编辑的草稿规则 */
+  const [sortDraft, setSortDraft] = useState<SortRule[]>([])
+  const sortId = useRef(0)
   const [page, setPage] = useState(1)
   const [size, setSize] = useState(pageSize)
   const [fullscreen, setFullscreen] = useState(false)
@@ -393,27 +407,37 @@ export function BoostTable<T extends Record<string, any>>({
     })
   }, [conditionFiltered, search])
 
-  // 排序
+  // 排序：按 sortRules 顺序做稳定多关键字排序（第一条为主、依次 tie-break）；
+  // 无规则时返回 filtered（保持数据来自 API 的默认顺序）。
   const sorted = useMemo(() => {
-    if (!sortKey) return filtered
-    const col = columns.find((c) => c.key === sortKey)
-    if (!col) return filtered
-    const acc = accessorOf(col)
+    // 仅保留字段仍存在的有效规则
+    const active = sortRules
+      .map((rule) => {
+        const col = columns.find((c) => c.key === rule.field)
+        return col ? { acc: accessorOf(col), dir: rule.dir } : null
+      })
+      .filter((r): r is { acc: (record: T) => unknown; dir: SortDir } => r !== null)
+    if (active.length === 0) return filtered
+    // Array.prototype.sort 自 ES2019 起保证稳定，无规则差时维持原顺序
     const arr = [...filtered]
     arr.sort((a, b) => {
-      const va = acc(a)
-      const vb = acc(b)
-      if (va == null && vb == null) return 0
-      if (va == null) return 1
-      if (vb == null) return -1
-      let cmp: number
-      if (typeof va === 'number' && typeof vb === 'number') cmp = va - vb
-      else cmp = String(va).localeCompare(String(vb), 'zh-CN')
-      return sortDir === 'asc' ? cmp : -cmp
+      for (const { acc, dir } of active) {
+        const va = acc(a)
+        const vb = acc(b)
+        let cmp: number
+        // 取值 / 比较方式与原单字段排序保持一致：null 垫底、数字按数值、其余 localeCompare('zh-CN')
+        if (va == null && vb == null) cmp = 0
+        else if (va == null) cmp = 1
+        else if (vb == null) cmp = -1
+        else if (typeof va === 'number' && typeof vb === 'number') cmp = va - vb
+        else cmp = String(va).localeCompare(String(vb), 'zh-CN')
+        if (cmp !== 0) return dir === 'asc' ? cmp : -cmp
+      }
+      return 0
     })
     return arr
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtered, sortKey, sortDir, columns])
+  }, [filtered, sortRules, columns])
 
   const pageCount = Math.max(1, Math.ceil(sorted.length / size))
   const current = Math.min(page, pageCount)
@@ -429,15 +453,18 @@ export function BoostTable<T extends Record<string, any>>({
     return (r as any)[rowKey] ?? i
   }
 
+  // 表头点击排序：把排序规则设为「仅该字段」并在 asc → desc → 无 间循环。
+  // 与排序面板共享同一份 sortRules，不存在两套互相打架。
   const toggleSort = (key: string) => {
-    if (sortKey !== key) {
-      setSortKey(key)
-      setSortDir('asc')
-    } else if (sortDir === 'asc') {
-      setSortDir('desc')
-    } else {
-      setSortKey(null)
-    }
+    setSortRules((rules) => {
+      // 当前是否「仅按该字段」排序（单条规则且字段匹配）
+      const only = rules.length === 1 && rules[0].field === key
+      if (!only) return [{ id: sortId.current++, field: key, dir: 'asc' }]
+      if (rules[0].dir === 'asc')
+        return [{ ...rules[0], dir: 'desc' }]
+      return []
+    })
+    setPage(1)
   }
 
   // ── 筛选面板操作 ──
@@ -490,6 +517,53 @@ export function BoostTable<T extends Record<string, any>>({
     })
 
   const sortableColumns = columns.filter((c) => c.sortable !== false)
+
+  // ── 排序面板操作（草稿 → 应用，与筛选面板同一交互模式）──
+  const newSortRule = (): SortRule => ({
+    id: sortId.current++,
+    field: sortableColumns[0]?.key ?? '',
+    dir: 'asc',
+  })
+
+  // 打开面板时把已生效规则载入草稿；若没有则给一行默认规则
+  const initSortDraft = () => {
+    if (sortRules.length > 0) {
+      setSortDraft(sortRules.map((r) => ({ ...r })))
+    } else {
+      setSortDraft(sortableColumns.length > 0 ? [newSortRule()] : [])
+    }
+  }
+
+  const patchSortRow = (id: number, patch: Partial<SortRule>) =>
+    setSortDraft((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+
+  const addSortRow = () => setSortDraft((rows) => [...rows, newSortRule()])
+
+  const removeSortRow = (id: number) =>
+    setSortDraft((rows) => rows.filter((r) => r.id !== id))
+
+  // 清空：清掉所有规则（草稿置空）
+  const clearSortDraft = () => setSortDraft([])
+
+  // 应用：写入生效规则并回到第一页（仅保留字段非空的规则）
+  const applySort = (close: () => void) => {
+    setSortRules(sortDraft.filter((r) => r.field).map((r) => ({ ...r })))
+    setPage(1)
+    close()
+  }
+
+  // 已生效的排序规则数 → 决定"排序"按钮高亮 / 徽标
+  const activeSortCount = sortRules.filter((r) =>
+    sortableColumns.some((c) => c.key === r.field),
+  ).length
+
+  // 字段 → 已生效方向，供表头排序指示复用（同一份 sortRules）。
+  // 同字段多条规则时以第一条为准（表头点击只会产生单条规则，正常不会出现）。
+  const sortDirByKey = useMemo(() => {
+    const m = new Map<string, SortDir>()
+    for (const r of sortRules) if (!m.has(r.field)) m.set(r.field, r.dir)
+    return m
+  }, [sortRules])
 
   // 已生效（有值）的条件数 → 决定"筛选"按钮高亮 / 徽标
   const activeFilterCount = conditions.filter((c) => {
@@ -876,51 +950,132 @@ export function BoostTable<T extends Record<string, any>>({
         </Dropdown>
 
         {/* 排序 */}
-        <Dropdown
-          width={220}
-          trigger={
-            <span className={ICON_BTN}>
-              <ArrowUpDown className="h-4 w-4" />
-              排序
-            </span>
-          }
-        >
-          {(close) => (
-            <div className="max-h-72 overflow-y-auto">
-              <div className="px-2 py-1.5 text-xs font-semibold text-base-content/50">
-                选择排序字段
-              </div>
-              {sortKey && (
-                <button
-                  type="button"
-                  className="mb-1 w-full rounded-lg px-2 py-1.5 text-left text-xs text-error hover:bg-base-200"
-                  onClick={() => {
-                    setSortKey(null)
-                    close()
-                  }}
-                >
-                  清除排序
-                </button>
-              )}
-              {sortableColumns.map((c) => (
-                <button
-                  key={c.key}
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm hover:bg-base-200"
-                  onClick={() => toggleSort(c.key)}
-                >
-                  <span>{c.title}</span>
-                  {sortKey === c.key &&
-                    (sortDir === 'asc' ? (
-                      <ArrowUp className="h-3.5 w-3.5 text-primary" />
-                    ) : (
-                      <ArrowDown className="h-3.5 w-3.5 text-primary" />
+        {sortableColumns.length > 0 && (
+          <Dropdown
+            width={380}
+            trigger={
+              <span
+                className={`${ICON_BTN} relative ${
+                  activeSortCount > 0 ? 'text-primary' : ''
+                }`}
+                onMouseDown={initSortDraft}
+              >
+                <ArrowUpDown className="h-4 w-4" />
+                排序
+                {activeSortCount > 0 && (
+                  <span className="badge badge-primary badge-xs ml-0.5">
+                    {activeSortCount}
+                  </span>
+                )}
+              </span>
+            }
+          >
+            {(close) => (
+              <div className="flex flex-col gap-2 p-1">
+                <div className="px-1 py-0.5 text-xs font-semibold text-base-content/50">
+                  设置排序规则（按从上到下的顺序依次排序）
+                </div>
+
+                {sortDraft.length === 0 ? (
+                  <div className="px-1 py-4 text-center text-sm text-base-content/40">
+                    暂无排序规则，点击下方“添加排序规则”
+                  </div>
+                ) : (
+                  <div className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-0.5">
+                    {sortDraft.map((rule, idx) => (
+                      <div
+                        key={rule.id}
+                        className="flex flex-nowrap items-center gap-1.5"
+                      >
+                        {/* 行首：主序 / 次序提示 */}
+                        <span className="w-12 shrink-0 text-center text-sm text-base-content/60">
+                          {idx === 0 ? '排序' : '其次'}
+                        </span>
+
+                        {/* 排序字段 */}
+                        <select
+                          className="select select-bordered select-sm min-w-0 flex-1"
+                          value={rule.field}
+                          onChange={(e) =>
+                            patchSortRow(rule.id, { field: e.target.value })
+                          }
+                        >
+                          {sortableColumns.map((c) => (
+                            <option key={c.key} value={c.key}>
+                              {c.title}
+                            </option>
+                          ))}
+                        </select>
+
+                        {/* 升序 / 降序 单选 */}
+                        <div className="join shrink-0">
+                          <button
+                            type="button"
+                            className={`btn btn-sm join-item gap-1 ${
+                              rule.dir === 'asc' ? 'btn-primary' : 'btn-ghost'
+                            }`}
+                            onClick={() => patchSortRow(rule.id, { dir: 'asc' })}
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                            升序
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn btn-sm join-item gap-1 ${
+                              rule.dir === 'desc' ? 'btn-primary' : 'btn-ghost'
+                            }`}
+                            onClick={() => patchSortRow(rule.id, { dir: 'desc' })}
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                            降序
+                          </button>
+                        </div>
+
+                        {/* 删除该行 */}
+                        <button
+                          type="button"
+                          aria-label="删除排序规则"
+                          className="btn btn-ghost btn-sm btn-square shrink-0 text-base-content/50 hover:text-error"
+                          onClick={() => removeSortRow(rule.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
                     ))}
-                </button>
-              ))}
-            </div>
-          )}
-        </Dropdown>
+                  </div>
+                )}
+
+                {/* 底部操作 */}
+                <div className="flex items-center justify-between gap-2 border-t border-base-300 pt-2">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm gap-1 text-primary"
+                    onClick={addSortRow}
+                  >
+                    <Plus className="h-4 w-4" />
+                    添加排序规则
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={clearSortDraft}
+                    >
+                      清空
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => applySort(close)}
+                    >
+                      确定
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Dropdown>
+        )}
 
         {/* 刷新 */}
         <button
@@ -961,7 +1116,8 @@ export function BoostTable<T extends Record<string, any>>({
             <thead className="sticky top-0 z-10">
               <tr className="bg-base-200">
                 {visibleColumns.map((c) => {
-                  const active = sortKey === c.key
+                  // 该列在已生效排序规则中的方向（与排序面板共享同一份 sortRules）
+                  const dir = sortDirByKey.get(c.key)
                   const sortable = c.sortable !== false
                   return (
                     <th
@@ -979,8 +1135,8 @@ export function BoostTable<T extends Record<string, any>>({
                       >
                         {c.title}
                         {sortable &&
-                          (active ? (
-                            sortDir === 'asc' ? (
+                          (dir ? (
+                            dir === 'asc' ? (
                               <ArrowUp className="h-3 w-3 text-primary" />
                             ) : (
                               <ArrowDown className="h-3 w-3 text-primary" />
