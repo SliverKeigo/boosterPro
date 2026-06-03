@@ -90,8 +90,8 @@ function flatten(value: unknown, out: string[]) {
   }
 }
 
-// 导出功能暂时下线：置 false 时所有列表都不渲染「导出」按钮（恢复时改回 true）
-const EXPORT_ENABLED = false
+// 导入功能暂时下线：置 false 时所有列表都不渲染「导入」按钮（恢复时改回 true）
+const IMPORT_ENABLED = false
 
 const ICON_BTN =
   'btn btn-ghost btn-sm gap-1.5 font-medium text-base-content/70 hover:text-base-content'
@@ -517,14 +517,13 @@ export function BoostTable<T extends Record<string, any>>({
             {createText}
           </button>
         )}
-        {onImport && (
+        {IMPORT_ENABLED && onImport && (
           <button type="button" className={ICON_BTN} onClick={onImport}>
             <Upload className="h-4 w-4" />
             导入
           </button>
         )}
-        {EXPORT_ENABLED &&
-          showExport &&
+        {showExport &&
           (onExport ? (
             <button type="button" className={ICON_BTN} onClick={onExport}>
               <Download className="h-4 w-4" />

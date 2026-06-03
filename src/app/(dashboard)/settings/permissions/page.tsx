@@ -396,8 +396,8 @@ export default function PermissionsPage() {
 
           <Field label="功能权限" required>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {/* 导出功能暂时下线，隐藏 EXPORT 权限勾选 */}
-              {ACTIONS.filter((a) => a.key !== 'EXPORT').map((a) => (
+              {/* 导入功能暂时下线，隐藏 IMPORT 权限勾选 */}
+              {ACTIONS.filter((a) => a.key !== 'IMPORT').map((a) => (
                 <label
                   key={a.key}
                   className="flex cursor-pointer items-center gap-2 rounded-lg border border-base-300 px-3 py-2 hover:bg-base-200"
