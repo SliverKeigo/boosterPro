@@ -43,6 +43,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - 登录成功后**整页跳转**进工作台（`window.location.replace('/')`）——生产构建下 `router.push+refresh` 跨布局（login→dashboard）偶发卡在登录页，故用整页跳转。
 - 鉴权 cookie 的 `Secure` **按请求实际协议自适应**（`isSecureRequest(req)`，见 `src/lib/auth.ts`），**不是按 `NODE_ENV`**：内网 HTTP 部署（生产）不能加 Secure，否则 cookie 被浏览器丢弃登不上。
 - 一键部署：`bash deploy.sh`（= `npm run deploy`）。在「裸机」上自动装 Node(≥18)/PostgreSQL、建角色与库、生成 `.env`（随机 DB 密码 + JWT_SECRET）、`prisma db push` 建表、灌入 admin+字典、`next build`、注册 systemd 开机自启（macOS 无 systemd 降级为常驻提示）。脚本会**先探测预置远程库**（`REMOTE_DB_*`，可连则复用、跳过本地建库）。
+- **健康检查与自愈**：`/api/health` 是免登录的**存活探测**（已在 middleware `PUBLIC_PATHS` 放行）——进程能响应即返 `200 {status:'ok', db}`；DB 异常只在 body 标 `db:'down'`、**不改状态码**（重启 Node 修不好挂掉的 DB，避免「重启风暴」）。Next.js **不自带**进程守护：① 主服务 systemd `Restart=always`（崩溃/被 kill/退出都拉起）；② 卡死它救不了，故再加**看门狗** `boosterpro-watchdog`（`scripts/healthcheck.sh` 循环 curl 健康接口，连续失败即 `systemctl restart` 主服务，以 root 跑才有权限）。两者均由 `deploy.sh` 注册。macOS 降级：pm2 自愈 + cron 跑 `healthcheck.sh once`。看门狗据「无响应/超时/5xx」判活，不据 DB。
 - `next.config.ts` 配 `allowedDevOrigins`（`192.168.31.208` + `192.168.31.*`）放行局域网设备访问 dev server 的 HMR；换网段需把对应 IP 加进去。`proxyClientMaxBodySize: '60mb'` 给大文件上传留余量。
 
 ## AI 功能

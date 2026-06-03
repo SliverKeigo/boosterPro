@@ -251,6 +251,8 @@ if [ "$OS" = "mac" ]; then
   log "部署完成（macOS 无 systemd，按下面任一方式常驻）"
   echo "  前台：  cd \"$ROOT_DIR\" && PORT=${APP_PORT} npm run start"
   echo "  守护：  npx pm2 start npm --name ${APP_NAME} -- run start && npx pm2 save && npx pm2 startup"
+  echo "         (pm2 自带崩溃自愈；卡死探活再加一条 cron：)"
+  echo "  探活：  * * * * * APP_SERVICE=${APP_NAME} HEALTH_URL=http://127.0.0.1:${APP_PORT}/api/health bash $ROOT_DIR/scripts/healthcheck.sh once"
 else
   log "注册 systemd 服务并开机自启 ..."
   NPM_BIN="$(command -v npm)"; NODE_DIR="$(dirname "$(command -v node)")"
@@ -269,7 +271,7 @@ Environment=NODE_ENV=production
 Environment=PORT=${APP_PORT}
 Environment=PATH=${NODE_DIR}:/usr/local/bin:/usr/bin:/bin
 ExecStart=${NPM_BIN} run start
-Restart=on-failure
+Restart=always
 RestartSec=5
 
 [Install]
@@ -284,6 +286,44 @@ EOF
   else
     warn "服务未能启动，请看日志：sudo journalctl -u ${APP_NAME} --no-pager -n 50"
   fi
+
+  # ── 健康检查看门狗：探活 /api/health，连续失败自动重启主服务 ──
+  # systemd 的 Restart=always 只能拉起「已退出」的进程；进程还在但卡死/无响应它救不了，
+  # 故再加一个看门狗：定时 curl /api/health，连续失败即 systemctl restart 主服务。
+  # 看门狗以 root 运行（系统单元默认，不设 User=），才有权限重启主服务。
+  log "注册健康检查看门狗 ${APP_NAME}-watchdog ..."
+  BASH_BIN="$(command -v bash)"
+  chmod +x "${ROOT_DIR}/scripts/healthcheck.sh" 2>/dev/null || true
+  $SUDO tee "/etc/systemd/system/${APP_NAME}-watchdog.service" >/dev/null <<EOF
+[Unit]
+Description=BoosterPro Health Watchdog (探活无响应则自动重启 ${APP_NAME})
+After=${APP_NAME}.service
+Wants=${APP_NAME}.service
+
+[Service]
+Type=simple
+Environment=HEALTH_URL=http://127.0.0.1:${APP_PORT}/api/health
+Environment=APP_SERVICE=${APP_NAME}
+Environment=INTERVAL=30
+Environment=FAIL_THRESHOLD=3
+Environment=CURL_TIMEOUT=5
+Environment=BOOT_GRACE=25
+ExecStart=${BASH_BIN} ${ROOT_DIR}/scripts/healthcheck.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  $SUDO systemctl daemon-reload
+  $SUDO systemctl enable "${APP_NAME}-watchdog" >/dev/null 2>&1 || true
+  $SUDO systemctl restart "${APP_NAME}-watchdog"
+  sleep 1
+  if $SUDO systemctl is-active --quiet "${APP_NAME}-watchdog"; then
+    ok "看门狗 ${APP_NAME}-watchdog 已启动（每 30s 探活，连续 3 次失败自动重启）"
+  else
+    warn "看门狗未能启动，请看日志：sudo journalctl -u ${APP_NAME}-watchdog --no-pager -n 50"
+  fi
 fi
 
 log "部署完成 🎉"
@@ -291,4 +331,6 @@ echo "  访问：    http://<本机IP>:${APP_PORT}"
 echo "  管理员：  账号 admin   密码 Admin@123456   （登录后请尽快改密）"
 [ "$OS" != "mac" ] && echo "  日志：    sudo journalctl -u ${APP_NAME} -f"
 [ "$OS" != "mac" ] && echo "  重启：    sudo systemctl restart ${APP_NAME}"
+[ "$OS" != "mac" ] && echo "  看门狗：  sudo journalctl -u ${APP_NAME}-watchdog -f   （探活无响应自动重启）"
+echo "  健康：    curl http://127.0.0.1:${APP_PORT}/api/health"
 echo "  AI 功能： 在 .env 填好 OPENAI_API_KEY 后重启服务即可启用"
