@@ -248,6 +248,7 @@ export default function CandidatesPage() {
     if (!form.recommendationTime) return toast.error('请选择推荐时间')
     if (!form.recruitmentChannel?.trim()) return toast.error('请选择招聘渠道')
     if (!form.recommendationReportUrl) return toast.error('请上传推荐报告')
+    if (!form.recommendationReason?.trim()) return toast.error('请填写推荐理由')
     setSubmitting(true)
     try {
       const visibleFlow = new Set(STATUS_FIELDS[form.recommendationStatus] ?? [])
@@ -511,6 +512,9 @@ export default function CandidatesPage() {
               {opts(STATUS_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Field>
+          <Field label="推荐理由" required className="col-span-2">
+            <textarea className="textarea textarea-bordered w-full" rows={2} value={form.recommendationReason} onChange={(e) => setField('recommendationReason', e.target.value)} placeholder="请填写推荐理由" />
+          </Field>
         </div>
 
         <div className="divider my-3" />
@@ -521,11 +525,6 @@ export default function CandidatesPage() {
             流程字段（根据推荐状态显示）
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {visible('recommendationReason') && (
-              <Field label="推荐理由" className="col-span-2">
-                <textarea className="textarea textarea-bordered w-full" rows={2} value={form.recommendationReason} onChange={(e) => setField('recommendationReason', e.target.value)} placeholder="请填写推荐理由" />
-              </Field>
-            )}
             {visible('interviewProgress') && (
               <Field label="面试进展" className="col-span-2">
                 <textarea className="textarea textarea-bordered w-full" rows={2} value={form.interviewProgress} onChange={(e) => setField('interviewProgress', e.target.value)} placeholder="描述当前面试进展" />
