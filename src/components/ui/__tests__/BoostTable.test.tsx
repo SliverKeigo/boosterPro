@@ -162,4 +162,28 @@ describe('BoostTable', () => {
     // 表头出现“操作”列
     expect(within(container.querySelector('thead') as HTMLElement).getByText('操作')).toBeInTheDocument()
   })
+
+  it('筛选连接符：整组单一「且/或」，仅第 2 条可改且同步到后续条件', async () => {
+    const user = userEvent.setup()
+    render(<BoostTable columns={columns} data={data} />)
+    await user.click(screen.getByText('筛选'))
+    // 面板首行为「当」；点两次「添加筛选条件」→ 共 3 条
+    const addBtn = await screen.findByText('添加筛选条件')
+    await user.click(addBtn)
+    await user.click(addBtn)
+    // 连接符 select = 含 <option value="and"> 的 select（字段/运算符 select 不含）
+    const connectors = () =>
+      (Array.from(document.querySelectorAll('select')) as HTMLSelectElement[]).filter((s) =>
+        s.querySelector('option[value="and"]'),
+      )
+    // 第 1 条是「当」(无 select)，故连接符 select 只有第 2、3 条共 2 个
+    expect(connectors()).toHaveLength(2)
+    // 第 2 条可改、第 3 条只读
+    expect(connectors()[0].disabled).toBe(false)
+    expect(connectors()[1].disabled).toBe(true)
+    // 把第 2 条改成「或」→ 第 3 条同步为「或」
+    fireEvent.change(connectors()[0], { target: { value: 'or' } })
+    expect(connectors()[0].value).toBe('or')
+    expect(connectors()[1].value).toBe('or')
+  })
 })

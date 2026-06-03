@@ -484,6 +484,11 @@ export function BoostTable<T extends Record<string, any>>({
   const patchRow = (id: number, patch: Partial<FilterCondition>) =>
     setDraft((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
 
+  // 全局连接符：整组只有一个「且 / 或」(在第 2 个条件上选择)，决定所有条件统一为「且」或「或」，
+  // 不支持逐条混用——与原系统一致。改第 2 条即同步到全部条件。
+  const setGroupLogic = (logic: LogicOp) =>
+    setDraft((rows) => rows.map((r) => ({ ...r, logic })))
+
   // 切换字段时重置运算符与值（保持类型合法）
   const changeField = (id: number, field: string) => {
     const col = colByKey.get(field)
@@ -494,7 +499,8 @@ export function BoostTable<T extends Record<string, any>>({
   const changeOp = (id: number, op: FilterOp) =>
     patchRow(id, { op, value: '', values: [] })
 
-  const addRow = () => setDraft((rows) => [...rows, newCondition('and')])
+  // 新增条件沿用「全局连接符」(第 2 条的 logic)；还没有第 2 条时默认「且」
+  const addRow = () => setDraft((rows) => [...rows, newCondition(rows[1]?.logic ?? 'and')])
 
   const removeRow = (id: number) =>
     setDraft((rows) => rows.filter((r) => r.id !== id))
@@ -743,15 +749,23 @@ export function BoostTable<T extends Record<string, any>>({
                               <span className="w-12 shrink-0 text-center text-sm text-base-content/60">
                                 当
                               </span>
-                            ) : (
+                            ) : idx === 1 ? (
+                              // 第 2 条：可改的「全局连接符」，改动同步到后续所有条件
                               <select
                                 className="select select-bordered select-sm w-12 shrink-0 px-1"
                                 value={cond.logic}
-                                onChange={(e) =>
-                                  patchRow(cond.id, {
-                                    logic: e.target.value as LogicOp,
-                                  })
-                                }
+                                onChange={(e) => setGroupLogic(e.target.value as LogicOp)}
+                              >
+                                <option value="and">且</option>
+                                <option value="or">或</option>
+                              </select>
+                            ) : (
+                              // 第 3 条起：沿用第 2 条的连接符，只读展示（不可单独修改）
+                              <select
+                                className="select select-bordered select-sm w-12 shrink-0 px-1"
+                                value={cond.logic}
+                                disabled
+                                title="连接符由第 2 个条件统一控制"
                               >
                                 <option value="and">且</option>
                                 <option value="or">或</option>
