@@ -20,7 +20,6 @@ import {
   Lock,
   BookMarked,
   LogOut,
-  Bell,
   ChevronDown,
   Briefcase,
   Zap,
@@ -254,13 +253,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="font-semibold text-base-content">{pageTitle}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label="通知"
-              className="btn btn-ghost btn-sm btn-square text-base-content/60"
-            >
-              <Bell className="h-5 w-5" />
-            </button>
             {user && (
               <Popconfirm
                 title="确认退出登录？"
