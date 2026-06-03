@@ -75,24 +75,25 @@ const STATUS_BADGE: Record<string, string> = {
   RESIGNED_LOCAL: 'badge-ghost',
 }
 
-// 推荐状态 → 需额外显示的流程字段（参照文档 image23 状态驱动规则）
+// 推荐状态 → 该状态下额外显示的组件（严格对照客户给的「状态 → 显示组件」对照表）。
+// 'guaranteeCommunications' 是子表（保证期内沟通记录），仅 保证期/过保关闭 显示；其余均为流程字段。
 const STATUS_FIELDS: Record<string, string[]> = {
-  PENDING: ['recommendationReason', 'interviewProgress'],
-  INTERVIEWING: ['recommendationReason', 'interviewProgress'],
+  PENDING: [],
+  INTERVIEWING: ['interviewProgress'],
   SALARY_NEGO: ['interviewProgress', 'salaryPlan'],
-  OFFERING: ['interviewProgress', 'salaryPlan', 'offerDate', 'offerFileUrl'],
-  ONBOARDING: ['interviewProgress', 'offerDate', 'offerOnboardDate', 'offerFileUrl', 'backgroundCheckReportUrl', 'actualOnboardDate'],
-  GUARANTEE: ['interviewProgress', 'offerDate', 'actualOnboardDate', 'guaranteePeriodEnd', 'guaranteePeriodMonths'],
-  POST_GUARANTEE_CLOSED: ['interviewProgress', 'offerDate', 'actualOnboardDate', 'guaranteePeriodEnd', 'guaranteePeriodMonths'],
+  OFFERING: ['interviewProgress', 'backgroundCheckReportUrl', 'salaryPlan'],
+  ONBOARDING: ['interviewProgress', 'offerDate', 'offerOnboardDate', 'offerFileUrl', 'salaryPlan'],
+  GUARANTEE: ['interviewProgress', 'offerDate', 'offerOnboardDate', 'offerFileUrl', 'actualOnboardDate', 'guaranteePeriodEnd', 'salaryPlan', 'guaranteeCommunications', 'guaranteePeriodMonths'],
+  POST_GUARANTEE_CLOSED: ['interviewProgress', 'offerDate', 'offerOnboardDate', 'actualOnboardDate', 'guaranteePeriodEnd', 'guaranteeCommunications'],
   RESUME_FAILED: ['failureReason'],
   INTERNAL_RESUME_FAILED: ['failureReason'],
   INTERVIEW_SCHEDULE_FAILED: ['interviewProgress', 'failureReason'],
   INTERVIEW_FAILED: ['interviewProgress', 'failureReason'],
-  SALARY_NEGO_FAILED: ['interviewProgress', 'salaryPlan', 'failureReason'],
-  OFFER_FAILED: ['interviewProgress', 'salaryPlan', 'offerDate', 'failureReason'],
-  ONBOARD_FAILED: ['interviewProgress', 'offerDate', 'offerOnboardDate', 'failureReason'],
-  NOT_PASSED_GUARANTEE: ['interviewProgress', 'offerDate', 'actualOnboardDate', 'guaranteePeriodEnd', 'guaranteePeriodMonths', 'failureReason'],
-  RESIGNED_POST_GUARANTEE: ['interviewProgress', 'offerDate', 'guaranteePeriodEnd', 'failureReason'],
+  SALARY_NEGO_FAILED: ['interviewProgress', 'failureReason'],
+  OFFER_FAILED: ['interviewProgress', 'failureReason'],
+  ONBOARD_FAILED: ['interviewProgress', 'failureReason'],
+  NOT_PASSED_GUARANTEE: ['interviewProgress', 'failureReason', 'offerDate', 'offerOnboardDate', 'offerFileUrl', 'backgroundCheckReportUrl', 'actualOnboardDate', 'salaryPlan', 'guaranteePeriodMonths'],
+  RESIGNED_POST_GUARANTEE: ['interviewProgress', 'failureReason'],
   RESIGNED_LOCAL: ['failureReason'],
 }
 
@@ -247,7 +248,9 @@ export default function CandidatesPage() {
           .filter(Boolean),
       }
       // 清除当前推荐状态下不显示的流程字段，避免与最终状态矛盾的脏数据入库
+      // 子表（guaranteeCommunications）是数组，隐藏时不在此清空（避免误清子表数据），仅清字符串型流程字段
       for (const f of ALL_FLOW_FIELDS) {
+        if (f === 'guaranteeCommunications') continue
         if (!visibleFlow.has(f)) payload[f] = ''
       }
       const url = editing ? `/api/candidates/${editing.id}` : '/api/candidates'
@@ -569,15 +572,17 @@ export default function CandidatesPage() {
 
         {/* 子表 */}
         <div className="space-y-4">
-          <SubTable
-            title="保证期内沟通记录"
-            value={form.guaranteeCommunications}
-            onChange={(rows) => setField('guaranteeCommunications', rows)}
-            columns={[
-              { key: 'date', title: '日期', type: 'date', width: 160 },
-              { key: 'content', title: '沟通内容', type: 'textarea', width: 320 },
-            ]}
-          />
+          {visible('guaranteeCommunications') && (
+            <SubTable
+              title="保证期内沟通记录"
+              value={form.guaranteeCommunications}
+              onChange={(rows) => setField('guaranteeCommunications', rows)}
+              columns={[
+                { key: 'date', title: '日期', type: 'date', width: 160 },
+                { key: 'content', title: '沟通内容', type: 'textarea', width: 320 },
+              ]}
+            />
+          )}
           <SubTable
             title="风险管理表单"
             value={form.riskEvents}
