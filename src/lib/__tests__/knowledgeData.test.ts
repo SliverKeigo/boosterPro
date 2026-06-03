@@ -7,6 +7,11 @@ describe('knowledgeData - INCLUDE 常量', () => {
     expect(KNOWLEDGE_INCLUDE.managementRecords).toBeDefined()
     expect(KNOWLEDGE_INCLUDE.managementRecords.include).toBeDefined()
   })
+
+  it('KNOWLEDGE_INCLUDE 含 internalLecturer 关联（仅 select id/name）', () => {
+    expect(KNOWLEDGE_INCLUDE.internalLecturer).toBeDefined()
+    expect(KNOWLEDGE_INCLUDE.internalLecturer.select).toMatchObject({ id: true, name: true })
+  })
 })
 
 describe('buildKnowledgeData - 字段映射与清洗', () => {
@@ -45,6 +50,53 @@ describe('buildKnowledgeData - 字段映射与清洗', () => {
     expect(buildKnowledgeData({ tags: '' }, 'create').tags).toEqual([])
     expect(buildKnowledgeData({ tags: ['a', 'b'] }, 'create').tags).toEqual(['a', 'b'])
     expect(buildKnowledgeData({}, 'create').tags).toEqual([])
+  })
+
+  it('保留 trainingOutline / externalLecturer / internalLecturerId 白名单字段', () => {
+    const out = buildKnowledgeData(
+      {
+        category: 'A',
+        trainingOutline: '第一章 概述\n第二章 实操',
+        externalLecturer: '外部李老师',
+        internalLecturerId: '5',
+      },
+      'create',
+    )
+    expect(out.trainingOutline).toBe('第一章 概述\n第二章 实操')
+    expect(out.externalLecturer).toBe('外部李老师')
+    expect(out.internalLecturerId).toBe(5)
+  })
+
+  it('trainingOutline / externalLecturer：空串 → null', () => {
+    const out = buildKnowledgeData(
+      { category: 'A', trainingOutline: '', externalLecturer: '' },
+      'create',
+    )
+    expect(out.trainingOutline).toBeNull()
+    expect(out.externalLecturer).toBeNull()
+  })
+
+  it('trainingOutline / externalLecturer：缺失 → null', () => {
+    const out = buildKnowledgeData({ category: 'A' }, 'create')
+    expect(out.trainingOutline).toBeNull()
+    expect(out.externalLecturer).toBeNull()
+  })
+
+  it('internalLecturerId：数字字符串 → Number；空串 / 缺失 / null → null', () => {
+    expect(buildKnowledgeData({ internalLecturerId: '9' }, 'create').internalLecturerId).toBe(9)
+    expect(buildKnowledgeData({ internalLecturerId: 9 }, 'create').internalLecturerId).toBe(9)
+    expect(buildKnowledgeData({ internalLecturerId: '' }, 'create').internalLecturerId).toBeNull()
+    expect(buildKnowledgeData({}, 'create').internalLecturerId).toBeNull()
+    expect(buildKnowledgeData({ internalLecturerId: null }, 'create').internalLecturerId).toBeNull()
+  })
+
+  it('剔除 internalLecturer relation 对象（仅保留外键 id）', () => {
+    const out = buildKnowledgeData(
+      { category: 'A', internalLecturer: { id: 5, name: '李老师' }, internalLecturerId: '5' },
+      'create',
+    )
+    expect(out).not.toHaveProperty('internalLecturer')
+    expect(out.internalLecturerId).toBe(5)
   })
 
   it('create：managementRecords 过滤空记录、转换 date / submitterId', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { signToken, verifyToken, AUTH_COOKIE, type JwtPayload } from '@/lib/auth'
+import { signToken, verifyToken, isSecureRequest, AUTH_COOKIE, type JwtPayload } from '@/lib/auth'
 
 describe('auth - signToken / verifyToken', () => {
   const payload: JwtPayload = { userId: 42, name: '张三', username: 'zhangsan' }
@@ -40,5 +40,53 @@ describe('auth - signToken / verifyToken', () => {
 
   it('AUTH_COOKIE 常量为 bp_token', () => {
     expect(AUTH_COOKIE).toBe('bp_token')
+  })
+})
+
+describe('auth - isSecureRequest', () => {
+  // 用 Headers 构造可控的 req.headers.get，url 仅在无 x-forwarded-proto 时回退使用
+  const reqWith = (headers: Record<string, string>, url = 'http://t/api/x'): Request =>
+    new Request(url, { headers })
+
+  it('x-forwarded-proto=https → true（反代终止 TLS）', () => {
+    expect(isSecureRequest(reqWith({ 'x-forwarded-proto': 'https' }))).toBe(true)
+  })
+
+  it('x-forwarded-proto 多值取首段：第一个为 https → true', () => {
+    expect(isSecureRequest(reqWith({ 'x-forwarded-proto': 'https, http' }))).toBe(true)
+  })
+
+  it('x-forwarded-proto 多值取首段：第一个为 http → false', () => {
+    expect(isSecureRequest(reqWith({ 'x-forwarded-proto': 'http, https' }))).toBe(false)
+  })
+
+  it('x-forwarded-proto=http → false', () => {
+    expect(isSecureRequest(reqWith({ 'x-forwarded-proto': 'http' }))).toBe(false)
+  })
+
+  it('无 x-forwarded-proto：http 的 req.url → false', () => {
+    expect(isSecureRequest(reqWith({}, 'http://t/api/x'))).toBe(false)
+  })
+
+  it('无 x-forwarded-proto：https 的 req.url → true', () => {
+    expect(isSecureRequest(reqWith({}, 'https://t/api/x'))).toBe(true)
+  })
+
+  it('headers 缺失 / 异常 mock 不抛错，按非 HTTPS 处理（false）', () => {
+    // 模拟没有 headers.get 且 url 无法解析的异常请求
+    const broken = { headers: undefined, url: 'not a url' } as unknown as Request
+    expect(isSecureRequest(broken)).toBe(false)
+  })
+
+  it('headers.get 抛异常时兜底返回 false（不向外抛）', () => {
+    const throwing = {
+      headers: {
+        get() {
+          throw new Error('boom')
+        },
+      },
+      url: 'http://t/api/x',
+    } as unknown as Request
+    expect(isSecureRequest(throwing)).toBe(false)
   })
 })
