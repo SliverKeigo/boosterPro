@@ -10,8 +10,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'BoosterPro · 猎头 CRM',
-  description: '猎头/招聘 CRM 管理系统',
+  title: 'BoosterPro',
+  description: 'BoosterPro',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

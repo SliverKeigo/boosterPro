@@ -98,7 +98,6 @@ export default function LoginPage() {
         )}
 
         <h1 className="vc-title">登录</h1>
-        <p className="vc-sub">猎头 · 招聘交付 CRM 管理系统</p>
 
         <form className="bp-form bp-form--glass" onSubmit={handleSubmit} noValidate>
           {error && (
