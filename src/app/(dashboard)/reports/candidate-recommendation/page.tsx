@@ -12,10 +12,9 @@ import {
   Filter,
   RotateCcw,
 } from 'lucide-react'
-import { BoostTable, type BoostColumn, useToast } from '@/components/ui'
+import { BoostTable, type BoostColumn, SearchSelect, searchFetch, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
-import { refGet } from '@/lib/refCache'
 // 推荐状态中文 label 复用 enums.ts 单一事实源（勿另写一份）
 import { RECOMMENDATION_STATUS_LABELS, RECOMMENDATION_STATUS_OPTIONS } from '@/lib/enums'
 
@@ -228,8 +227,6 @@ export default function CandidateRecommendationReportPage() {
 
   const [loading, setLoading] = useState(true)
   const [candidates, setCandidates] = useState<any[]>([])
-  const [users, setUsers] = useState<any[]>([])
-  const [customers, setCustomers] = useState<any[]>([])
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS })
   const setFilter = (k: keyof typeof EMPTY_FILTERS, v: string) =>
     setFilters((f) => ({ ...f, [k]: v }))
@@ -243,12 +240,8 @@ export default function CandidateRecommendationReportPage() {
     void (async () => {
       try {
         // 全量候选人在前端按筛选 + 时间窗聚合（与现有报表一致）；
-        // 推荐人 / 客户下拉走轻量 options 接口（仅登录即可取）。
-        const [candRes, userList, customerList] = await Promise.all([
-          fetch('/api/candidates'),
-          refGet('/api/users'),
-          refGet('/api/clients/options'),
-        ])
+        // 推荐人 / 客户筛选下拉改用可搜索 SearchSelect，按需走轻量 options 接口（?q= 后端过滤），无需在此预拉。
+        const candRes = await fetch('/api/candidates')
         if (!candRes.ok)
           throw new Error(
             (await candRes.clone().json().catch(() => ({}))).error || '',
@@ -256,8 +249,6 @@ export default function CandidateRecommendationReportPage() {
         const candJson = await candRes.json()
         if (!alive) return
         setCandidates(candJson.data ?? [])
-        setUsers(userList)
-        setCustomers(customerList)
       } catch (e) {
         if (alive) toast.error(e instanceof Error && e.message ? e.message : '加载失败')
       } finally {
@@ -453,66 +444,46 @@ export default function CandidateRecommendationReportPage() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <label className="form-control w-full">
             <span className="label-text mb-1 text-xs text-base-content/60">推荐状态</span>
-            <select
-              className="select select-bordered select-sm w-full"
+            <SearchSelect
               value={filters.status}
-              onChange={(e) => setFilter('status', e.target.value)}
-            >
-              <option value="">全部</option>
-              {RECOMMENDATION_STATUS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setFilter('status', v)}
+              options={RECOMMENDATION_STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              placeholder="全部"
+              allowClear
+            />
           </label>
 
           <label className="form-control w-full">
             <span className="label-text mb-1 text-xs text-base-content/60">推荐人</span>
-            <select
-              className="select select-bordered select-sm w-full"
+            <SearchSelect
               value={filters.submitterId}
-              onChange={(e) => setFilter('submitterId', e.target.value)}
-            >
-              <option value="">全部</option>
-              {users.map((u) => (
-                <option key={u.id} value={String(u.id)}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setFilter('submitterId', v)}
+              fetchOptions={searchFetch('/api/users', (u) => ({ value: String(u.id), label: u.name }))}
+              placeholder="全部"
+              allowClear
+            />
           </label>
 
           <label className="form-control w-full">
             <span className="label-text mb-1 text-xs text-base-content/60">客户名称</span>
-            <select
-              className="select select-bordered select-sm w-full"
+            <SearchSelect
               value={filters.customerId}
-              onChange={(e) => setFilter('customerId', e.target.value)}
-            >
-              <option value="">全部</option>
-              {customers.map((c) => (
-                <option key={c.id} value={String(c.id)}>
-                  {c.shortName ?? c.fullName}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setFilter('customerId', v)}
+              fetchOptions={searchFetch('/api/clients/options', (c) => ({ value: String(c.id), label: c.shortName ?? c.fullName }))}
+              placeholder="全部"
+              allowClear
+            />
           </label>
 
           <label className="form-control w-full">
             <span className="label-text mb-1 text-xs text-base-content/60">简历渠道</span>
-            <select
-              className="select select-bordered select-sm w-full"
+            <SearchSelect
               value={filters.channel}
-              onChange={(e) => setFilter('channel', e.target.value)}
-            >
-              <option value="">全部</option>
-              {channelOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setFilter('channel', v)}
+              options={channelOptions}
+              placeholder="全部"
+              allowClear
+            />
           </label>
 
           <label className="form-control w-full">

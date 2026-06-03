@@ -11,6 +11,8 @@ import {
   Modal,
   Popconfirm,
   Field,
+  SearchSelect,
+  searchFetch,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -29,7 +31,6 @@ export default function CustomerContactsPage() {
   const toast = useToast()
   const { can, isOwner, userId, departmentId } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
-  const [customers, setCustomers] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -41,13 +42,13 @@ export default function CustomerContactsPage() {
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
   // 表单引用数据按需加载：打开新增/编辑弹窗时再拉（refGet 按 url 缓存 60s + 在途去重，已缓存则瞬时）
+  // 提交人组织 / 提交人为联动下拉（组织过滤提交人、提交人回填组织），仍用本地列表做静态选项；
+  // 客户改用异步 SearchSelect，按搜索词向后端取，无需在此预载。
   const loadFormRefs = useCallback(async () => {
-    const [c, d, u] = await Promise.all([
-      refGet('/api/clients/options'),
+    const [d, u] = await Promise.all([
       refGet('/api/departments'),
       refGet('/api/users'),
     ])
-    setCustomers(c)
     setDepartments(d)
     setUsers(u)
   }, [])
@@ -226,27 +227,26 @@ export default function CustomerContactsPage() {
             <input className="input input-bordered w-full" value={form.title} onChange={(e) => setField('title', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="客户名称" required>
-            <select className="select select-bordered w-full" value={form.customerId} onChange={(e) => setField('customerId', e.target.value)}>
-              <option value="" disabled hidden>请选择客户</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.shortName}</option>)}
-            </select>
+            <SearchSelect
+              value={String(form.customerId ?? '')}
+              onChange={(v) => setField('customerId', v)}
+              fetchOptions={searchFetch('/api/clients/options', (c) => ({ value: String(c.id), label: c.shortName || c.fullName }))}
+              initialLabel={editing?.customer?.shortName ?? ''}
+              placeholder="请选择客户"
+            />
           </Field>
           <Field label="提交人组织">
-            <select
-              className="select select-bordered w-full"
-              value={form.submitDepartmentId}
-              onChange={(e) => setForm((f: any) => ({ ...f, submitDepartmentId: e.target.value, submitterId: '' }))}
-            >
-              <option value="" disabled hidden>请选择组织</option>
-              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
+            <SearchSelect
+              value={String(form.submitDepartmentId ?? '')}
+              onChange={(v) => setForm((f: any) => ({ ...f, submitDepartmentId: v, submitterId: '' }))}
+              options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+              placeholder="请选择组织"
+            />
           </Field>
           <Field label="提交人">
-            <select
-              className="select select-bordered w-full"
-              value={form.submitterId}
-              onChange={(e) => {
-                const v = e.target.value
+            <SearchSelect
+              value={String(form.submitterId ?? '')}
+              onChange={(v) => {
                 const u = users.find((x) => String(x.id) === v)
                 setForm((f: any) => ({
                   ...f,
@@ -254,12 +254,11 @@ export default function CustomerContactsPage() {
                   submitDepartmentId: u?.departmentId != null ? String(u.departmentId) : f.submitDepartmentId,
                 }))
               }}
-            >
-              <option value="" disabled hidden>请选择提交人</option>
-              {users
+              options={users
                 .filter((u) => !form.submitDepartmentId || String(u.departmentId ?? '') === String(form.submitDepartmentId))
-                .map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
+                .map((u) => ({ value: String(u.id), label: u.name }))}
+              placeholder="请选择提交人"
+            />
           </Field>
         </div>
 

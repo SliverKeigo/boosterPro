@@ -14,6 +14,7 @@ import {
   FileUpload,
   YearSelect,
   yearOptions,
+  SearchSelect,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -413,35 +414,24 @@ export default function CandidatesPage() {
             <input className="input input-bordered w-full" value={form.email} onChange={(e) => setField('email', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="教育经历" required>
-            <select className="select select-bordered w-full" value={form.education} onChange={(e) => setField('education', e.target.value)}>
-              <option value="" disabled hidden>请选择</option>
-              {opts(EDUCATION_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <SearchSelect value={form.education} onChange={(v) => setField('education', v)} options={opts(EDUCATION_LABELS)} placeholder="请选择" />
           </Field>
           <Field label="院校">
-            <select className="select select-bordered w-full" value={form.schoolTier} onChange={(e) => setField('schoolTier', e.target.value)}>
-              <option value="" disabled hidden>请选择</option>
-              {opts(SCHOOL_TIER_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <SearchSelect value={form.schoolTier} onChange={(v) => setField('schoolTier', v)} options={opts(SCHOOL_TIER_LABELS)} placeholder="请选择" />
           </Field>
           <Field label="客户名称" required>
-            <select
-              className="select select-bordered w-full"
-              value={form.customerId}
-              onChange={(e) => {
-                const cid = e.target.value
-                setField('customerId', cid)
+            <SearchSelect
+              value={String(form.customerId ?? '')}
+              placeholder="请选择客户"
+              options={customers.map((c) => ({ value: String(c.id), label: c.fullName || c.shortName }))}
+              onChange={(v) => {
+                setField('customerId', v)
                 setField('requirementId', '')
                 setField('recruitmentParty', '')
-                const c = customers.find((x) => String(x.id) === String(cid))
+                const c = customers.find((x) => String(x.id) === v)
                 setField('customerShortName', c?.shortName || '')
               }}
-            >
-              <option value="" disabled hidden>请选择客户</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>{c.fullName || c.shortName}</option>
-              ))}
-            </select>
+            />
           </Field>
           <Field label="客户简称" required>
             <input
@@ -452,65 +442,50 @@ export default function CandidatesPage() {
             />
           </Field>
           <Field label="招聘需求方" required>
-            <select
-              className="select select-bordered w-full"
+            <SearchSelect
               value={form.recruitmentParty}
               disabled={!form.customerId}
-              onChange={(e) => {
-                setField('recruitmentParty', e.target.value)
-                setField('requirementId', '')
-              }}
-            >
-              <option value="" disabled hidden>{form.customerId ? '请选择招聘需求方' : '请先选择客户'}</option>
-              {[
+              placeholder={form.customerId ? '请选择招聘需求方' : '请先选择客户'}
+              options={[
                 ...new Set(
                   requirements
                     .filter((r) => String(r.customerId) === String(form.customerId) && r.recruiter && isRecruitingReq(r))
                     .map((r) => r.recruiter),
                 ),
-              ].map((rc: any) => (
-                <option key={rc} value={rc}>{rc}</option>
-              ))}
-            </select>
+              ].map((rc: any) => ({ value: rc, label: rc }))}
+              onChange={(v) => {
+                setField('recruitmentParty', v)
+                setField('requirementId', '')
+              }}
+            />
           </Field>
           <Field label="岗位名称" required>
-            <select
-              className="select select-bordered w-full"
-              value={form.requirementId}
+            <SearchSelect
+              value={String(form.requirementId ?? '')}
               disabled={!form.customerId}
-              onChange={(e) => setField('requirementId', e.target.value)}
-            >
-              <option value="" disabled hidden>{form.customerId ? '请选择岗位' : '请先选择客户'}</option>
-              {requirements
+              placeholder={form.customerId ? '请选择岗位' : '请先选择客户'}
+              options={requirements
                 .filter(
                   (r) =>
                     String(r.customerId) === String(form.customerId) &&
                     (!form.recruitmentParty || r.recruiter === form.recruitmentParty) &&
                     isRecruitingReq(r),
                 )
-                .map((r) => (
-                  <option key={r.id} value={r.id}>{r.positionName}</option>
-                ))}
-            </select>
+                .map((r) => ({ value: String(r.id), label: r.positionName }))}
+              onChange={(v) => setField('requirementId', v)}
+            />
           </Field>
           <Field label="推荐时间" required>
             <input type="datetime-local" className="input input-bordered w-full" value={form.recommendationTime} onChange={(e) => setField('recommendationTime', e.target.value)} />
           </Field>
           <Field label="招聘渠道" required>
-            <select className="select select-bordered w-full" value={form.recruitmentChannel} onChange={(e) => setField('recruitmentChannel', e.target.value)}>
-              <option value="" disabled hidden>请选择</option>
-              {channelOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+            <SearchSelect value={form.recruitmentChannel} onChange={(v) => setField('recruitmentChannel', v)} options={channelOptions} placeholder="请选择" />
           </Field>
           <Field label="推荐报告" required>
             <FileUpload value={form.recommendationReportUrl} onChange={(url) => setField('recommendationReportUrl', url)} />
           </Field>
           <Field label="推荐状态" required>
-            <select className="select select-bordered w-full" value={form.recommendationStatus} onChange={(e) => setField('recommendationStatus', e.target.value)}>
-              {opts(STATUS_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <SearchSelect value={form.recommendationStatus} onChange={(v) => setField('recommendationStatus', v)} options={opts(STATUS_LABELS)} placeholder="请选择" />
           </Field>
           <Field label="推荐理由" required className="col-span-2">
             <textarea className="textarea textarea-bordered w-full" rows={2} value={form.recommendationReason} onChange={(e) => setField('recommendationReason', e.target.value)} placeholder="请填写推荐理由" />
@@ -612,21 +587,21 @@ export default function CandidatesPage() {
             <input className="input input-bordered w-full" value={form.tags} onChange={(e) => setField('tags', e.target.value)} placeholder="如：核心人才, 已背调" />
           </Field>
           <Field label="提交人部门">
-            <select
-              className="select select-bordered w-full"
-              value={form.submitDepartmentId}
-              onChange={(e) => setForm((f: any) => ({ ...f, submitDepartmentId: e.target.value, submitterId: '' }))}
-            >
-              <option value="" disabled hidden>请选择部门</option>
-              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
+            <SearchSelect
+              value={String(form.submitDepartmentId ?? '')}
+              placeholder="请选择部门"
+              options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+              onChange={(v) => setForm((f: any) => ({ ...f, submitDepartmentId: v, submitterId: '' }))}
+            />
           </Field>
           <Field label="提交人">
-            <select
-              className="select select-bordered w-full"
-              value={form.submitterId}
-              onChange={(e) => {
-                const v = e.target.value
+            <SearchSelect
+              value={String(form.submitterId ?? '')}
+              placeholder="请选择提交人"
+              options={users
+                .filter((u) => !form.submitDepartmentId || String(u.departmentId ?? '') === String(form.submitDepartmentId))
+                .map((u) => ({ value: String(u.id), label: u.name }))}
+              onChange={(v) => {
                 const u = users.find((x) => String(x.id) === v)
                 setForm((f: any) => ({
                   ...f,
@@ -634,12 +609,7 @@ export default function CandidatesPage() {
                   submitDepartmentId: u?.departmentId != null ? String(u.departmentId) : f.submitDepartmentId,
                 }))
               }}
-            >
-              <option value="" disabled hidden>请选择提交人</option>
-              {users
-                .filter((u) => !form.submitDepartmentId || String(u.departmentId ?? '') === String(form.submitDepartmentId))
-                .map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
+            />
           </Field>
           <Field label="备注" className="col-span-2">
             <textarea className="textarea textarea-bordered w-full" rows={2} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="其他备注信息" />

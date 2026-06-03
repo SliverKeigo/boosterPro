@@ -3,11 +3,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Trash2, ArrowRightLeft } from 'lucide-react'
-import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, useToast } from '@/components/ui'
+import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, SearchSelect, searchFetch, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 
 const EMPTY_FORM: any = {
   name: '', username: '', email: '', password: '', departmentId: '', roleId: '',
+  // 异步部门 SearchSelect 编辑回显用（仅前端展示，payload 不含）
+  departmentName: '',
 }
 
 export default function UsersPage() {
@@ -106,6 +108,7 @@ export default function UsersPage() {
       email: r.email ?? '',
       password: '',
       departmentId: r.departmentId ?? '',
+      departmentName: r.department?.name ?? '',
       roleId: r.roleId ?? '',
     })
     setOpen(true)
@@ -239,16 +242,21 @@ export default function UsersPage() {
             <input type="password" className="input input-bordered w-full" value={form.password} onChange={(e) => setField('password', e.target.value)} placeholder={editing ? '留空则不修改' : '请输入'} />
           </Field>
           <Field label="部门">
-            <select className="select select-bordered w-full" value={form.departmentId} onChange={(e) => setField('departmentId', e.target.value)}>
-              <option value="" disabled hidden>请选择</option>
-              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
+            <SearchSelect
+              value={form.departmentId ? String(form.departmentId) : ''}
+              onChange={(v) => setField('departmentId', v)}
+              fetchOptions={searchFetch('/api/departments', (d) => ({ value: String(d.id), label: d.name }))}
+              initialLabel={form.departmentName || ''}
+              placeholder="请选择"
+            />
           </Field>
           <Field label="角色">
-            <select className="select select-bordered w-full" value={form.roleId} onChange={(e) => setField('roleId', e.target.value)}>
-              <option value="" disabled hidden>请选择</option>
-              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
+            <SearchSelect
+              value={form.roleId ? String(form.roleId) : ''}
+              onChange={(v) => setField('roleId', v)}
+              options={roles.map((r) => ({ value: String(r.id), label: r.name }))}
+              placeholder="请选择"
+            />
           </Field>
         </div>
       </Modal>
@@ -272,21 +280,20 @@ export default function UsersPage() {
             创建的全部数据移交给所选目标用户，此操作不可撤销。
           </div>
           <Field label="目标用户" required>
-            <select
-              className="select select-bordered w-full"
+            <SearchSelect
               value={transferTargetId}
-              onChange={(e) => setTransferTargetId(e.target.value)}
-            >
-              <option value="" disabled hidden>请选择</option>
-              {data
-                .filter((u) => u.id !== transferSource?.id)
-                .map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                    {u.email ? `（${u.email}）` : ''}
-                  </option>
-                ))}
-            </select>
+              onChange={(v) => setTransferTargetId(v)}
+              // 选用户 → 异步；后端 ?q= 过滤后再排除「移交来源用户」自身（按 value 字符串比较）
+              fetchOptions={async (q) => {
+                const rows = await searchFetch('/api/users', (u) => ({
+                  value: String(u.id),
+                  label: u.email ? `${u.name}（${u.email}）` : u.name,
+                }))(q)
+                const excludeValue = transferSource ? String(transferSource.id) : ''
+                return rows.filter((o) => o.value !== excludeValue)
+              }}
+              placeholder="请选择"
+            />
           </Field>
         </div>
       </Modal>

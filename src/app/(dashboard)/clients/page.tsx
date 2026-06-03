@@ -14,6 +14,7 @@ import {
   FileUpload,
   RichText,
   RegionCascade,
+  SearchSelect,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -266,12 +267,7 @@ export default function ClientsPage() {
             <input className="input input-bordered w-full" value={form.formerName} onChange={(e) => setField('formerName', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="所属行业">
-            <select className="select select-bordered w-full" value={form.industry} onChange={(e) => setField('industry', e.target.value)}>
-              <option value="" disabled hidden>请选择</option>
-              {industryOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+            <SearchSelect value={form.industry} onChange={(v) => setField('industry', v)} options={industryOptions} placeholder="请选择" />
           </Field>
           <Field label="所属区域" required>
             <input className="input input-bordered w-full" value={form.region} onChange={(e) => setField('region', e.target.value)} placeholder="请输入" />

@@ -13,11 +13,12 @@ import {
   Field,
   FileUpload,
   RegionCascade,
+  SearchSelect,
+  searchFetch,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
-import { refGet } from '@/lib/refCache'
 
 const RES = 'OPPORTUNITY'
 
@@ -62,12 +63,6 @@ export default function OpportunitiesPage() {
   const [editing, setEditing] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState<any>(EMPTY_FORM)
-  const [users, setUsers] = useState<any[]>([])
-
-  const loadFormRefs = useCallback(async () => {
-    const u = await refGet('/api/users')
-    setUsers(u)
-  }, [])
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
@@ -93,7 +88,6 @@ export default function OpportunitiesPage() {
   }, [fetchData])
 
   const openCreate = () => {
-    void loadFormRefs()
     setEditing(null)
     // 销售负责人默认填当前登录用户（仍可在下拉中改）
     setForm({ ...EMPTY_FORM, salesOwnerId: userId != null ? String(userId) : '' })
@@ -101,7 +95,6 @@ export default function OpportunitiesPage() {
   }
 
   const openEdit = (r: any) => {
-    void loadFormRefs()
     setEditing(r)
     setForm({
       ...EMPTY_FORM,
@@ -256,16 +249,11 @@ export default function OpportunitiesPage() {
             <RegionCascade value={form.region} onChange={(v) => setField('region', v)} />
           </Field>
           <Field label="商机状态" required>
-            <select className="select select-bordered w-full" value={form.status} onChange={(e) => setField('status', e.target.value)}>
-              <option value="" disabled hidden>请选择状态</option>
-              {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <SearchSelect value={form.status} onChange={(v) => setField('status', v)} options={statusOptions} placeholder="请选择状态" />
           </Field>
           {/* 商机性质 / 商机联系人 */}
           <Field label="商机性质" required>
-            <select className="select select-bordered w-full" value={form.nature} onChange={(e) => setField('nature', e.target.value)}>
-              {opts(NATURE_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <SearchSelect value={form.nature} onChange={(v) => setField('nature', v)} options={opts(NATURE_LABELS)} placeholder="请选择" />
           </Field>
           <Field label="商机联系人">
             <input className="input input-bordered w-full" value={form.contactName} onChange={(e) => setField('contactName', e.target.value)} placeholder="请输入" />
@@ -289,10 +277,13 @@ export default function OpportunitiesPage() {
             <textarea className="textarea textarea-bordered w-full" rows={3} value={form.decisionMakerDescription} onChange={(e) => setField('decisionMakerDescription', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="销售负责人" required>
-            <select className="select select-bordered w-full" value={form.salesOwnerId} onChange={(e) => setField('salesOwnerId', e.target.value)}>
-              <option value="" disabled hidden>请选择</option>
-              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
+            <SearchSelect
+              value={String(form.salesOwnerId ?? '')}
+              onChange={(v) => setField('salesOwnerId', v)}
+              fetchOptions={searchFetch('/api/users', (u) => ({ value: String(u.id), label: u.name }))}
+              initialLabel={editing?.salesOwner?.name ?? ''}
+              placeholder="请选择"
+            />
           </Field>
         </div>
 

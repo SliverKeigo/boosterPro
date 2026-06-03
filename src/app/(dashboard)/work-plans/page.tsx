@@ -9,6 +9,8 @@ import {
   Modal,
   Popconfirm,
   Field,
+  SearchSelect,
+  searchFetch,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -27,6 +29,8 @@ const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
 const EMPTY_FORM: any = {
   title: '',
   ownerId: '',
+  // 异步负责人 SearchSelect 回显用（仅前端展示，提交前剔除，不入库）
+  ownerName: '',
   startDate: '',
   endDate: '',
   status: '',
@@ -43,15 +47,17 @@ export default function WorkPlansPage() {
   const [editing, setEditing] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState<any>(EMPTY_FORM)
-  const [users, setUsers] = useState<any[]>([])
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
-  // 负责人下拉「引用数据」按需加载（打开弹窗时拉，带 url 缓存 + 在途去重）
-  const loadFormRefs = useCallback(async () => {
-    const u = await refGet('/api/users')
-    setUsers(u)
-  }, [])
+  // 新增时负责人默认预填当前登录用户：异步下拉需要回显名称，但 useMyPermissions 只给 userId、
+  // 没有名称——故从 /api/users（refGet 缓存 + 在途去重）解析当前用户名，写入 ownerName 供 initialLabel。
+  const resolveCurrentUserName = useCallback(async () => {
+    if (userId == null) return
+    const list = await refGet('/api/users')
+    const me = list.find((u: any) => u.id === userId)
+    if (me?.name) setField('ownerName', me.name)
+  }, [userId])
 
   const fetchData = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true)
@@ -78,18 +84,18 @@ export default function WorkPlansPage() {
     setEditing(null)
     // 负责人默认填当前登录用户（仍可在下拉中改）
     setForm({ ...EMPTY_FORM, ownerId: userId != null ? String(userId) : '' })
-    void loadFormRefs()
+    void resolveCurrentUserName()
     setOpen(true)
   }
 
   const openEdit = (r: any) => {
     setEditing(r)
-    void loadFormRefs()
     setForm({
       ...EMPTY_FORM,
       ...r,
       title: r.title ?? '',
       ownerId: r.ownerId ?? '',
+      ownerName: r.owner?.name ?? '',
       status: r.status ?? '',
       notes: r.notes ?? '',
       startDate: fmtDate(r.startDate),
@@ -112,11 +118,14 @@ export default function WorkPlansPage() {
   const handleSubmit = async () => {
     setSubmitting(true)
     try {
+      // ownerName 仅供前端异步下拉回显，非库字段，提交前剔除
+      const payload: any = { ...form }
+      delete payload.ownerName
       const url = editing ? `/api/work-plans/${editing.id}` : '/api/work-plans'
       const res = await fetch(url, {
         method: editing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
       toast.success(editing ? '更新成功' : '创建成功')
@@ -231,20 +240,21 @@ export default function WorkPlansPage() {
             <input className="input input-bordered w-full" value={form.title} onChange={(e) => setField('title', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="状态">
-            <select className="select select-bordered w-full" value={form.status} onChange={(e) => setField('status', e.target.value)}>
-              <option value="" disabled hidden>请选择</option>
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
+            <SearchSelect
+              value={form.status}
+              onChange={(v) => setField('status', v)}
+              options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="请选择"
+            />
           </Field>
           <Field label="负责人">
-            <select className="select select-bordered w-full" value={form.ownerId} onChange={(e) => setField('ownerId', e.target.value)}>
-              <option value="" disabled hidden>请选择负责人</option>
-              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
+            <SearchSelect
+              value={form.ownerId ? String(form.ownerId) : ''}
+              onChange={(v) => setField('ownerId', v)}
+              fetchOptions={searchFetch('/api/users', (u) => ({ value: String(u.id), label: u.name }))}
+              initialLabel={form.ownerName || ''}
+              placeholder="请选择负责人"
+            />
           </Field>
           <Field label="开始日期">
             <input type="date" className="input input-bordered w-full" value={form.startDate} onChange={(e) => setField('startDate', e.target.value)} />

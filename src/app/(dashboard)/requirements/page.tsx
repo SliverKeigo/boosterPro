@@ -13,11 +13,12 @@ import {
   Dropdown,
   Field,
   FileUpload,
+  SearchSelect,
+  searchFetch,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
-import { refGet } from '@/lib/refCache'
 
 const RES = 'REQUIREMENT'
 
@@ -55,7 +56,6 @@ export default function RequirementsPage() {
   const { can, isOwner } = useMyPermissions()
   const { items: statusOptions } = useDict('requirement_status')
   const [data, setData] = useState<any[]>([])
-  const [customers, setCustomers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
@@ -93,12 +93,6 @@ export default function RequirementsPage() {
     }
   }
 
-  // 客户下拉「引用数据」按需加载：打开新增/编辑弹窗时再拉，带 url 缓存 + 在途去重。
-  const loadFormRefs = useCallback(async () => {
-    const c = await refGet('/api/clients/options')
-    setCustomers(c)
-  }, [])
-
   const fetchData = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true)
     try {
@@ -121,14 +115,12 @@ export default function RequirementsPage() {
   }, [fetchData])
 
   const openCreate = () => {
-    void loadFormRefs()
     setEditing(null)
     setForm({ ...EMPTY_FORM })
     setOpen(true)
   }
 
   const openEdit = (r: any) => {
-    void loadFormRefs()
     setEditing(r)
     setForm({
       ...EMPTY_FORM,
@@ -334,10 +326,13 @@ export default function RequirementsPage() {
         <div className="grid grid-cols-2 gap-4">
           {/* 客户名称 / 招聘需求方 */}
           <Field label="客户名称" required>
-            <select className="select select-bordered w-full" value={form.customerId} onChange={(e) => setField('customerId', e.target.value)}>
-              <option value="" disabled hidden>请选择客户</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.shortName}</option>)}
-            </select>
+            <SearchSelect
+              value={String(form.customerId ?? '')}
+              onChange={(v) => setField('customerId', v)}
+              fetchOptions={searchFetch('/api/clients/options', (c) => ({ value: String(c.id), label: c.shortName || c.fullName }))}
+              initialLabel={editing?.customer?.shortName ?? ''}
+              placeholder="请选择客户"
+            />
           </Field>
           <Field label="招聘需求方">
             <input className="input input-bordered w-full" value={form.recruiter} onChange={(e) => setField('recruiter', e.target.value)} placeholder="请输入" />
@@ -373,10 +368,12 @@ export default function RequirementsPage() {
             </div>
           </Field>
           <Field label="性别要求" required>
-            <select className="select select-bordered w-full" value={form.genderRequirement} onChange={(e) => setField('genderRequirement', e.target.value)}>
-              <option value="" disabled hidden>请选择</option>
-              {opts(GENDER_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <SearchSelect
+              value={form.genderRequirement}
+              onChange={(v) => setField('genderRequirement', v)}
+              options={opts(GENDER_LABELS)}
+              placeholder="请选择"
+            />
           </Field>
           {/* 学历要求 / 语言要求 */}
           <Field label="学历要求" required>

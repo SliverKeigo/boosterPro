@@ -13,10 +13,11 @@ import {
   Field,
   FileUpload,
   RichText,
+  SearchSelect,
+  searchFetch,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
-import { refGet } from '@/lib/refCache'
 
 const RES = 'CLIENT_SUPPLEMENT'
 
@@ -35,7 +36,6 @@ export default function SupplementsPage() {
   const toast = useToast()
   const { can, isOwner } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
-  const [customers, setCustomers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
@@ -43,11 +43,6 @@ export default function SupplementsPage() {
   const [form, setForm] = useState<any>(EMPTY_FORM)
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
-
-  const loadFormRefs = useCallback(async () => {
-    const c = await refGet('/api/clients/options')
-    setCustomers(c)
-  }, [])
 
   const fetchData = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true)
@@ -71,14 +66,12 @@ export default function SupplementsPage() {
   }, [fetchData])
 
   const openCreate = () => {
-    void loadFormRefs()
     setEditing(null)
     setForm({ ...EMPTY_FORM })
     setOpen(true)
   }
 
   const openEdit = (r: any) => {
-    void loadFormRefs()
     setEditing(r)
     setForm({
       ...EMPTY_FORM,
@@ -223,10 +216,13 @@ export default function SupplementsPage() {
       >
         <div className="grid grid-cols-2 gap-4">
           <Field label="关联客户" required>
-            <select className="select select-bordered w-full" value={form.customerId} onChange={(e) => setField('customerId', e.target.value)}>
-              <option value="" disabled hidden>请选择客户</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.shortName}</option>)}
-            </select>
+            <SearchSelect
+              value={String(form.customerId ?? '')}
+              onChange={(v) => setField('customerId', v)}
+              fetchOptions={searchFetch('/api/clients/options', (c) => ({ value: String(c.id), label: c.shortName || c.fullName }))}
+              initialLabel={editing?.customer?.shortName ?? ''}
+              placeholder="请选择客户"
+            />
           </Field>
           <Field label="需求客户">
             <input className="input input-bordered w-full" value={form.demandCustomer} onChange={(e) => setField('demandCustomer', e.target.value)} placeholder="请输入" />

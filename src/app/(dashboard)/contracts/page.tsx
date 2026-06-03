@@ -14,11 +14,12 @@ import {
   FileUpload,
   YearSelect,
   yearOptions,
+  SearchSelect,
+  searchFetch,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
-import { refGet } from '@/lib/refCache'
 
 const RES = 'CONTRACT'
 
@@ -51,8 +52,6 @@ export default function ContractsPage() {
   const { items: invoiceTypeOptions } = useDict('invoice_type')
   const { items: verificationResultOptions } = useDict('verification_result')
   const [data, setData] = useState<any[]>([])
-  const [customers, setCustomers] = useState<any[]>([])
-  const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
@@ -60,16 +59,6 @@ export default function ContractsPage() {
   const [form, setForm] = useState<any>(EMPTY_FORM)
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
-
-  // 表单下拉引用数据按需加载（打开弹窗时调用，带缓存 / 在途去重）
-  const loadFormRefs = useCallback(async () => {
-    const [c, u] = await Promise.all([
-      refGet('/api/clients/options'),
-      refGet('/api/users'),
-    ])
-    setCustomers(c)
-    setUsers(u)
-  }, [])
 
   const fetchData = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true)
@@ -96,13 +85,11 @@ export default function ContractsPage() {
     setEditing(null)
     // 销售负责人默认填当前登录用户（仍可在下拉中改）
     setForm({ ...EMPTY_FORM, salesOwnerId: userId != null ? String(userId) : '' })
-    void loadFormRefs()
     setOpen(true)
   }
 
   const openEdit = (r: any) => {
     setEditing(r)
-    void loadFormRefs()
     setForm({
       ...EMPTY_FORM,
       ...r,
@@ -282,10 +269,13 @@ export default function ContractsPage() {
       >
         <div className="grid grid-cols-2 gap-4">
           <Field label="关联客户" required>
-            <select className="select select-bordered w-full" value={form.customerId} onChange={(e) => setField('customerId', e.target.value)}>
-              <option value="" disabled hidden>请选择客户</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.shortName}</option>)}
-            </select>
+            <SearchSelect
+              value={String(form.customerId ?? '')}
+              onChange={(v) => setField('customerId', v)}
+              fetchOptions={searchFetch('/api/clients/options', (c) => ({ value: String(c.id), label: c.shortName || c.fullName }))}
+              initialLabel={editing?.customer?.shortName ?? ''}
+              placeholder="请选择客户"
+            />
           </Field>
           <Field label="合同名称" required>
             <input className="input input-bordered w-full" value={form.contractName} onChange={(e) => setField('contractName', e.target.value)} placeholder="请输入" />
@@ -304,12 +294,7 @@ export default function ContractsPage() {
             <input type="date" className="input input-bordered w-full" value={form.expiryDate} onChange={(e) => setField('expiryDate', e.target.value)} />
           </Field>
           <Field label="服务类型" required>
-            <select className="select select-bordered w-full" value={form.serviceType} onChange={(e) => setField('serviceType', e.target.value)}>
-              <option value="" disabled hidden>请选择</option>
-              {serviceTypeOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+            <SearchSelect value={form.serviceType} onChange={(v) => setField('serviceType', v)} options={serviceTypeOptions} placeholder="请选择" />
           </Field>
           <Field label="猎头服务费率%">
             <input type="number" className="input input-bordered w-full" value={form.headhunterFeeRate} onChange={(e) => setField('headhunterFeeRate', e.target.value)} placeholder="请输入" />
@@ -321,16 +306,22 @@ export default function ContractsPage() {
             <input type="number" className="input input-bordered w-full" value={form.ropFeeRate} onChange={(e) => setField('ropFeeRate', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="销售负责人">
-            <select className="select select-bordered w-full" value={form.salesOwnerId} onChange={(e) => setField('salesOwnerId', e.target.value)}>
-              <option value="" disabled hidden>请选择销售负责人</option>
-              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
+            <SearchSelect
+              value={String(form.salesOwnerId ?? '')}
+              onChange={(v) => setField('salesOwnerId', v)}
+              fetchOptions={searchFetch('/api/users', (u) => ({ value: String(u.id), label: u.name }))}
+              initialLabel={editing?.salesOwner?.name ?? ''}
+              placeholder="请选择销售负责人"
+            />
           </Field>
           <Field label="交付负责人">
-            <select className="select select-bordered w-full" value={form.deliveryOwnerId} onChange={(e) => setField('deliveryOwnerId', e.target.value)}>
-              <option value="" disabled hidden>请选择交付负责人</option>
-              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
+            <SearchSelect
+              value={String(form.deliveryOwnerId ?? '')}
+              onChange={(v) => setField('deliveryOwnerId', v)}
+              fetchOptions={searchFetch('/api/users', (u) => ({ value: String(u.id), label: u.name }))}
+              initialLabel={editing?.deliveryOwner?.name ?? ''}
+              placeholder="请选择交付负责人"
+            />
           </Field>
           <Field label="合同附件" required className="col-span-2">
             <FileUpload value={form.contractFileUrl} onChange={(url) => setField('contractFileUrl', url)} />

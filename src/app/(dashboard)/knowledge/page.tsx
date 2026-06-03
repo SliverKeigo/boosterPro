@@ -14,11 +14,12 @@ import {
   FileUpload,
   RichText,
   Dropdown,
+  SearchSelect,
+  searchFetch,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
-import { refGet } from '@/lib/refCache'
 
 const RES = 'KNOWLEDGE'
 
@@ -50,6 +51,8 @@ const EMPTY_FORM: any = {
   notes: '',
   trainingOutline: '',
   internalLecturerId: '',
+  // 异步 SearchSelect 编辑回显用（仅前端展示，提交前剔除，不入库）
+  internalLecturerName: '',
   externalLecturer: '',
   managementRecords: [],
 }
@@ -63,18 +66,11 @@ export default function KnowledgePage() {
   const [editing, setEditing] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState<any>(EMPTY_FORM)
-  const [users, setUsers] = useState<any[]>([])
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
   const { items: categoryOptions } = useDict('knowledge_category')
   const { items: tagOptions } = useDict('knowledge_tag')
-
-  // 表单引用数据按需加载：打开新增/编辑弹窗时再拉（refGet 按 url 缓存 + 在途去重）
-  const loadFormRefs = useCallback(async () => {
-    const u = await refGet('/api/users')
-    setUsers(u)
-  }, [])
 
   // 当前表单选中的标签集合
   const selectedTags = (): Set<string> =>
@@ -123,14 +119,12 @@ export default function KnowledgePage() {
   }, [fetchData])
 
   const openCreate = () => {
-    void loadFormRefs()
     setEditing(null)
     setForm({ ...EMPTY_FORM })
     setOpen(true)
   }
 
   const openEdit = (r: any) => {
-    void loadFormRefs()
     setEditing(r)
     setForm({
       ...EMPTY_FORM,
@@ -138,6 +132,7 @@ export default function KnowledgePage() {
       tags: Array.isArray(r.tags) ? r.tags.join(', ') : '',
       trainingOutline: r.trainingOutline ?? '',
       internalLecturerId: r.internalLecturerId ?? '',
+      internalLecturerName: r.internalLecturer?.name ?? '',
       externalLecturer: r.externalLecturer ?? '',
       managementRecords: (r.managementRecords ?? []).map((x: any) => ({
         date: fmtDate(x.date),
@@ -172,6 +167,8 @@ export default function KnowledgePage() {
           .map((s: string) => s.trim())
           .filter(Boolean),
       }
+      // internalLecturerName 仅供前端异步下拉回显，非库字段，提交前剔除
+      delete payload.internalLecturerName
       // 清除当前「分类 / 标签」下不显示的条件字段，避免脏数据入库。
       // 子表清成 []（而非 ''），内部讲师 id 清成 ''，其余字符串清成 ''。
       for (const f of CONDITIONAL_FIELDS) {
@@ -305,12 +302,7 @@ export default function KnowledgePage() {
       >
         <div className="grid grid-cols-2 gap-4">
           <Field label="知识分类" required>
-            <select className="select select-bordered w-full" value={form.category} onChange={(e) => setField('category', e.target.value)}>
-              <option value="" disabled hidden>请选择分类</option>
-              {categoryOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+            <SearchSelect value={form.category} onChange={(v) => setField('category', v)} options={categoryOptions} placeholder="请选择分类" />
           </Field>
           <Field label="知识标签" required>
             {(() => {
@@ -382,16 +374,13 @@ export default function KnowledgePage() {
           )}
           {visible('internalLecturerId') && (
             <Field label="内部讲师">
-              <select
-                className="select select-bordered w-full"
-                value={form.internalLecturerId}
-                onChange={(e) => setField('internalLecturerId', e.target.value)}
-              >
-                <option value="">请选择内部讲师</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
-                ))}
-              </select>
+              <SearchSelect
+                value={form.internalLecturerId ? String(form.internalLecturerId) : ''}
+                onChange={(v) => setField('internalLecturerId', v)}
+                fetchOptions={searchFetch('/api/users', (u) => ({ value: String(u.id), label: u.name }))}
+                initialLabel={form.internalLecturerName || ''}
+                placeholder="请选择内部讲师"
+              />
             </Field>
           )}
           {visible('externalLecturer') && (
