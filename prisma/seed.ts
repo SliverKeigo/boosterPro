@@ -35,13 +35,13 @@ const DICT_SEEDS: { code: string; name: string; remark?: string; labels: string[
   {
     code: 'recruitment_channel',
     name: '招聘渠道',
-    labels: ['BOSS直聘', '猎聘', '脉脉', '内推', '智联招聘', '前程无忧', '其他'],
+    labels: ['猎聘', 'BOSS', '智联', '前程无忧', '推介', '朋友群', '其他'],
   },
   { code: 'requirement_status', name: '岗位状态', labels: ['新增', '正常', '重启', '暂停', '加急', '关闭', '售前岗位'] },
   // 客户仅提供「线索阶段」一个取值；勿臆造其它阶段，需新增由客户确认后在「字典管理」补充。
   { code: 'opportunity_status', name: '商机状态', labels: ['线索阶段'] },
   { code: 'service_type', name: '服务类型', labels: ['猎头', 'RPO', '其他'] },
-  { code: 'position_level', name: '职位级别', labels: ['初级', '中级', '高级', '专家', '管理'] },
+  { code: 'position_level', name: '职位级别', labels: ['初级', '中级', '高级'] },
   { code: 'invoice_type', name: '发票类型', labels: ['增值税专用发票', '增值税普通发票'] },
   { code: 'verification_result', name: '核销结果', labels: ['已核销', '未核销', '部分核销'] },
   { code: 'knowledge_category', name: '知识分类', labels: ['案例分享', '行业资料', '培训资料', '知识便条', '制度流程模板'] },

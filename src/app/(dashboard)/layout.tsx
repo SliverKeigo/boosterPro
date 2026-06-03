@@ -46,7 +46,7 @@ interface NavGroup {
 const GROUPS: NavGroup[] = [
   {
     key: 'delivery',
-    label: '招聘交付',
+    label: '交付中心',
     icon: Briefcase,
     items: [
       { href: '/candidates', label: '候选人管理', icon: Users },

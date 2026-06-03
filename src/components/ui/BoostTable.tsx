@@ -90,6 +90,9 @@ function flatten(value: unknown, out: string[]) {
   }
 }
 
+// 导出功能暂时下线：置 false 时所有列表都不渲染「导出」按钮（恢复时改回 true）
+const EXPORT_ENABLED = false
+
 const ICON_BTN =
   'btn btn-ghost btn-sm gap-1.5 font-medium text-base-content/70 hover:text-base-content'
 
@@ -520,7 +523,8 @@ export function BoostTable<T extends Record<string, any>>({
             导入
           </button>
         )}
-        {showExport &&
+        {EXPORT_ENABLED &&
+          showExport &&
           (onExport ? (
             <button type="button" className={ICON_BTN} onClick={onExport}>
               <Download className="h-4 w-4" />
