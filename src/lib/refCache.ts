@@ -21,7 +21,12 @@ export async function refGet(url: string): Promise<any[]> {
   if (existing) return existing
 
   const p = fetch(url)
-    .then((r) => (r.ok ? r.json() : { data: [] }))
+    // 非 2xx 必须 throw → 走 .catch 返回 []【但不写缓存】；否则瞬时 500/401 会把空数组缓存 60s，
+    // 期间所有下拉(选客户/岗位/用户/部门)空白且无报错。
+    .then((r) => {
+      if (!r.ok) throw new Error(`refGet ${url} ${r.status}`)
+      return r.json()
+    })
     .then((j) => {
       const data = (j.data ?? []) as any[]
       cache.set(url, { at: Date.now(), data })

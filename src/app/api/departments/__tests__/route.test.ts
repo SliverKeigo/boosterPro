@@ -8,10 +8,11 @@ vi.mock('@/lib/prisma', () => ({
 }))
 vi.mock('@/lib/permissions', () => ({
   requireAdmin: vi.fn(),
+  getSessionPayload: vi.fn(async () => ({ userId: 1 })),
 }))
 
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/permissions'
+import { requireAdmin, getSessionPayload } from '@/lib/permissions'
 import { GET, POST } from '@/app/api/departments/route'
 
 const admin = { id: 1, name: 'A', email: null, isAdmin: true, departmentId: null, roleId: null }
@@ -32,6 +33,13 @@ describe('GET /api/departments', () => {
     await expect(res.json()).resolves.toEqual({ data: [{ id: 1 }, { id: 2 }], total: 2 })
     const args = mock(prisma.department.findMany).mock.calls[0][0]
     expect(args.include).toEqual({ _count: { select: { users: true } } })
+  })
+
+  it('未登录 → 401，不查库', async () => {
+    mock(getSessionPayload).mockResolvedValueOnce(null)
+    const res = await GET()
+    expect(res.status).toBe(401)
+    expect(prisma.department.findMany).not.toHaveBeenCalled()
   })
 })
 

@@ -8,6 +8,7 @@ vi.mock('@/lib/prisma', () => ({
     candidate: { updateMany: vi.fn() },
     requirement: { updateMany: vi.fn() },
     clientSupplement: { updateMany: vi.fn() },
+    customerContact: { updateMany: vi.fn() },
     talentPool: { updateMany: vi.fn() },
     opportunity: { updateMany: vi.fn() },
     customer: { updateMany: vi.fn() },
@@ -31,11 +32,12 @@ const ctx = (id = '5') => ({ params: Promise.resolve({ id }) })
 const makeReq = (body: unknown) =>
   new Request('http://t', { method: 'POST', body: JSON.stringify(body) })
 
-// 让八个业务表的 updateMany 都返回一个 count，便于断言聚合结果
+// 让九个业务表的 updateMany 都返回一个 count，便于断言聚合结果
 const setupModels = () => {
   mock(prisma.candidate.updateMany).mockResolvedValue({ count: 1 })
   mock(prisma.requirement.updateMany).mockResolvedValue({ count: 2 })
   mock(prisma.clientSupplement.updateMany).mockResolvedValue({ count: 3 })
+  mock(prisma.customerContact.updateMany).mockResolvedValue({ count: 9 })
   mock(prisma.talentPool.updateMany).mockResolvedValue({ count: 4 })
   mock(prisma.opportunity.updateMany).mockResolvedValue({ count: 5 })
   mock(prisma.customer.updateMany).mockResolvedValue({ count: 6 })
@@ -49,7 +51,7 @@ beforeEach(() => {
 })
 
 describe('POST /api/users/[id]/transfer', () => {
-  it('管理员移交：八张业务表 updateMany 均把 fromId 的数据改为 toId，并经 $transaction 提交', async () => {
+  it('管理员移交：九张业务表 updateMany 均把 fromId 的数据改为 toId，并经 $transaction 提交', async () => {
     mock(prisma.user.findUnique)
       .mockResolvedValueOnce({ id: 9 }) // targetUser (toId)
       .mockResolvedValueOnce({ id: 5 }) // fromUser (fromId)
@@ -62,6 +64,7 @@ describe('POST /api/users/[id]/transfer', () => {
         candidate: 1,
         requirement: 2,
         clientSupplement: 3,
+        customerContact: 9,
         talentPool: 4,
         opportunity: 5,
         customer: 6,
@@ -76,6 +79,7 @@ describe('POST /api/users/[id]/transfer', () => {
     expect(mock(prisma.candidate.updateMany).mock.calls[0][0]).toEqual(expectArgs)
     expect(mock(prisma.requirement.updateMany).mock.calls[0][0]).toEqual(expectArgs)
     expect(mock(prisma.clientSupplement.updateMany).mock.calls[0][0]).toEqual(expectArgs)
+    expect(mock(prisma.customerContact.updateMany).mock.calls[0][0]).toEqual(expectArgs)
     expect(mock(prisma.talentPool.updateMany).mock.calls[0][0]).toEqual(expectArgs)
     expect(mock(prisma.opportunity.updateMany).mock.calls[0][0]).toEqual(expectArgs)
     expect(mock(prisma.customer.updateMany).mock.calls[0][0]).toEqual(expectArgs)

@@ -3,7 +3,7 @@ import { handleApiError, HttpError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/permissions'
 
-// 移交权限：把某用户名下八张业务表的数据归属批量改给另一用户（仅管理员）
+// 移交权限：把某用户名下九张业务表的数据归属批量改给另一用户（仅管理员）
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const admin = await getCurrentUser()
@@ -26,6 +26,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       candidate,
       requirement,
       clientSupplement,
+      customerContact,
       talentPool,
       opportunity,
       customer,
@@ -35,6 +36,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       prisma.candidate.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
       prisma.requirement.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
       prisma.clientSupplement.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
+      prisma.customerContact.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
       prisma.talentPool.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
       prisma.opportunity.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
       prisma.customer.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
@@ -48,6 +50,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         candidate: candidate.count,
         requirement: requirement.count,
         clientSupplement: clientSupplement.count,
+        customerContact: customerContact.count,
         talentPool: talentPool.count,
         opportunity: opportunity.count,
         customer: customer.count,

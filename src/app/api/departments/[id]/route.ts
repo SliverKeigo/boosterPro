@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { handleApiError, HttpError } from '@/lib/apiError'
-import { requireAdmin } from '@/lib/permissions'
+import { requireAdmin, getSessionPayload } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    if (!(await getSessionPayload())) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const { id } = await params
     const pid = parseInt(id)
     if (!Number.isInteger(pid) || pid <= 0) throw new HttpError(400, '非法的 ID')

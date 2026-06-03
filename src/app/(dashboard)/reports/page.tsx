@@ -306,7 +306,11 @@ export default function ReportsPage() {
     [requirements],
   )
   const reqStatusDist = useMemo(
-    () => countBy(requirements, (r) => r.status),
+    // status 是多值数组(String[])：展平成单个状态再计数，否则数组当 Map 键会令每条需求各自成组、计数全错
+    () => countBy(
+      requirements.flatMap((r) => (Array.isArray(r.status) ? r.status : [])),
+      (s) => s,
+    ),
     [requirements],
   )
 

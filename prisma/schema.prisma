@@ -257,7 +257,7 @@ model Requirement {
   educationRequirement String?                      @map("education_requirement") @db.Text
   languageRequirement  String?                      @map("language_requirement") @db.Text
   status               String[]
-  deadline             DateTime                     @db.Date
+  deadline             DateTime?                    @db.Date
   baseCity             String                       @map("base_city") @db.VarChar(255)
   jobDescription       String?                      @map("job_description") @db.Text
   talentProfile        String?                      @map("talent_profile") @db.Text

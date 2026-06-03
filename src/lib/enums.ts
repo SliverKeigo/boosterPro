@@ -67,16 +67,9 @@ export const RECOMMENDATION_STATUS_LABELS: Record<string, string> = {
 }
 export const RECOMMENDATION_STATUS_OPTIONS: EnumOption[] = toOptions(RECOMMENDATION_STATUS_LABELS)
 
-/** OpportunityStatus —— 商机状态 */
-export const OPPORTUNITY_STATUS_LABELS: Record<string, string> = {
-  LEAD: '线索阶段',
-  PROSPECT: '商机阶段',
-  PROPOSAL: '提案阶段',
-  NEGOTIATE: '谈判阶段',
-  CLOSED_WON: '成交',
-  CLOSED: '关闭',
-}
-export const OPPORTUNITY_STATUS_OPTIONS: EnumOption[] = toOptions(OPPORTUNITY_STATUS_LABELS)
+// 商机状态【不走枚举】：Opportunity.status 是普通 String，库里存字典 opportunity_status 的中文值
+// (客户仅给「线索阶段」一项)，前端用 useDict('opportunity_status') 取值。原先这里的英文 key 映射
+// (LEAD/PROSPECT/…) 与实际存储体系不一致、且臆造了文档禁止的多个阶段，已删除以免被误用。
 
 /** OpportunityNature —— 商机性质 */
 export const OPPORTUNITY_NATURE_LABELS: Record<string, string> = {

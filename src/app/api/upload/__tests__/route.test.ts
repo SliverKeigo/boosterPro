@@ -5,8 +5,13 @@ vi.mock('fs/promises', () => ({
   writeFile: vi.fn(async () => undefined),
   mkdir: vi.fn(async () => undefined),
 }))
+// 上传接口现要求登录：mock 轻量登录校验为已登录
+vi.mock('@/lib/permissions', () => ({
+  getSessionPayload: vi.fn(async () => ({ userId: 1 })),
+}))
 
 import { writeFile, mkdir } from 'fs/promises'
+import { getSessionPayload } from '@/lib/permissions'
 import { POST } from '@/app/api/upload/route'
 
 const mock = (fn: unknown) => fn as ReturnType<typeof vi.fn>
@@ -35,6 +40,14 @@ describe('POST /api/upload', () => {
     // 写入的文件名带时间戳-随机- 前缀且清理后保留中文扩展名
     const savedPath = mock(writeFile).mock.calls[0][0] as string
     expect(savedPath).toMatch(/\d+-[a-z0-9]+-头像\.png$/)
+  })
+
+  it('未登录 → 401，不写盘', async () => {
+    mock(getSessionPayload).mockResolvedValueOnce(null)
+    const file = new File([new Uint8Array([1])], 'a.png', { type: 'image/png' })
+    const res = await upload(file)
+    expect(res.status).toBe(401)
+    expect(writeFile).not.toHaveBeenCalled()
   })
 
   it('未收到文件 → 400', async () => {

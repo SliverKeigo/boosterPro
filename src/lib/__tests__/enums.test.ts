@@ -8,8 +8,6 @@ import {
   GENDER_TYPE_OPTIONS,
   RECOMMENDATION_STATUS_LABELS,
   RECOMMENDATION_STATUS_OPTIONS,
-  OPPORTUNITY_STATUS_LABELS,
-  OPPORTUNITY_STATUS_OPTIONS,
   OPPORTUNITY_NATURE_LABELS,
   OPPORTUNITY_NATURE_OPTIONS,
   type EnumOption,
@@ -41,9 +39,7 @@ describe('enums - LABELS 映射', () => {
     expect(RECOMMENDATION_STATUS_LABELS.OFFERING).toBe('Offer中')
   })
 
-  it('商机状态 / 性质 label', () => {
-    expect(OPPORTUNITY_STATUS_LABELS.LEAD).toBe('线索阶段')
-    expect(OPPORTUNITY_STATUS_LABELS.CLOSED_WON).toBe('成交')
+  it('商机性质 label', () => {
     expect(OPPORTUNITY_NATURE_LABELS.DIRECT).toBe('直接客户')
     expect(OPPORTUNITY_NATURE_LABELS.INDIRECT).toBe('间接客户')
   })
@@ -55,7 +51,6 @@ describe('enums - OPTIONS 由 LABELS 派生', () => {
     ['SCHOOL_TIER', SCHOOL_TIER_OPTIONS, SCHOOL_TIER_LABELS],
     ['GENDER_TYPE', GENDER_TYPE_OPTIONS, GENDER_TYPE_LABELS],
     ['RECOMMENDATION_STATUS', RECOMMENDATION_STATUS_OPTIONS, RECOMMENDATION_STATUS_LABELS],
-    ['OPPORTUNITY_STATUS', OPPORTUNITY_STATUS_OPTIONS, OPPORTUNITY_STATUS_LABELS],
     ['OPPORTUNITY_NATURE', OPPORTUNITY_NATURE_OPTIONS, OPPORTUNITY_NATURE_LABELS],
   ]
 
@@ -71,8 +66,8 @@ describe('enums - OPTIONS 由 LABELS 派生', () => {
   })
 
   it('每个 option 的 value 都能在 LABELS 里回查到 label', () => {
-    for (const opt of OPPORTUNITY_STATUS_OPTIONS) {
-      expect(OPPORTUNITY_STATUS_LABELS[opt.value]).toBe(opt.label)
+    for (const opt of OPPORTUNITY_NATURE_OPTIONS) {
+      expect(OPPORTUNITY_NATURE_LABELS[opt.value]).toBe(opt.label)
     }
   })
 })

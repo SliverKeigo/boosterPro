@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
+import { getSessionPayload } from '@/lib/permissions'
 
 // 上传目录可通过环境变量配置，默认项目根下 uploads/
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads'
 
 export async function POST(req: Request) {
   try {
+    // 接口级登录校验（不只依赖 middleware）：未登录禁止写盘，避免任意访客上传/占用磁盘
+    if (!(await getSessionPayload())) {
+      return NextResponse.json({ error: '未登录' }, { status: 401 })
+    }
     const formData = await req.formData()
     const file = formData.get('file') as File | null
     if (!file) {

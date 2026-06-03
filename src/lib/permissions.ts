@@ -29,6 +29,14 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   })
 })
 
+// 轻量登录校验：仅验 JWT cookie（不查库），用于「只需已登录、无需用户对象」的接口（文件上传/下载等热路径）。
+// 读取 cookie 也会让所在 Route Handler 自动转为动态渲染（避免被 Next 静态缓存返回过时数据）。
+export const getSessionPayload = cache(async () => {
+  const token = (await cookies()).get(AUTH_COOKIE)?.value
+  if (!token) return null
+  return verifyToken(token)
+})
+
 // 计算用户对所有 resource 的功能权限集合：{ CANDIDATE: ['VIEW','CREATE',...], ... }
 export async function getPermissionMap(user: CurrentUser): Promise<Record<string, string[]>> {
   // 管理员：全部资源全部动作

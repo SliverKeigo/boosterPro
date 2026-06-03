@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { readFile, stat } from 'fs/promises'
 import path from 'path'
+import { getSessionPayload } from '@/lib/permissions'
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads'
 
@@ -20,6 +21,10 @@ const MIME: Record<string, string> = {
 
 export async function GET(req: Request, { params }: { params: Promise<{ name: string }> }) {
   try {
+    // 接口级登录校验（不只依赖 middleware）：未登录禁止下载任何文件
+    if (!(await getSessionPayload())) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const { name } = await params
     const decoded = decodeURIComponent(name)
     // 防目录穿越

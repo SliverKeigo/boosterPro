@@ -9,6 +9,7 @@ vi.mock('@/lib/prisma', () => ({
 }))
 vi.mock('@/lib/permissions', () => ({
   requireAdmin: vi.fn(),
+  getSessionPayload: vi.fn(async () => ({ userId: 1 })),
 }))
 
 import { prisma } from '@/lib/prisma'
