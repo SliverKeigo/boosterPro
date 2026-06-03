@@ -380,7 +380,7 @@ model CandidateRiskEvent {
 model TalentPool {
   id              Int         @id @default(autoincrement())
   name            String      @db.VarChar(100)
-  birthYear       Int?        @map("birth_year")
+  birthYear       String?     @map("birth_year") @db.VarChar(7) // 出生年月 YYYY-MM
   gender          GenderType?
   education       String?     @db.VarChar(50)
   phone           String?     @db.VarChar(50)

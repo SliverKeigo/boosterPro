@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
-import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, FileUpload, YearSelect, yearOptions, useToast } from '@/components/ui'
+import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, FileUpload, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
 
@@ -120,7 +120,7 @@ export default function TalentPoolPage() {
     { key: 'education', title: '学历', filterType: 'select',
       filterOptions: ['大专', '本科', '硕士', '博士'].map((l) => ({ label: l, value: l })) },
     { key: 'phone', title: '电话' },
-    { key: 'birthYear', title: '出生年份', defaultVisible: false, filterType: 'select', filterOptions: yearOptions(1950, 0) },
+    { key: 'birthYear', title: '出生年份', defaultVisible: false },
     { key: 'resumeUrl', title: '简历URL', defaultVisible: false,
       render: (v) => v ? <a href={v} target="_blank" rel="noreferrer" className="link link-primary line-clamp-1 max-w-[200px]">{v}</a> : <span className="text-base-content/30">—</span> },
     { key: 'tags', title: '人才标签', sortable: false,
@@ -184,7 +184,7 @@ export default function TalentPoolPage() {
             <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="出生年份">
-            <YearSelect value={form.birthYear} onChange={(v) => setField('birthYear', v)} minYear={1950} />
+            <input type="month" className="input input-bordered w-full" value={form.birthYear} onChange={(e) => setField('birthYear', e.target.value)} />
           </Field>
           {/* 最高学历 / 性别 */}
           <Field label="最高学历">
