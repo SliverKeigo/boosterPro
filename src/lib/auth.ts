@@ -29,3 +29,16 @@ export async function verifyToken(token: string): Promise<JwtPayload | null> {
 }
 
 export const AUTH_COOKIE = 'bp_token'
+
+// 判断请求是否经 HTTPS（含被反代终止 TLS 的场景，优先看 x-forwarded-proto）。
+// 用于决定登录 cookie 是否加 Secure——内网部署常是明文 HTTP 且非 localhost，
+// 若强加 Secure，浏览器会丢弃该 cookie，导致登录后请求不带 token、被中间件打回登录页。
+export function isSecureRequest(req: Request): boolean {
+  const xfproto = req.headers.get('x-forwarded-proto')
+  if (xfproto) return xfproto.split(',')[0].trim().toLowerCase() === 'https'
+  try {
+    return new URL(req.url).protocol === 'https:'
+  } catch {
+    return false
+  }
+}

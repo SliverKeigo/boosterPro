@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { signToken, AUTH_COOKIE } from '@/lib/auth'
+import { signToken, AUTH_COOKIE, isSecureRequest } from '@/lib/auth'
 
 export async function POST(req: Request) {
   try {
@@ -50,7 +50,8 @@ export async function POST(req: Request) {
     })
     response.cookies.set(AUTH_COOKIE, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      // 按请求实际协议决定，而非 NODE_ENV：内网 HTTP 部署(生产)不能加 Secure，否则 cookie 被浏览器丢弃
+      secure: isSecureRequest(req),
       sameSite: 'lax',
       path: '/',
       // 记住我：7 天持久 cookie；不勾选则为会话 cookie（关闭浏览器即登出）
