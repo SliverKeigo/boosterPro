@@ -39,31 +39,22 @@ describe('buildTalentPoolData - 字段映射与清洗', () => {
     expect(buildTalentPoolData({ name: 'A', gender: 'MALE' }).gender).toBe('MALE')
   })
 
-  it('数值字段 birthYear / age：数字字符串 → Number，空串 / null / 缺失 → null', () => {
-    const out = buildTalentPoolData({ name: 'A', birthYear: '1992', age: '' })
-    expect(out.birthYear).toBe(1992)
-    expect(out.age).toBeNull()
-
-    expect(buildTalentPoolData({ name: 'A', age: null }).age).toBeNull()
+  it('数值字段 birthYear：数字字符串 → Number，空串 / 缺失 → null；age 已不是人才库字段', () => {
+    expect(buildTalentPoolData({ name: 'A', birthYear: '1992' }).birthYear).toBe(1992)
+    expect(buildTalentPoolData({ name: 'A', birthYear: '' }).birthYear).toBeNull()
     expect(buildTalentPoolData({ name: 'A' }).birthYear).toBeNull()
-    expect(buildTalentPoolData({ name: 'A', age: 30 }).age).toBe(30)
+    // 年龄字段已移除(出生年份可推算)：即使前端误传 age 也被白名单过滤掉
+    expect('age' in buildTalentPoolData({ name: 'A', age: 30 })).toBe(false)
   })
 
-  it('tags：逗号分隔字符串 → 去空白数组（与候选人/知识库的单值包装行为不同）', () => {
-    expect(buildTalentPoolData({ name: 'A', tags: 'Java, Go ,  Rust' }).tags).toEqual([
-      'Java',
-      'Go',
-      'Rust',
-    ])
+  it('tags：自由文本(不按逗号分隔)，整段作为单元素存入，逗号为普通字符', () => {
+    expect(buildTalentPoolData({ name: 'A', tags: 'Java, Go, Rust' }).tags).toEqual(['Java, Go, Rust'])
+    expect(buildTalentPoolData({ name: 'A', tags: '  核心人才  ' }).tags).toEqual(['核心人才'])
   })
 
   it('tags：空串 → 空数组；已是数组则原样保留', () => {
     expect(buildTalentPoolData({ name: 'A', tags: '' }).tags).toEqual([])
     expect(buildTalentPoolData({ name: 'A' }).tags).toEqual([])
     expect(buildTalentPoolData({ name: 'A', tags: ['x', 'y'] }).tags).toEqual(['x', 'y'])
-  })
-
-  it('tags：逗号串中的空段被过滤', () => {
-    expect(buildTalentPoolData({ name: 'A', tags: 'a,,b, ,c' }).tags).toEqual(['a', 'b', 'c'])
   })
 })

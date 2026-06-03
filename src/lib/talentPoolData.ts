@@ -11,7 +11,6 @@ const TALENT_POOL_SCALAR_FIELDS = [
   'targetPosition',
   'positionType',
   'positionLevel',
-  'age',
   'tags',
   'resumeUrl',
 ] as const
@@ -46,19 +45,14 @@ export function buildTalentPoolData(body: any) {
   if (data.gender === '') data.gender = null
 
   // 数值字段：空串 / undefined 归 null，否则转 Number
-  for (const f of ['birthYear', 'age']) {
+  for (const f of ['birthYear']) {
     if (data[f] === '' || data[f] === undefined || data[f] === null) data[f] = null
     else data[f] = Number(data[f])
   }
 
-  // 标签：逗号字符串 → 数组
+  // 人才标签为自由文本(不按逗号分隔)：前端已传单元素数组；若传字符串，整段作为单元素存入 text[]。
   if (!Array.isArray(data.tags)) {
-    data.tags = data.tags
-      ? String(data.tags)
-          .split(',')
-          .map((s: string) => s.trim())
-          .filter(Boolean)
-      : []
+    data.tags = data.tags && String(data.tags).trim() ? [String(data.tags).trim()] : []
   }
 
   // 白名单过滤掉多余键

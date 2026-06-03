@@ -12,7 +12,7 @@ const RES = 'TALENT_POOL'
 const GENDER_LABELS: Record<string, string> = { MALE: '男', FEMALE: '女', ANY: '不限' }
 
 const EMPTY_FORM: any = {
-  name: '', gender: '', birthYear: '', age: '', education: '', phone: '',
+  name: '', gender: '', birthYear: '', education: '', phone: '',
   currentPosition: '', targetPosition: '', positionType: '', positionLevel: '',
   tags: '', resumeUrl: '',
 }
@@ -65,8 +65,7 @@ export default function TalentPoolPage() {
       ...r,
       gender: r.gender ?? '',
       birthYear: r.birthYear ?? '',
-      age: r.age ?? '',
-      tags: Array.isArray(r.tags) ? r.tags.join(', ') : '',
+      tags: Array.isArray(r.tags) ? r.tags.join(' ') : '',
     })
     setOpen(true)
   }
@@ -90,10 +89,8 @@ export default function TalentPoolPage() {
     try {
       const payload = {
         ...form,
-        tags: String(form.tags || '')
-          .split(',')
-          .map((s: string) => s.trim())
-          .filter(Boolean),
+        // 人才标签为自由文本(不按逗号分隔)：整段文本作为单元素存入 text[]
+        tags: String(form.tags || '').trim() ? [String(form.tags).trim()] : [],
       }
       const url = editing ? `/api/talent-pool/${editing.id}` : '/api/talent-pool'
       const res = await fetch(url, {
@@ -124,18 +121,11 @@ export default function TalentPoolPage() {
       filterOptions: ['大专', '本科', '硕士', '博士'].map((l) => ({ label: l, value: l })) },
     { key: 'phone', title: '电话' },
     { key: 'birthYear', title: '出生年份', defaultVisible: false, filterType: 'select', filterOptions: yearOptions(1950, 0) },
-    { key: 'age', title: '年龄', defaultVisible: false, filterType: 'number' },
     { key: 'resumeUrl', title: '简历URL', defaultVisible: false,
       render: (v) => v ? <a href={v} target="_blank" rel="noreferrer" className="link link-primary line-clamp-1 max-w-[200px]">{v}</a> : <span className="text-base-content/30">—</span> },
     { key: 'tags', title: '人才标签', sortable: false,
-      accessor: (r) => (Array.isArray(r.tags) ? r.tags.join(' ') : ''),
-      render: (_v, r) => (
-        <div className="flex flex-wrap gap-1">
-          {(r.tags ?? []).map((t: string, i: number) => (
-            <span key={i} className="badge badge-ghost badge-sm">{t}</span>
-          ))}
-        </div>
-      ) },
+      accessor: (r) => (Array.isArray(r.tags) ? r.tags.join(' ') : (r.tags ?? '')),
+      render: (v) => v ? <span className="line-clamp-1 max-w-[220px]">{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'createdAt', title: '创建时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
   ]
@@ -244,12 +234,9 @@ export default function TalentPoolPage() {
           <Field label="简历及相关资料" required>
             <FileUpload value={form.resumeUrl} onChange={(url) => setField('resumeUrl', url)} />
           </Field>
-          {/* 年龄 / 人才标签 */}
-          <Field label="年龄">
-            <input type="number" className="input input-bordered w-full" value={form.age} onChange={(e) => setField('age', e.target.value)} placeholder="请输入数字" />
-          </Field>
-          <Field label="人才标签（逗号分隔）">
-            <input className="input input-bordered w-full" value={form.tags} onChange={(e) => setField('tags', e.target.value)} placeholder="请输入" />
+          {/* 人才标签：自由文本(不按逗号分隔)。出生年份已能推算年龄，故无单独「年龄」字段。 */}
+          <Field label="人才标签" className="col-span-2">
+            <textarea className="textarea textarea-bordered w-full" rows={2} value={form.tags} onChange={(e) => setField('tags', e.target.value)} placeholder="请输入" />
           </Field>
         </div>
       </Modal>
