@@ -234,9 +234,20 @@ export default function CandidatesPage() {
   }
 
   const handleSubmit = async () => {
+    // 必填校验（顺序与表单一致；Field 的 required 仅画星号，校验在此手动做）
     if (!form.name?.trim()) return toast.error('请填写候选人姓名')
-    if (!form.recruitmentChannel?.trim()) return toast.error('请填写招聘渠道')
-    if (form.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return toast.error('邮箱格式不正确')
+    if (!form.birthYear) return toast.error('请选择出生年份')
+    if (!form.phone?.trim()) return toast.error('请填写联系电话')
+    if (!form.email?.trim()) return toast.error('请填写候选人邮箱')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return toast.error('邮箱格式不正确')
+    if (!form.education) return toast.error('请选择教育经历')
+    if (!form.customerId) return toast.error('请选择客户名称')
+    if (!form.customerShortName?.trim()) return toast.error('请填写客户简称')
+    if (!form.recruitmentParty?.trim()) return toast.error('请选择招聘需求方')
+    if (!form.requirementId) return toast.error('请选择岗位名称')
+    if (!form.recommendationTime) return toast.error('请选择推荐时间')
+    if (!form.recruitmentChannel?.trim()) return toast.error('请选择招聘渠道')
+    if (!form.recommendationReportUrl) return toast.error('请上传推荐报告')
     setSubmitting(true)
     try {
       const visibleFlow = new Set(STATUS_FIELDS[form.recommendationStatus] ?? [])
@@ -391,16 +402,16 @@ export default function CandidatesPage() {
           <Field label="候选人姓名" required>
             <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="请输入" />
           </Field>
-          <Field label="出生年份">
+          <Field label="出生年份" required>
             <YearSelect value={form.birthYear} onChange={(v) => setField('birthYear', v)} minYear={1950} />
           </Field>
-          <Field label="联系电话">
+          <Field label="联系电话" required>
             <input className="input input-bordered w-full" value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="请输入" />
           </Field>
-          <Field label="候选人邮箱">
+          <Field label="候选人邮箱" required>
             <input className="input input-bordered w-full" value={form.email} onChange={(e) => setField('email', e.target.value)} placeholder="请输入" />
           </Field>
-          <Field label="教育经历">
+          <Field label="教育经历" required>
             <select className="select select-bordered w-full" value={form.education} onChange={(e) => setField('education', e.target.value)}>
               <option value="" disabled hidden>请选择</option>
               {opts(EDUCATION_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -412,7 +423,7 @@ export default function CandidatesPage() {
               {opts(SCHOOL_TIER_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Field>
-          <Field label="客户名称">
+          <Field label="客户名称" required>
             <select
               className="select select-bordered w-full"
               value={form.customerId}
@@ -431,7 +442,7 @@ export default function CandidatesPage() {
               ))}
             </select>
           </Field>
-          <Field label="客户简称">
+          <Field label="客户简称" required>
             <input
               className="input input-bordered w-full"
               value={form.customerShortName}
@@ -439,7 +450,7 @@ export default function CandidatesPage() {
               placeholder="选择客户后自动填充，可修改"
             />
           </Field>
-          <Field label="招聘需求方">
+          <Field label="招聘需求方" required>
             <select
               className="select select-bordered w-full"
               value={form.recruitmentParty}
@@ -461,7 +472,7 @@ export default function CandidatesPage() {
               ))}
             </select>
           </Field>
-          <Field label="岗位名称">
+          <Field label="岗位名称" required>
             <select
               className="select select-bordered w-full"
               value={form.requirementId}
@@ -481,7 +492,7 @@ export default function CandidatesPage() {
                 ))}
             </select>
           </Field>
-          <Field label="推荐时间">
+          <Field label="推荐时间" required>
             <input type="datetime-local" className="input input-bordered w-full" value={form.recommendationTime} onChange={(e) => setField('recommendationTime', e.target.value)} />
           </Field>
           <Field label="招聘渠道" required>
@@ -492,7 +503,7 @@ export default function CandidatesPage() {
               ))}
             </select>
           </Field>
-          <Field label="推荐报告">
+          <Field label="推荐报告" required>
             <FileUpload value={form.recommendationReportUrl} onChange={(url) => setField('recommendationReportUrl', url)} />
           </Field>
           <Field label="推荐状态" required>
