@@ -27,7 +27,7 @@ describe('GET /api/departments', () => {
   // 注意：departments 的 GET 无守卫（候选人页下拉依赖），任意调用方都返回全量部门 + 用户数
   it('返回 { data, total }（无 requireAdmin 守卫）', async () => {
     mock(prisma.department.findMany).mockResolvedValue([{ id: 1 }, { id: 2 }])
-    const res = await GET()
+    const res = await GET(new Request('http://t/api/departments'))
     expect(requireAdmin).not.toHaveBeenCalled()
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({ data: [{ id: 1 }, { id: 2 }], total: 2 })
@@ -37,9 +37,20 @@ describe('GET /api/departments', () => {
 
   it('未登录 → 401，不查库', async () => {
     mock(getSessionPayload).mockResolvedValueOnce(null)
-    const res = await GET()
+    const res = await GET(new Request('http://t/api/departments'))
     expect(res.status).toBe(401)
     expect(prisma.department.findMany).not.toHaveBeenCalled()
+  })
+
+  it('带 ?q= → 后端按部门名模糊过滤；无 q → 不带 where', async () => {
+    mock(prisma.department.findMany).mockResolvedValue([])
+    await GET(new Request('http://t/api/departments?q=研发'))
+    expect(mock(prisma.department.findMany).mock.calls[0][0].where).toEqual({
+      name: { contains: '研发', mode: 'insensitive' },
+    })
+    mock(prisma.department.findMany).mockClear()
+    await GET(new Request('http://t/api/departments'))
+    expect(mock(prisma.department.findMany).mock.calls[0][0].where).toBeUndefined()
   })
 })
 

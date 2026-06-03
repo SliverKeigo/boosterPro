@@ -8,13 +8,18 @@ import bcrypt from 'bcryptjs'
 // - 管理员：全量字段（不返回 passwordHash），供用户管理 / 权限设置页使用，前端 BoostTable 负责搜索 / 排序 / 分页。
 // - 普通登录用户：仅 { id, name }，供业务页（如候选人页提交人 / 负责人下拉）使用。
 // 返回结构统一为 { data, total }，前端均消费 json.data。
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const me = await getCurrentUser()
     if (!me) return NextResponse.json({ error: '未登录或登录已过期' }, { status: 401 })
 
+    // 可搜索下拉：带 ?q= 时按姓名模糊过滤（供「选提交人/负责人」下拉的后端过滤）
+    const q = new URL(req.url).searchParams.get('q')?.trim()
+    const nameWhere = q ? { name: { contains: q, mode: 'insensitive' as const } } : undefined
+
     if (me.isAdmin) {
       const data = await prisma.user.findMany({
+        where: nameWhere,
         orderBy: { createdAt: 'asc' },
         omit: { passwordHash: true },
         include: {
@@ -26,6 +31,7 @@ export async function GET() {
     }
 
     const data = await prisma.user.findMany({
+      where: nameWhere,
       orderBy: { createdAt: 'asc' },
       select: { id: true, name: true, departmentId: true },
     })

@@ -37,7 +37,7 @@ describe('GET /api/users', () => {
       { id: 1, name: 'A' },
       { id: 2, name: 'B' },
     ])
-    const res = await GET()
+    const res = await GET(new Request('http://t/api/users'))
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({
       data: [
@@ -54,7 +54,7 @@ describe('GET /api/users', () => {
   it('普通用户：仅返回精简字段 { id, name, departmentId }', async () => {
     mock(getCurrentUser).mockResolvedValue(normal)
     mock(prisma.user.findMany).mockResolvedValue([{ id: 5, name: 'X', departmentId: 1 }])
-    const res = await GET()
+    const res = await GET(new Request('http://t/api/users'))
     expect(res.status).toBe(200)
     const args = mock(prisma.user.findMany).mock.calls[0][0]
     expect(args.select).toEqual({ id: true, name: true, departmentId: true })
@@ -63,7 +63,7 @@ describe('GET /api/users', () => {
 
   it('未登录 → 401', async () => {
     mock(getCurrentUser).mockResolvedValue(null)
-    const res = await GET()
+    const res = await GET(new Request('http://t/api/users'))
     expect(res.status).toBe(401)
     expect(prisma.user.findMany).not.toHaveBeenCalled()
   })
