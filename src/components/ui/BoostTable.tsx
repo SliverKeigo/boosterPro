@@ -96,6 +96,10 @@ const IMPORT_ENABLED = false
 const ICON_BTN =
   'btn btn-ghost btn-sm gap-1.5 font-medium text-base-content/70 hover:text-base-content'
 
+// 原始主键 / 外键 ID 列（key 为 'id' 或以 'Id' 结尾，如 customerId/submitterId/requirementId）
+// 对用户无意义（表格展示对应的名称列即可）：统一从 显示列 / 排序 / 筛选 / 实际渲染 中排除。
+const isIdColumnKey = (key: string) => key === 'id' || /Id$/.test(key)
+
 // ── 筛选相关类型与工具 ──
 type FilterKind = 'text' | 'date' | 'number' | 'select'
 type LogicOp = 'and' | 'or'
@@ -269,7 +273,7 @@ export function BoostTable<T extends Record<string, any>>({
         if (c.filterable === false) return false
         if (c.filterable === true) return true // 显式开启，覆盖下面的默认排除
         // 默认排除对筛选无意义的技术列：主键 / 外键 id（如 customerId）、URL / 文件链接列
-        if (c.key === 'id' || /Id$/.test(c.key)) return false
+        if (isIdColumnKey(c.key)) return false
         if (/Url$/i.test(c.key)) return false
         return true
       }),
@@ -446,7 +450,7 @@ export function BoostTable<T extends Record<string, any>>({
     [sorted, current, size],
   )
 
-  const visibleColumns = columns.filter((c) => visible[c.key])
+  const visibleColumns = columns.filter((c) => visible[c.key] && !isIdColumnKey(c.key))
 
   const getKey = (r: T, i: number): string | number => {
     if (typeof rowKey === 'function') return rowKey(r)
@@ -516,7 +520,7 @@ export function BoostTable<T extends Record<string, any>>({
       rows,
     })
 
-  const sortableColumns = columns.filter((c) => c.sortable !== false)
+  const sortableColumns = columns.filter((c) => c.sortable !== false && !isIdColumnKey(c.key))
 
   // ── 排序面板操作（草稿 → 应用，与筛选面板同一交互模式）──
   const newSortRule = (): SortRule => ({
@@ -932,7 +936,7 @@ export function BoostTable<T extends Record<string, any>>({
             <div className="px-2 py-1.5 text-xs font-semibold text-base-content/50">
               勾选要显示的列
             </div>
-            {columns.map((c) => (
+            {columns.filter((c) => !isIdColumnKey(c.key)).map((c) => (
               <label
                 key={c.key}
                 className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-base-200"
