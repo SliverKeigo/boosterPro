@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest'
 
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000'
 const ADMIN_USER = 'admin'
-const ADMIN_PASS = 'Admin@123456'
+// 与 seed 保持一致：管理员密码已改为随机生成，跑 e2e 前请用固定口令灌库
+// （SEED_RESET_ADMIN_PASSWORD=1 SEED_ADMIN_PASSWORD=Admin@123456 npm run db:seed）。
+const ADMIN_PASS = process.env.SEED_ADMIN_PASSWORD || 'Admin@123456'
 
 // 原始 fetch 鉴权流程（登录 / me / logout），不复用 _client 的 memo cookie。
 describe('E2E 鉴权 login/me/logout', () => {

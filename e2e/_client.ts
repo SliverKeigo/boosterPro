@@ -2,9 +2,14 @@
 // 用 admin 登录拿 cookie，后续请求带上；不 mock 任何东西。
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000'
 
+// 管理员密码已改为「首次 seed 随机生成」。跑 e2e 前请用固定口令灌库：
+//   SEED_RESET_ADMIN_PASSWORD=1 SEED_ADMIN_PASSWORD=Admin@123456 npm run db:seed
+// 此处默认沿用 Admin@123456，可用 SEED_ADMIN_PASSWORD 覆盖以与 seed 保持一致。
+const ADMIN_PW = process.env.SEED_ADMIN_PASSWORD || 'Admin@123456'
+
 let cookie = ''
 
-export async function login(username = 'admin', password = 'Admin@123456'): Promise<string> {
+export async function login(username = 'admin', password = ADMIN_PW): Promise<string> {
   if (cookie) return cookie
   const res = await fetch(`${BASE}/api/auth/login`, {
     method: 'POST',

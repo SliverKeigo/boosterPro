@@ -53,6 +53,8 @@ warn() { printf '%s  !%s %s\n' "$c_y" "$c_0" "$*"; }
 die()  { printf '%s  ✗ %s%s\n' "$c_r" "$*" "$c_0" >&2; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 randhex() { if have openssl; then openssl rand -hex "$1"; else LC_ALL=C tr -dc 'a-f0-9' </dev/urandom | head -c "$(( $1 * 2 ))"; fi; }
+# 可读强密码：A-Za-z0-9（无 shell 特殊字符 / 空格），用作初始管理员密码
+randpass() { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c "${1:-16}"; }
 
 [ -f "$ROOT_DIR/package.json" ] && grep -q '"boosterpro"' "$ROOT_DIR/package.json" || die "请在 BoosterPro 项目根目录运行本脚本"
 
@@ -166,6 +168,7 @@ fi
 # ═══ 3. .env（不存在则生成；存在则沿用并解析其 DATABASE_URL）═══
 ENV_FILE="$ROOT_DIR/.env"
 if [ -f "$ENV_FILE" ] && grep -q '^DATABASE_URL=' "$ENV_FILE"; then
+  ENV_CREATED=0
   ok ".env 已存在，沿用其中配置"
   url="$(grep -E '^DATABASE_URL=' "$ENV_FILE" | head -1 | cut -d= -f2- | sed -E 's/^"//; s/"$//; s/^'"'"'//; s/'"'"'$//')"
   nop="${url#*://}"
@@ -173,6 +176,7 @@ if [ -f "$ENV_FILE" ] && grep -q '^DATABASE_URL=' "$ENV_FILE"; then
   hp="${rest%%/*}"; DB_HOST="${hp%%:*}"; pp="${hp##*:}"; [ "$pp" != "$hp" ] && DB_PORT="$pp"
   dbp="${rest#*/}"; DB_NAME="${dbp%%\?*}"
 else
+  ENV_CREATED=1
   [ -n "$DB_PASS" ] || DB_PASS="$(randhex 16)"
   JWT_SECRET_VAL="$(randhex 32)"
   cat > "$ENV_FILE" <<EOF
@@ -236,9 +240,19 @@ run_user npx prisma db push
 ok "数据库表结构就绪"
 
 log "灌入默认管理员 + 字典 ..."
-run_user npm run db:seed
+# 管理员初始密码随机生成（仅首次创建时使用；库里已有 admin 时 seed 不会重置，见 prisma/seed.ts）。
+# 经 env 透传给 seed（run_user 走 sudo -u，须用 env 注入变量）。
+ADMIN_PW="$(randpass 16)"
+SEED_OUT="$(run_user env SEED_ADMIN_PASSWORD="$ADMIN_PW" npm run db:seed 2>&1)"
+printf '%s\n' "$SEED_OUT"
 run_user npm run db:fix-sequences >/dev/null 2>&1 || true
-ok "种子完成（管理员 admin / Admin@123456）"
+# 据 seed 输出的标记判断本次是否真的创建/重置了管理员（决定末尾是否展示初始密码）
+if printf '%s\n' "$SEED_OUT" | grep -qE 'SEED_ADMIN_RESULT=(created|reset)'; then
+  ADMIN_PW_NEW=1
+else
+  ADMIN_PW_NEW=0
+fi
+ok "种子完成"
 
 run_user mkdir -p "$ROOT_DIR/uploads"
 
@@ -328,7 +342,18 @@ fi
 
 log "部署完成 🎉"
 echo "  访问：    http://<本机IP>:${APP_PORT}"
-echo "  管理员：  账号 admin   密码 Admin@123456   （登录后请尽快改密）"
+# 管理员凭据：仅当本次真的创建/重置了 admin 才显示明文初始密码
+if [ "${ADMIN_PW_NEW:-0}" = "1" ]; then
+  echo "  管理员：  账号 admin   初始密码 ${ADMIN_PW}   （仅本次显示，登录后请立即改密）"
+else
+  echo "  管理员：  账号 admin   （库中已存在，密码未改动；忘记可重置：SEED_RESET_ADMIN_PASSWORD=1 npm run db:seed）"
+fi
+# 数据库凭据：仅当本次新生成 .env 且为本地随机库才回显密码；远程/复用库仅给连接信息（口令见 .env）
+if [ "${ENV_CREATED:-0}" = "1" ] && [ "${USE_REMOTE_DB:-0}" -eq 0 ]; then
+  echo "  数据库：  ${DB_USER} / ${DB_PASS}   @ ${DB_HOST}:${DB_PORT}/${DB_NAME}   （本地新建，密码随机，已写入 .env）"
+else
+  echo "  数据库：  ${DB_USER} @ ${DB_HOST}:${DB_PORT}/${DB_NAME}   （口令见 .env 的 DATABASE_URL）"
+fi
 [ "$OS" != "mac" ] && echo "  日志：    sudo journalctl -u ${APP_NAME} -f"
 [ "$OS" != "mac" ] && echo "  重启：    sudo systemctl restart ${APP_NAME}"
 [ "$OS" != "mac" ] && echo "  看门狗：  sudo journalctl -u ${APP_NAME}-watchdog -f   （探活无响应自动重启）"

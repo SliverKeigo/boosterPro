@@ -38,6 +38,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - GET 的特例：`users` / `departments` 的 GET 对**非管理员返回精简字段**（候选人页下拉依赖，不能整体 requireAdmin）；`roles` 的 GET 仅管理员。表单下拉另走 `/api/<resource>/options`（如 `clients/options`、`requirements/options`）——**仅登录即可取**、只返回下拉必要字段、不卡该资源 VIEW（避免下拉被只读权限卡空）。
 - 前端：`useMyPermissions()`（`src/lib/usePermissions.ts`）的 `can(resource,action)` / `isOwner(row)` 控制按钮 / 菜单显隐。
 - 种子：`npm run db:seed`（`tsx --env-file=.env prisma/seed.ts`，独立脚本须 `--env-file` 才能加载 `.env`）创建默认部门「总部」/ 角色「超级管理员」/ 管理员 `admin@boosterpro.com`（用户名 `admin`、`isAdmin=true`），并幂等灌入全部字典（`DICT_SEEDS`，仅当某类型一条项都没有时才插入，不覆盖已有）。
+- **管理员密码**：**首次创建随机生成**并打印到控制台（不再硬编码）；**再次 seed 不重置**已有管理员密码（旧 `upsert` 每次重写 `passwordHash` 会把管理员改过的密码覆盖回默认值＝提权风险，已改为 create/update 分流）。可用 `SEED_ADMIN_PASSWORD` 指定口令、`SEED_RESET_ADMIN_PASSWORD=1` 强制重置；seed 末尾打印 `SEED_ADMIN_RESULT=created|reset|unchanged` 供 `deploy.sh` 解析是否展示初始密码。**e2e 依赖固定口令**：跑前先 `SEED_RESET_ADMIN_PASSWORD=1 SEED_ADMIN_PASSWORD=Admin@123456 npm run db:seed`（e2e 默认仍读 `Admin@123456`，可被 `SEED_ADMIN_PASSWORD` 覆盖）。`deploy.sh` 部署时随机生成管理员口令经 `env` 透传给 seed，并在末尾摘要回显「初始管理员密码」与「本地新建 DB 的随机口令」（远程/复用库只给连接信息，口令见 `.env`）。
 
 ## 登录 / 部署
 - 登录成功后**整页跳转**进工作台（`window.location.replace('/')`）——生产构建下 `router.push+refresh` 跨布局（login→dashboard）偶发卡在登录页，故用整页跳转。

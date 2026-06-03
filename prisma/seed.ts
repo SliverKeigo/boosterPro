@@ -4,7 +4,9 @@
  * 创建：
  *   - 默认部门「总部」
  *   - 默认角色「超级管理员」
- *   - 默认管理员账号 admin@boosterpro.com / Admin@123456（isAdmin: true）
+ *   - 默认管理员账号 admin@boosterpro.com（用户名 admin，isAdmin: true）
+ *     首次创建时【随机生成密码】并打印到控制台（也可用 SEED_ADMIN_PASSWORD 指定）；
+ *     再次运行【不会重置】已有管理员密码（除非显式 SEED_RESET_ADMIN_PASSWORD=1）。
  *
  * 密码哈希方式与登录校验（src/app/api/auth/login/route.ts 用 bcryptjs.compare）保持一致，
  * 因此这里同样用 bcryptjs.hash。
@@ -13,16 +15,30 @@
  * 运行：npm run db:seed（需先 npx prisma db push 建好表结构，且 .env 中已设 DATABASE_URL）。
  */
 import bcrypt from 'bcryptjs'
+import { randomBytes } from 'node:crypto'
 import { prisma } from '../src/lib/prisma'
 import { INDUSTRIES, TALENT_INDUSTRIES } from '../src/lib/industries'
 import { resetSequences } from './fix-sequences'
 
 const ADMIN_EMAIL = 'admin@boosterpro.com'
-const ADMIN_PASSWORD = 'Admin@123456'
 const ADMIN_NAME = '系统管理员'
 const ADMIN_USERNAME = 'admin'
 const DEFAULT_DEPARTMENT_NAME = '总部'
 const DEFAULT_ROLE_NAME = '超级管理员'
+
+/** 随机强密码：A-Za-z0-9（去掉 0/O/1/l/I 等易混淆字符），用作初始管理员密码 */
+function genPassword(len = 16): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
+  const bytes = randomBytes(len)
+  let out = ''
+  for (let i = 0; i < len; i++) out += chars[bytes[i] % chars.length]
+  return out
+}
+
+/** 环境变量真值判断 */
+function truthy(v: string | undefined): boolean {
+  return ['1', 'true', 'yes', 'y', 'on'].includes((v ?? '').trim().toLowerCase())
+}
 
 /**
  * 字典种子定义。每个类型包含 code / name / remark 与字典项 label 列表
@@ -95,32 +111,55 @@ async function main() {
     })
   }
 
-  // 邮箱是 @unique，可作为 upsert 的稳定键
-  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10)
-  const admin = await prisma.user.upsert({
+  // 管理员（邮箱 @unique 作稳定键）。安全要点：
+  //   ① 首次创建时随机生成密码（不再硬编码 Admin@123456）；
+  //   ② 再次 seed【不重置】已有管理员密码——否则会把管理员改过的密码覆盖回默认值（提权风险）。
+  // 忘记密码需重置时：SEED_RESET_ADMIN_PASSWORD=1 npm run db:seed（可配合 SEED_ADMIN_PASSWORD 指定）。
+  const existingAdmin = await prisma.user.findUnique({
     where: { email: ADMIN_EMAIL },
-    update: {
-      name: ADMIN_NAME,
-      username: ADMIN_USERNAME,
-      passwordHash,
-      isAdmin: true,
-      departmentId: department.id,
-      roleId: role.id,
-    },
-    create: {
-      name: ADMIN_NAME,
-      username: ADMIN_USERNAME,
-      email: ADMIN_EMAIL,
-      passwordHash,
-      isAdmin: true,
-      departmentId: department.id,
-      roleId: role.id,
-    },
+    select: { id: true },
   })
+  const baseData = {
+    name: ADMIN_NAME,
+    username: ADMIN_USERNAME,
+    isAdmin: true,
+    departmentId: department.id,
+    roleId: role.id,
+  }
 
-  console.log(
-    `Seed 完成：管理员 ${admin.email}（id=${admin.id}）/ 部门「${department.name}」/ 角色「${role.name}」`,
-  )
+  let adminPasswordPlain: string | null = null
+  let adminResult: 'created' | 'reset' | 'unchanged'
+  if (!existingAdmin) {
+    adminPasswordPlain = process.env.SEED_ADMIN_PASSWORD?.trim() || genPassword()
+    const passwordHash = await bcrypt.hash(adminPasswordPlain, 10)
+    await prisma.user.create({ data: { ...baseData, email: ADMIN_EMAIL, passwordHash } })
+    adminResult = 'created'
+  } else if (truthy(process.env.SEED_RESET_ADMIN_PASSWORD)) {
+    adminPasswordPlain = process.env.SEED_ADMIN_PASSWORD?.trim() || genPassword()
+    const passwordHash = await bcrypt.hash(adminPasswordPlain, 10)
+    await prisma.user.update({ where: { email: ADMIN_EMAIL }, data: { ...baseData, passwordHash } })
+    adminResult = 'reset'
+  } else {
+    // 不写 passwordHash —— 保留管理员现有密码
+    await prisma.user.update({ where: { email: ADMIN_EMAIL }, data: baseData })
+    adminResult = 'unchanged'
+  }
+
+  if (adminPasswordPlain) {
+    console.log('────────────────────────────────────────────')
+    console.log(` 管理员账号已${adminResult === 'created' ? '创建' : '重置密码'}`)
+    console.log(`   账号：${ADMIN_USERNAME}    邮箱：${ADMIN_EMAIL}`)
+    console.log(`   密码：${adminPasswordPlain}`)
+    console.log(' ⚠ 此密码仅本次显示，请登录后立即修改')
+    console.log('────────────────────────────────────────────')
+  } else {
+    console.log(
+      `Seed：管理员 ${ADMIN_EMAIL} 已存在，密码保持不变（如需重置：SEED_RESET_ADMIN_PASSWORD=1 npm run db:seed）`,
+    )
+  }
+  console.log(`Seed 完成：部门「${department.name}」/ 角色「${role.name}」`)
+  // 供 deploy.sh 解析：本次是否新建/重置了管理员（决定是否在部署摘要展示初始密码）
+  console.log(`SEED_ADMIN_RESULT=${adminResult}`)
 
   // 字典种子（幂等，置于业务账号 seed 之后）
   await seedDicts()

@@ -82,7 +82,7 @@ npm run dev
 > 升级既有库的 `requirements.status` 为多值数组：`npm run db:migrate-req-status`（幂等；全新库由 `db push` 直接建为 `text[]`）。
 > 局域网其它设备访问 dev server 需把其 IP 加入 `next.config.ts` 的 `allowedDevOrigins`。
 
-访问 http://localhost:3000 ，默认管理员账号：`admin@boosterpro.com` / `Admin@123456`（用户名 `admin`）。内网 HTTP 部署也可正常登录（鉴权 cookie 的 Secure 按请求协议自适应）。
+访问 http://localhost:3000 ，默认管理员账号 `admin@boosterpro.com`（用户名 `admin`）。**密码在首次 `db:seed` 时随机生成并打印到控制台**（仅显示一次，请登录后立即修改）；再次 seed 不会重置已有管理员密码。需指定固定口令（如本地开发 / e2e）可：`SEED_ADMIN_PASSWORD=你的密码 npm run db:seed`；忘记密码重置：`SEED_RESET_ADMIN_PASSWORD=1 npm run db:seed`。内网 HTTP 部署也可正常登录（鉴权 cookie 的 Secure 按请求协议自适应）。
 
 ## 项目结构
 ```
