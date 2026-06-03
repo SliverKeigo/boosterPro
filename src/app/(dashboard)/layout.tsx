@@ -73,6 +73,13 @@ const GROUPS: NavGroup[] = [
       { href: '/clients', label: '客户基本信息', icon: Building2 },
       { href: '/customer-contacts', label: '客户联系人信息', icon: Contact },
       { href: '/contracts', label: '销售合同', icon: FileSignature },
+    ],
+  },
+  {
+    key: 'common',
+    label: '公司通用',
+    icon: LayoutDashboard,
+    items: [
       { href: '/knowledge', label: '公司知识库', icon: BookOpen },
     ],
   },
