@@ -138,6 +138,7 @@ export default function ClientsPage() {
   }
 
   const handleSubmit = async () => {
+    if (!form.fullName?.trim()) return toast.error('请填写客户名称')
     if (!form.shortName?.trim()) return toast.error('请填写客户简称')
     if (!form.region?.trim()) return toast.error('请填写所属区域')
     if (!form.address?.trim()) return toast.error('请填写公司地址')
@@ -235,7 +236,7 @@ export default function ClientsPage() {
         width={760}
       >
         <div className="grid grid-cols-2 gap-4">
-          <Field label="客户名称">
+          <Field label="客户名称" required>
             <div className="flex items-center gap-2">
               <input className="input input-bordered w-full" value={form.fullName} onChange={(e) => setField('fullName', e.target.value)} placeholder="请输入" />
               <button

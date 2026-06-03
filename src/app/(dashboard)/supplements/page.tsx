@@ -108,7 +108,7 @@ export default function SupplementsPage() {
   }
 
   const handleSubmit = async () => {
-    if (!form.customerId || String(form.customerId).trim() === '') return toast.error('请填写关联客户 ID')
+    if (!form.customerId || String(form.customerId).trim() === '') return toast.error('请选择客户名称')
     setSubmitting(true)
     try {
       const url = editing ? `/api/supplements/${editing.id}` : '/api/supplements'

@@ -161,6 +161,7 @@ export default function KnowledgePage() {
 
   const handleSubmit = async () => {
     if (!form.category?.trim()) return toast.error('请填写知识分类')
+    if (selectedTags().size === 0) return toast.error('请选择知识标签')
     if (!form.keywords?.trim()) return toast.error('请填写关键词')
     setSubmitting(true)
     try {

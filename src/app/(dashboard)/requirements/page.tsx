@@ -169,12 +169,19 @@ export default function RequirementsPage() {
   }
 
   const handleSubmit = async () => {
-    if (!form.customerId || String(form.customerId).trim() === '') return toast.error('请填写关联客户 ID')
+    const statusList: string[] = Array.isArray(form.status) ? form.status : []
+    if (!form.customerId || String(form.customerId).trim() === '') return toast.error('请选择客户名称')
     if (!form.positionName?.trim()) return toast.error('请填写岗位名称')
     if (form.headcount === '' || form.headcount === null) return toast.error('请填写需求人数')
-    if (!Array.isArray(form.status) || form.status.length === 0) return toast.error('请选择岗位状态')
-    if (!form.deadline) return toast.error('请选择截止日期')
+    if (form.monthlySalaryMin === '' || form.monthlySalaryMin === null || form.monthlySalaryMax === '' || form.monthlySalaryMax === null)
+      return toast.error('请填写月薪范围')
+    if (!form.genderRequirement) return toast.error('请选择性别要求')
+    if (!form.educationRequirement?.trim()) return toast.error('请填写学历要求')
+    if (statusList.length === 0) return toast.error('请选择岗位状态')
+    if (statusList.includes('重启') && !form.deadline) return toast.error('请选择招聘重启日期')
     if (!form.baseCity?.trim()) return toast.error('请填写 Base 城市')
+    if ((statusList.includes('关闭') || statusList.includes('暂停')) && !form.closeReason?.trim())
+      return toast.error('请填写关闭/暂停原因')
     setSubmitting(true)
     try {
       const url = editing ? `/api/requirements/${editing.id}` : '/api/requirements'
@@ -343,7 +350,7 @@ export default function RequirementsPage() {
             <input type="number" className="input input-bordered w-full" value={form.headcount} onChange={(e) => setField('headcount', e.target.value)} placeholder="请输入数字" />
           </Field>
           {/* 月薪范围 / 年薪范围(万) */}
-          <Field label="月薪范围（元）">
+          <Field label="月薪范围（元）" required>
             <div className="flex items-center gap-2">
               <input type="number" className="input input-bordered w-full" value={form.monthlySalaryMin} onChange={(e) => setField('monthlySalaryMin', e.target.value)} placeholder="最低" />
               <span className="text-base-content/40">-</span>
@@ -365,14 +372,14 @@ export default function RequirementsPage() {
               <input type="number" className="input input-bordered w-full" value={form.ageMax} onChange={(e) => setField('ageMax', e.target.value)} placeholder="最大" />
             </div>
           </Field>
-          <Field label="性别要求">
+          <Field label="性别要求" required>
             <select className="select select-bordered w-full" value={form.genderRequirement} onChange={(e) => setField('genderRequirement', e.target.value)}>
               <option value="" disabled hidden>请选择</option>
               {opts(GENDER_LABELS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Field>
           {/* 学历要求 / 语言要求 */}
-          <Field label="学历要求">
+          <Field label="学历要求" required>
             <input className="input input-bordered w-full" value={form.educationRequirement} onChange={(e) => setField('educationRequirement', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="语言要求">
@@ -423,7 +430,7 @@ export default function RequirementsPage() {
               )
             })()}
           </Field>
-          <Field label="招聘重启日期" required>
+          <Field label="招聘重启日期" required={Array.isArray(form.status) && form.status.includes('重启')}>
             <input type="date" className="input input-bordered w-full" value={form.deadline} onChange={(e) => setField('deadline', e.target.value)} />
           </Field>
           {/* Base城市 / 岗位JD */}
@@ -466,7 +473,7 @@ export default function RequirementsPage() {
           <Field label="附件">
             <FileUpload value={form.attachmentUrl} onChange={(url) => setField('attachmentUrl', url)} />
           </Field>
-          <Field label="关闭/暂停原因" required>
+          <Field label="关闭/暂停原因" required={Array.isArray(form.status) && (form.status.includes('关闭') || form.status.includes('暂停'))}>
             <textarea className="textarea textarea-bordered w-full" rows={3} value={form.closeReason} onChange={(e) => setField('closeReason', e.target.value)} placeholder="请输入" />
           </Field>
           {/* 其他备注 */}

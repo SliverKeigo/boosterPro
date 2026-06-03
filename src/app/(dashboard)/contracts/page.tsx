@@ -136,14 +136,14 @@ export default function ContractsPage() {
   }
 
   const handleSubmit = async () => {
-    if (!form.customerId?.toString().trim()) return toast.error('请填写关联客户 ID')
+    if (!form.customerId?.toString().trim()) return toast.error('请选择客户名称')
     if (!form.contractName?.trim()) return toast.error('请填写合同名称')
-    if (!form.signingYear?.toString().trim()) return toast.error('请填写签订年份')
-    if (!form.effectiveStart) return toast.error('请选择合同生效开始日期')
-    if (!form.effectiveEnd) return toast.error('请选择合同生效结束日期')
+    if (!form.signingYear?.toString().trim()) return toast.error('请选择签订年份')
+    if (!form.effectiveStart) return toast.error('请选择合同生效起始日期')
+    if (!form.effectiveEnd) return toast.error('请选择合同结束日期')
     if (!form.expiryDate) return toast.error('请选择合同到期日期')
-    if (!form.serviceType?.trim()) return toast.error('请填写服务类型')
-    if (!form.contractFileUrl?.trim()) return toast.error('请填写合同附件 URL')
+    if (!form.serviceType?.trim()) return toast.error('请选择服务类型')
+    if (!form.contractFileUrl?.trim()) return toast.error('请上传合同附件')
     setSubmitting(true)
     try {
       const url = editing ? `/api/contracts/${editing.id}` : '/api/contracts'

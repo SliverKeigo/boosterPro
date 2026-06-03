@@ -85,7 +85,7 @@ export default function TalentPoolPage() {
   const handleSubmit = async () => {
     if (!form.name?.trim()) return toast.error('请填写人才姓名')
     if (!form.currentPosition?.trim()) return toast.error('请填写当前职位')
-    if (!form.resumeUrl?.trim()) return toast.error('请填写简历URL')
+    if (!form.resumeUrl?.trim()) return toast.error('请上传简历及相关资料')
     setSubmitting(true)
     try {
       const payload = {

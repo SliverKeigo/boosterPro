@@ -133,10 +133,13 @@ export default function OpportunitiesPage() {
   const handleSubmit = async () => {
     if (!form.name?.trim()) return toast.error('请填写商机名称')
     if (!form.description?.trim()) return toast.error('请填写商机描述')
-    if (!form.region?.trim()) return toast.error('请填写所属区域')
+    if (!form.region?.trim()) return toast.error('请选择所属区域')
+    if (!form.status) return toast.error('请选择商机状态')
+    if (!form.nature) return toast.error('请选择商机性质')
     if (!form.salesDecisionInfo?.trim()) return toast.error('请填写公司销售决策信息')
     if (!form.customerDecisionMaker?.trim()) return toast.error('请填写客户决策人')
-    if (!form.decisionMakerDescription?.trim()) return toast.error('请填写决策人信息描述')
+    if (!form.decisionMakerDescription?.trim()) return toast.error('请填写决策人相关信息描述')
+    if (!form.salesOwnerId) return toast.error('请选择销售负责人')
     setSubmitting(true)
     try {
       const url = editing ? `/api/opportunities/${editing.id}` : '/api/opportunities'
