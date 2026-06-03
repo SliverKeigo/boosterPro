@@ -129,6 +129,22 @@ describe('exportToExcel', () => {
     expect(ws.getRow(2).getCell(2).value).toBe('否')
   })
 
+  it('公式注入防护：以 = + - @ 开头的文本前置单引号当作纯文本', async () => {
+    await exportToExcel({
+      title: 't',
+      columns: [
+        { header: '备注', getValue: (r: any) => r.note },
+        { header: '正常', getValue: (r: any) => r.ok },
+      ],
+      rows: [{ note: '=HYPERLINK("http://evil")', ok: '正常文本' }],
+    })
+    const ws = (await loadWorkbook()).getWorksheet(1)!
+    // 危险前缀被加 ' 前缀、存为纯文本，不会被电子表格当公式执行
+    expect(ws.getRow(2).getCell(1).value).toBe('\'=HYPERLINK("http://evil")')
+    // 普通文本不受影响
+    expect(ws.getRow(2).getCell(2).value).toBe('正常文本')
+  })
+
   it('多行数据全部写入', async () => {
     await exportToExcel({
       title: 't',

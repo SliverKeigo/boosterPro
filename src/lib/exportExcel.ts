@@ -33,8 +33,12 @@ function normalize(raw: any): { value: any; numFmt?: string } {
       return { value: d, numFmt: hasTime ? 'yyyy-mm-dd hh:mm' : 'yyyy-mm-dd' }
     }
   }
+  // 防公式 / CSV 注入：以 = @ Tab CR 开头的文本，前置单引号使其被电子表格当纯文本、不被当公式执行。
+  // 刻意不含 + / -：避免给 +86 国际手机号、负数等合法文本误加引号(它们几乎不是攻击向量，
+  // 且 .xlsx 走文本单元格本就不会被 Excel 执行，此处为防 CSV 二次转换的纵深防御)。
+  const safe = /^[=@\t\r]/.test(s) ? `'${s}` : s
   // 其余一律按文本：避免手机号 / 编号被转成科学计数或丢前导零
-  return { value: s }
+  return { value: safe }
 }
 
 function sheetName(title?: string): string {

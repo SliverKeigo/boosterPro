@@ -8,11 +8,13 @@ const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout', '/api/hea
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // 静态资源和公开路径直接放行
+  // 静态资源和公开路径直接放行。
+  // 公开路径用【精确匹配】而非前缀：否则 startsWith('/api/health') 会顺带放行 /api/healthZZZ、
+  // /api/health/secret 等同前缀子路径，日后在这些前缀下新增路由会意外免登录暴露。
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
-    PUBLIC_PATHS.some((p) => pathname.startsWith(p))
+    PUBLIC_PATHS.includes(pathname)
   ) {
     return NextResponse.next()
   }

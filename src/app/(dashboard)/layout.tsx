@@ -29,6 +29,8 @@ import {
 } from 'lucide-react'
 import { Popconfirm, useToast } from '@/components/ui'
 import { useMyPermissions, clearPermissionCache } from '@/lib/usePermissions'
+import { clearRefCache } from '@/lib/refCache'
+import { clearDictCache } from '@/lib/useDict'
 import { PATH_TO_RESOURCE } from '@/lib/resources'
 
 interface NavItem {
@@ -146,8 +148,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
-    // 清空模块级权限缓存，避免同一浏览器换账号登录后沿用上一用户的权限
+    // 清空所有模块级缓存，避免同一浏览器换账号登录后沿用上一用户的数据：
+    // 权限缓存 + 引用下拉缓存(refCache，/api/users 等含 PII，响应随权限而异) + 字典缓存。
     clearPermissionCache()
+    clearRefCache()
+    clearDictCache()
     toast.success('已退出登录')
     router.push('/login')
     router.refresh()
