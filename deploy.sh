@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
 #
-# BoosterPro 一键部署脚本
+# BoosterPro 环境初始化脚本（init）
 # ─────────────────────────────────────────────────────────────────────────────
-# 作用：在一台「什么都没装」的新机器上一条命令完成部署——
+# 作用：在一台「什么都没装」的新机器上把【运行环境 + 数据库】准备好，但【不构建、不部署产物】——
 #   1) 缺 Node(20) / PostgreSQL 就自动安装并启动
 #   2) 自动建数据库角色与库、配好密码登录
 #   3) 自动生成 .env（随机 DB 密码 + 随机 JWT_SECRET）
 #   4) npm 安装依赖 → Prisma 建表 → 灌入默认管理员 + 字典 → 同步序列
-#   5) 生产构建，并注册 systemd 服务、开机自启
+#   5) 注册 systemd 服务 + 看门狗并设为开机自启（此时尚无构建产物，故先注册不启动）
+#
+# 应用产物（.next + node_modules）由 GitHub CI 构建，单独用 update.sh 部署：
+#   初始化后 → 把 boosterpro-dist.tgz 传上来 → bash update.sh boosterpro-dist.tgz（解压并启动服务）
+# 之所以拆开：本机(macOS/arm64)与服务器(linux/x64)原生件不兼容，构建统一交给 CI 的 linux 产物，
+# deploy.sh 只负责一次性初始化、update.sh 负责每次产物更新（停服务→换产物→重启→失败回滚）。
 #
 # 支持系统：Ubuntu/Debian(apt)、CentOS/RHEL/Rocky/Alma(dnf/yum)、macOS(brew)
-#          （macOS 无 systemd，最后一步降级为「如何常驻」的提示）
+#          （macOS 无 systemd / update.sh，初始化后按末尾提示在本机 build & start）
 #
 # 用法（在项目根目录，用一个有 sudo 权限的普通用户运行；勿直接用 root 跑）：
 #   bash deploy.sh
@@ -244,9 +249,11 @@ else
   warn "DATABASE_URL 指向远程库（${DB_HOST}），跳过本地建库——请确保该库可连。"
 fi
 
-# ═══ 5. 依赖 / 建表 / 种子 / 构建 ═══
+# ═══ 5. 依赖 / 建表 / 种子（不构建——构建产物由 CI + update.sh 提供）═══
 cd "$ROOT_DIR"
-log "安装依赖 ..."
+# 初始化阶段需要完整依赖（含 prisma CLI、tsx）来建表与灌种子；
+# 待 update.sh 部署 CI 产物时，会用「已 prune devDeps 的 linux node_modules」整体覆盖这里装的依赖。
+log "安装依赖（建表/种子用，update.sh 部署产物时会覆盖为 CI 的 node_modules）..."
 if [ -f package-lock.json ]; then run_user npm ci; else run_user npm install; fi
 ok "依赖安装完成"
 
@@ -271,20 +278,19 @@ fi
 ok "种子完成"
 
 run_user mkdir -p "$ROOT_DIR/uploads"
+# 注意：此处不再 next build。构建产物（.next + 已 prune 的 node_modules）由 GitHub CI 生成，
+# 用 update.sh 部署（解压 boosterpro-dist.tgz 并启动服务）。
 
-log "生产构建（next build，可能需要 1~3 分钟）..."
-run_user npm run build
-ok "构建完成"
-
-# ═══ 6. 常驻运行 ═══
+# ═══ 6. 注册 systemd（注册不启动——产物由 update.sh 部署后才启动）═══
 if [ "$OS" = "mac" ]; then
-  log "部署完成（macOS 无 systemd，按下面任一方式常驻）"
-  echo "  前台：  cd \"$ROOT_DIR\" && PORT=${APP_PORT} npm run start"
+  log "环境与数据库初始化完成（macOS 无 systemd / update.sh，请在本机自行构建并运行）"
+  echo "  构建：  cd \"$ROOT_DIR\" && npm run build"
+  echo "  前台：  PORT=${APP_PORT} npm run start"
   echo "  守护：  npx pm2 start npm --name ${APP_NAME} -- run start && npx pm2 save && npx pm2 startup"
   echo "         (pm2 自带崩溃自愈；卡死探活再加一条 cron：)"
   echo "  探活：  * * * * * APP_SERVICE=${APP_NAME} HEALTH_URL=http://127.0.0.1:${APP_PORT}/api/health bash $ROOT_DIR/scripts/healthcheck.sh once"
 else
-  log "注册 systemd 服务并开机自启 ..."
+  log "注册 systemd 服务（注册不启动，待 update.sh 部署产物后启动）..."
   NPM_BIN="$(command -v npm)"; NODE_DIR="$(dirname "$(command -v node)")"
   $SUDO tee "/etc/systemd/system/${APP_NAME}.service" >/dev/null <<EOF
 [Unit]
@@ -307,15 +313,8 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 EOF
-  $SUDO systemctl daemon-reload
-  $SUDO systemctl enable "${APP_NAME}" >/dev/null 2>&1 || true
-  $SUDO systemctl restart "${APP_NAME}"
-  sleep 3
-  if $SUDO systemctl is-active --quiet "${APP_NAME}"; then
-    ok "服务 ${APP_NAME} 已启动并设为开机自启"
-  else
-    warn "服务未能启动，请看日志：sudo journalctl -u ${APP_NAME} --no-pager -n 50"
-  fi
+  # 服务单元已写入（上方 tee）。此处不启动：尚无 .next 产物，启动必失败；
+  # 待 update.sh 解压 CI 产物后再由其 systemctl start 拉起。下面继续注册看门狗。
 
   # ── 健康检查看门狗：探活 /api/health，连续失败自动重启主服务 ──
   # systemd 的 Restart=always 只能拉起「已退出」的进程；进程还在但卡死/无响应它救不了，
@@ -346,18 +345,16 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
   $SUDO systemctl daemon-reload
+  $SUDO systemctl enable "${APP_NAME}" >/dev/null 2>&1 || true
   $SUDO systemctl enable "${APP_NAME}-watchdog" >/dev/null 2>&1 || true
-  $SUDO systemctl restart "${APP_NAME}-watchdog"
-  sleep 1
-  if $SUDO systemctl is-active --quiet "${APP_NAME}-watchdog"; then
-    ok "看门狗 ${APP_NAME}-watchdog 已启动（每 30s 探活，连续 3 次失败自动重启）"
-  else
-    warn "看门狗未能启动，请看日志：sudo journalctl -u ${APP_NAME}-watchdog --no-pager -n 50"
-  fi
+  ok "已注册 ${APP_NAME} / ${APP_NAME}-watchdog 并设为开机自启（尚未启动——还没有构建产物）"
+  warn "服务暂未启动：用 update.sh 部署 CI 产物后才会运行（见末尾「下一步」）"
 fi
 
-log "部署完成 🎉"
-echo "  访问：    http://<本机IP>:${APP_PORT}"
+log "环境初始化完成 🎉"
+echo "  下一步：  把 CI 构建产物 boosterpro-dist.tgz 传到服务器，然后运行——"
+echo "            bash update.sh boosterpro-dist.tgz      # 解压产物并启动服务"
+echo
 # 管理员凭据：仅当本次真的创建/重置了 admin 才显示明文初始密码
 if [ "${ADMIN_PW_NEW:-0}" = "1" ]; then
   echo "  管理员：  账号 admin   初始密码 ${ADMIN_PW}   （仅本次显示，登录后请立即改密）"
