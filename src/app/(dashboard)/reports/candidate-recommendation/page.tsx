@@ -21,12 +21,15 @@ import { RECOMMENDATION_STATUS_LABELS, RECOMMENDATION_STATUS_OPTIONS } from '@/l
 // ─── 口径常量（集中、带注释，便于以后调整） ─────────────────────────────────────
 
 /**
- * 「无效简历」状态集合 —— 即"简历被刷掉"的状态。
- * 「有效简历」= 推荐状态 NOT IN INVALID_RESUME_STATUSES（排除以下两种简历直接被刷掉的状态）。
+ * 「无效简历」状态集合 —— 即"简历未真正推进/被刷掉"的状态。
+ * 「有效简历」= 推荐状态 NOT IN INVALID_RESUME_STATUSES（口径以业务反馈截图为准，共 4 个无效状态）。
+ * 配合月份窗口即得"当月/上月有效简历数量"（月份按推荐时间 recommendationTime）。
  * 后续若业务对"有效"定义调整，仅改这里即可。
  */
 const INVALID_RESUME_STATUSES = new Set<string>([
+  'PENDING', // 已推荐，待反馈
   'RESUME_FAILED', // 简历失败
+  'RESIGNED_LOCAL', // 简历挂起（未面）
   'INTERNAL_RESUME_FAILED', // 简历(内推)失败
 ])
 const isValidResume = (status: string) => !INVALID_RESUME_STATUSES.has(status)
@@ -213,7 +216,7 @@ const EMPTY_FILTERS = {
   customerId: '', // 客户 id
   recommendStart: '', // recommendationTime 起（含）
   recommendEnd: '', // recommendationTime 止（含当天）
-  planDate: '', // 计划日期（单选一日，对应 offer到岗日期 offerOnboardDate）
+  planDate: '', // 计划日期＝提交日期（单选一日，按记录提交时间 createdAt 匹配）
   channel: '', // recruitmentChannel 字典 value
 }
 
@@ -267,7 +270,7 @@ export default function CandidateRecommendationReportPage() {
     const recEnd = filters.recommendEnd
       ? new Date(new Date(filters.recommendEnd).getTime() + 86_400_000)
       : null
-    // 计划日期：单选一日，按"当天"匹配（对应 offer到岗日期 offerOnboardDate）
+    // 计划日期＝提交日期：单选一日，按记录提交时间 createdAt 的"当天"匹配
     const planDay = filters.planDate ? new Date(filters.planDate) : null
     const planNext = planDay ? new Date(planDay.getTime() + 86_400_000) : null
 
@@ -280,8 +283,8 @@ export default function CandidateRecommendationReportPage() {
       if (recStart && !inRange(c.recommendationTime, recStart, new Date(8.64e15)))
         return false
       if (recEnd && !inRange(c.recommendationTime, new Date(0), recEnd)) return false
-      // 计划日期（单日，对应 offer到岗日期 offerOnboardDate）
-      if (planDay && planNext && !inRange(c.offerOnboardDate, planDay, planNext)) return false
+      // 计划日期＝提交日期（单日，对应记录提交时间 createdAt）
+      if (planDay && planNext && !inRange(c.createdAt, planDay, planNext)) return false
       return true
     })
   }, [candidates, filters])
@@ -505,11 +508,11 @@ export default function CandidateRecommendationReportPage() {
             />
           </label>
 
-          {/* 计划日期：单选一个日期（对应 offer到岗日期 offerOnboardDate） */}
+          {/* 计划日期＝提交日期：单选一个日期（按记录提交时间 createdAt 匹配） */}
           <label className="form-control w-full">
             <span className="label-text mb-1 text-xs text-base-content/60">
               计划日期{' '}
-              <span className="text-base-content/30" title="对应 offer到岗日期(offerOnboardDate)">
+              <span className="text-base-content/30" title="即提交日期，按记录提交时间筛选">
                 ⓘ
               </span>
             </span>
@@ -523,7 +526,7 @@ export default function CandidateRecommendationReportPage() {
         </div>
         <div className="mt-3 flex items-center justify-between">
           <p className="text-xs text-base-content/40">
-            「计划日期」当前对应 offer到岗日期
+            「计划日期」即提交日期（按记录提交时间筛选）
           </p>
           <button className="btn btn-ghost btn-sm gap-1" onClick={resetFilters}>
             <RotateCcw className="h-3.5 w-3.5" />
