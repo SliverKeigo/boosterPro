@@ -43,18 +43,28 @@
 - **BoostTable**：通用表格——新增 / 导出、全字段模糊搜索、显示列控制（覆盖全部字段）、**多字段自定义排序**（叠加多条规则，覆盖默认序）、刷新、全屏、固定操作列、前端分页。导入功能当前下线（隐藏「导入」按钮）。
 - **SubTable / SubTableCell**：表单内嵌子表（多行增 / 删 / 改）与列表内子表预览
 - **YearSelect**：通用年份下拉（越界历史 / 未来年份可回显）
+- **SearchSelect**：可搜索下拉（combobox）——静态选项走前端过滤；传 `fetchOptions` 则改异步后端过滤（配 `searchFetch('/api/<res>/options', map)` 调用轻量选项接口，按 `?q=` 过滤、`initialLabel` 回显已选）。表单里「引用别的实体」的下拉（选客户 / 岗位 / 用户等）统一用它
 - **RegionCascade**：地区级联选择
 - **Modal / Popconfirm / Dropdown / Field / FileUpload / RichText / Toast**
 
 ## 快速开始
 
-### 方式 A：一键部署（裸机推荐）
-```bash
-bash deploy.sh           # = npm run deploy
-```
-在「什么都没装」的新机器上一条命令完成：自动安装 Node(≥18) / PostgreSQL → 建角色与库 → 生成 `.env`（随机 DB 密码 + JWT_SECRET）→ `prisma db push` 建表 → 灌入默认管理员 + 字典 → `next build` → 注册 systemd 服务并开机自启。支持 Ubuntu/Debian、RHEL 系、macOS（macOS 无 systemd，最后给出常驻命令提示）。
+### 方式 A：服务器部署（初始化 + 部署产物，两步）
 
-> 脚本会**先探测一个预置远程 PostgreSQL**（`REMOTE_DB_*` 环境变量可覆盖），可连则直接复用、跳过本地建库。可用 `DB_NAME/DB_USER/DB_PASS/APP_PORT/NODE_MAJOR` 等环境变量覆盖默认值。AI 功能在 `.env` 填好 `OPENAI_API_KEY` 后重启服务即启用。
+构建产物（`.next` + 已 prune devDeps 的 `node_modules`）由 **GitHub CI**（`.github/workflows/build.yml`，ubuntu/x64）产出，**本机不再构建**——避免 macOS/arm64 与服务器 linux/x64 原生件（sharp/swc 等）不兼容。
+
+```bash
+# ① 初始化环境（一次性，在裸机上跑）
+bash deploy.sh                        # = npm run deploy
+
+# ② 部署 / 更新产物（每次发版跑；boosterpro-dist.tgz 来自 CI 构建产物）
+bash update.sh boosterpro-dist.tgz    # = npm run update
+```
+
+- **`deploy.sh`（环境初始化）**：在「什么都没装」的新机器上自动安装 Node(≥18) / PostgreSQL → 建角色与库 → 生成 `.env`（随机 DB 密码 + JWT_SECRET）→ `prisma db push` 建表 → 灌入默认管理员 + 字典 → 注册 systemd 服务 + 看门狗并开机自启（**注册不启动、不再 `next build`**）。支持 Ubuntu/Debian、RHEL 系、macOS（macOS 无 systemd / update.sh，初始化后按提示本机 `npm run build && npm run start`）。
+- **`update.sh`（部署/更新产物）**：停看门狗 + 主服务 → 备份旧 `.next`/`node_modules` → 解压新产物 → 重启 → `/api/health` 校验，**失败自动回滚**到旧产物；只换产物，**不动 `.env`/`uploads/`/数据库**。数据库结构变更走手工（`psql` 或 `npx prisma db execute`），update.sh 不自动迁移。
+
+> `deploy.sh` 会**先探测一个预置远程 PostgreSQL**（`REMOTE_DB_*` 环境变量可覆盖），可连则直接复用、跳过本地建库。可用 `DB_NAME/DB_USER/DB_PASS/APP_PORT/NODE_MAJOR` 等覆盖默认值；`update.sh` 可用 `APP_DIR/SERVICE/APP_PORT/HEALTH_TIMEOUT/KEEP_BACKUP` 覆盖。AI 功能在 `.env` 填好 `OPENAI_API_KEY` 后重启服务即启用。
 
 ### 方式 B：手动开发启动
 
@@ -107,7 +117,7 @@ src/
       reports/          # 报表聚合数据（REPORT 权限，按需 select 不含 PII）
       upload/ files/    # 文件上传 / 下载
     login/              # 登录页（成功后整页跳转进工作台）
-  components/ui/        # 通用 UI 组件（BoostTable / SubTable / YearSelect / RegionCascade …）
+  components/ui/        # 通用 UI 组件（BoostTable / SubTable / YearSelect / SearchSelect / RegionCascade …）
   lib/                  # prisma、openai、ai、apiError、industries、useDict、各模块 data helper
                         #   permissions.ts（服务端鉴权）、resources.ts（资源/动作常量）、usePermissions.ts（客户端权限 hook）
   types/models.ts       # Prisma 模型类型导出
@@ -117,7 +127,10 @@ prisma/
   seed.ts               # 默认管理员 / 部门 / 角色 + 字典种子（npm run db:seed）
   migrate-requirement-status-array.ts  # 把 requirements.status 升级为 text[]（npm run db:migrate-req-status）
   fix-sequences.ts      # 同步自增序列到 max(id)+1（npm run db:fix-sequences）
-deploy.sh               # 一键部署（装环境 / 建库 / 灌种子 / 构建 / systemd 自启）
+deploy.sh               # 环境初始化（装 Node/PostgreSQL → 建库 → db push → 灌种子 → 注册 systemd；不构建、不启动）
+update.sh               # 部署/更新 CI 产物（停服务 → 解压 boosterpro-dist.tgz → 重启 → 健康校验，失败回滚）
+scripts/healthcheck.sh  # 健康看门狗（探活 /api/health，连续失败 systemctl restart 主服务）
+.github/workflows/      # CI：build.yml 在 ubuntu/x64 构建并打包 boosterpro-dist.tgz（linux 产物）
 uploads/                # 上传文件（已 gitignore）
 docs/                   # 数据字典 / 字段对照清单（已 gitignore，本地参考）
 ```

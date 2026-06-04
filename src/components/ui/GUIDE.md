@@ -67,6 +67,32 @@ import { Field } from '@/components/ui'
 </div>
 ```
 
+## SearchSelect —— 可搜索下拉（combobox，替代原生 select）
+
+```tsx
+import { SearchSelect, searchFetch } from '@/components/ui'
+
+// 静态：传 options，输入框前端过滤（适合枚举 / 字典，配 useDict）
+<SearchSelect
+  value={form.education} onChange={(v) => setField('education', v)}
+  options={['大专', '本科', '硕士', '博士'].map((l) => ({ label: l, value: l }))}
+  placeholder="请选择"
+/>
+
+// 异步：传 fetchOptions 走后端过滤（适合"引用别的实体"——选客户 / 岗位 / 用户）
+<SearchSelect
+  value={form.ownerId ? String(form.ownerId) : ''} onChange={(v) => setField('ownerId', v)}
+  fetchOptions={searchFetch('/api/users', (u) => ({ value: String(u.id), label: u.name }))}
+  initialLabel={form.ownerName || ''}   // 编辑回显已选名称（值已知、列表未必含该项时）
+  placeholder="请选择负责人"
+/>
+```
+
+- **静态模式**：传 `options`，打开后输入按 `includes` 前端过滤。
+- **异步模式**：传 `fetchOptions(q) => Promise<{label,value}[]>`，打开即以空串请求一次、输入防抖 250ms 后按词请求后端。`searchFetch(url, map)` 封装了「调 `/api/<res>/options?q=…` + 结果映射」；编辑态用 `initialLabel` 回显已选项 label。
+- **约定**：表单里「引用别的实体」的下拉一律用 **异步 SearchSelect + `/api/<res>/options`**（仅登录可取、不卡资源 VIEW），不要复用会 `requirePermission(...,'VIEW')` 的列表 GET——否则"有新增权限、无目标资源只读权限"的用户会拿到空下拉。
+- `ownerName`/`ownerId` 这类「仅用于异步下拉回显」的字段不入库，提交前从 payload 剔除（见 `work-plans/page.tsx`）。
+
 ## SubTable —— 表单内嵌子表（多条新增/删除/行内编辑）
 
 ```tsx
