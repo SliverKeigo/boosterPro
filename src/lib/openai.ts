@@ -19,4 +19,10 @@ export function getOpenAI(): OpenAI {
   return _client
 }
 
+// AI 服务商通过 .env 切换（本封装与服务商无关，只认下面三个变量）：
+//  · OpenAI：       OPENAI_BASE_URL=https://api.openai.com/v1      OPENAI_MODEL=gpt-4o 等
+//  · 字节跳动豆包    OPENAI_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
+//    (火山方舟 Ark)  OPENAI_API_KEY=<Ark API Key>   OPENAI_MODEL=<支持联网的豆包模型，如 doubao-seed-1-6-250615>
+//  火山方舟的 Responses API 与 web_search 工具同 OpenAI 同形（responses.create + tools:[{type:'web_search'}]），
+//  故切换到豆包仅需改这三个环境变量、无需改代码（响应取文本已做兼容兜底，见 ai.ts extractOutputText）。
 export const MODEL = process.env.OPENAI_MODEL ?? 'gpt-4o'

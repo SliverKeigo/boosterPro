@@ -51,6 +51,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - 通过 OpenAI **Responses API** + `web_search` 工具联网：`(openai as any).responses.create({ tools: [{ type: 'web_search' }], input })`（已封装为 `src/lib/ai.ts` 的 `runWebSearchJson`）。
 - 联网工具正式名是 `web_search`（GA），**不是** `web_search_preview`（旧预览名，会 upstream 失败）。
 - `OPENAI_MODEL` 必须是该 API 实际支持的有效模型名。
+- **服务商无关，靠 `.env` 切换**（`src/lib/openai.ts` 只读 `OPENAI_BASE_URL/OPENAI_API_KEY/OPENAI_MODEL`）。接入**字节跳动豆包（火山方舟 Ark）**只改这三个变量：`OPENAI_BASE_URL=https://ark.cn-beijing.volces.com/api/v3`、`OPENAI_MODEL=doubao-seed-1-6-250615`（需支持联网）——Ark 的 Responses API 与 `web_search` 工具同 OpenAI 同形，故无需改代码。响应取文本用 `ai.ts` 的 `extractOutputText`（`output_text` 优先、`output[].content[].text` 兜底），兼容两家对 `output_text` 填充不一致的情况。
 
 ## ⚠️ 重要经验教训（务必遵守）
 

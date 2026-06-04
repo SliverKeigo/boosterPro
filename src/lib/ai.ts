@@ -30,9 +30,33 @@ export function parseAiJson(text: string): any {
 }
 
 /**
- * 统一封装：通过 OpenAI Responses API + `web_search` 工具联网，取 output_text 并容错解析为 JSON。
+ * 从 Responses API 返回里取纯文本：优先 SDK 聚合好的 `output_text`；
+ * 没有则兜底遍历 `output[].content[].text`。不同服务商/SDK 版本对 `output_text` 的填充未必一致
+ * （豆包火山方舟 Ark 的 Responses API 与 OpenAI 同形但实现不同），兜底保证两侧都能取到文本。
+ */
+function extractOutputText(r: any): string {
+  if (typeof r?.output_text === 'string' && r.output_text.trim()) return r.output_text
+  const out = r?.output
+  if (Array.isArray(out)) {
+    const parts: string[] = []
+    for (const item of out) {
+      const content = item?.content
+      if (!Array.isArray(content)) continue
+      for (const c of content) {
+        const t = typeof c?.text === 'string' ? c.text : c?.text?.value
+        if (typeof t === 'string') parts.push(t)
+      }
+    }
+    if (parts.length) return parts.join('')
+  }
+  return ''
+}
+
+/**
+ * 统一封装：通过 Responses API + `web_search` 工具联网，取文本并容错解析为 JSON。
  * 解析失败抛出 HttpError(502, 'AI 返回解析失败')（语义为上游返回异常，而非自身 500）。
  * 联网工具正式名是 `web_search`（GA），不是 `web_search_preview`。
+ * 服务商无关：OpenAI 与字节跳动豆包(火山方舟 Ark)均走此路径，仅 .env 的 OPENAI_* 不同（见 openai.ts）。
  */
 export async function runWebSearchJson(input: string): Promise<any> {
   // 上游偶发以 SSE 流式返回（即便未请求 stream），SDK 解析时会抛错；
@@ -46,7 +70,7 @@ export async function runWebSearchJson(input: string): Promise<any> {
         input,
         stream: false,
       })
-      const data = parseAiJson(r.output_text || '')
+      const data = parseAiJson(extractOutputText(r))
       if (data) return data
       lastErr = new HttpError(502, 'AI 返回解析失败')
     } catch (e) {
