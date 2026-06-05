@@ -22,7 +22,7 @@ export async function GET(req: Request) {
           }
         : undefined,
       orderBy: { updatedAt: 'desc' },
-      select: { id: true, positionName: true, customerId: true, recruiter: true, status: true },
+      select: { id: true, positionName: true, customerId: true, recruiter: true, status: true, createdAt: true },
     })
     return NextResponse.json({ data, total: data.length })
   } catch (e) {

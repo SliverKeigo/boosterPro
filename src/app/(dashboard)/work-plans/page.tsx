@@ -1,7 +1,7 @@
 'use client'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Pencil, Trash2, Plus, X } from 'lucide-react'
 import {
   BoostTable,
@@ -140,6 +140,22 @@ export default function WorkPlansPage() {
     setItems((arr) => arr.map((it) => (it._key === key ? { ...it, assignments: { ...it.assignments, [memberId]: v } } : it)))
   const addItem = () => setItems((arr) => [...arr, emptyItem()])
   const removeItem = (key: number) => setItems((arr) => arr.filter((it) => it._key !== key))
+
+  // 岗位 createdAt 缓存：选岗位时「岗位开放时间」自动填为该岗位的创建时间（只读）
+  const reqCreatedAt = useRef<Record<string, string>>({})
+  const fetchRequirements = useCallback(async (q: string) => {
+    const res = await fetch(`/api/requirements/options?q=${encodeURIComponent(q)}`)
+    if (!res.ok) return []
+    const json = await res.json()
+    return (json.data ?? []).map((x: any) => {
+      if (x.createdAt) reqCreatedAt.current[String(x.id)] = x.createdAt
+      return { value: String(x.id), label: x.positionName }
+    })
+  }, [])
+  const pickRequirement = (key: number, v: string) => {
+    const created = reqCreatedAt.current[v]
+    setItem(key, { requirementId: v, ...(created ? { positionOpenDate: fmtDate(created) } : {}) })
+  }
 
   // 小计（前端计算，不入库）
   const subtotal = useMemo(() => {
@@ -298,14 +314,19 @@ export default function WorkPlansPage() {
             <table className="table table-xs">
               <thead>
                 <tr>
-                  <th className="min-w-[160px]">客户名称</th>
-                  <th className="min-w-[160px]">岗位名称</th>
-                  <th className="min-w-[180px]">交付进展简述</th>
-                  <th className="min-w-[130px]">岗位开放时间</th>
-                  <th className="min-w-[90px]">例行寻猎</th>
-                  <th className="min-w-[90px]">参与度</th>
+                  <th rowSpan={2} className="min-w-[160px]">客户名称</th>
+                  <th rowSpan={2} className="min-w-[160px]">岗位名称</th>
+                  <th rowSpan={2} className="min-w-[180px]">交付进展简述</th>
+                  <th rowSpan={2} className="min-w-[130px]">岗位开放时间</th>
+                  <th rowSpan={2} className="min-w-[90px]">例行寻猎</th>
+                  <th rowSpan={2} className="min-w-[90px]">本周参与度</th>
+                  {members.length > 0 && (
+                    <th colSpan={members.length} className="border-x border-base-300 bg-base-200 text-center">本周计划岗位（组员）</th>
+                  )}
+                  <th rowSpan={2} className="w-10"></th>
+                </tr>
+                <tr>
                   {members.map((m) => <th key={m.id} className="min-w-[110px] bg-base-200">{m.name}</th>)}
-                  <th className="w-10"></th>
                 </tr>
               </thead>
               <tbody>
@@ -319,12 +340,12 @@ export default function WorkPlansPage() {
                     </td>
                     <td>
                       <SearchSelect value={it.requirementId} initialLabel={it.requirementName}
-                        onChange={(v) => setItem(it._key, { requirementId: v })}
-                        fetchOptions={searchFetch('/api/requirements/options', (q: any) => ({ value: String(q.id), label: q.positionName }))}
+                        onChange={(v) => pickRequirement(it._key, v)}
+                        fetchOptions={fetchRequirements}
                         placeholder="选岗位" />
                     </td>
                     <td><input className="input input-bordered input-xs w-full" value={it.progressNote} onChange={(e) => setItem(it._key, { progressNote: e.target.value })} placeholder="如：1人谈薪中" /></td>
-                    <td><input type="date" className="input input-bordered input-xs w-full" value={it.positionOpenDate} onChange={(e) => setItem(it._key, { positionOpenDate: e.target.value })} /></td>
+                    <td><input type="date" readOnly disabled className="input input-bordered input-xs w-full bg-base-200" value={it.positionOpenDate} title="岗位开放时间＝所选岗位的创建时间，自动填充" /></td>
                     <td>
                       <select className="select select-bordered select-xs w-full" value={it.routineHunting} onChange={(e) => setItem(it._key, { routineHunting: e.target.value })}>
                         <option value="">—</option><option value="是">是</option><option value="否">否</option>
@@ -358,8 +379,12 @@ export default function WorkPlansPage() {
               )}
             </table>
           </div>
-          {members.length === 0 && groupId && (
-            <p className="mt-1 text-xs text-warning">该组暂无成员，矩阵列为空——请先在「系统管理 → 组管理」为该组配置成员。</p>
+          {members.length === 0 && (
+            <p className="mt-1 text-xs text-warning">
+              {groupId
+                ? '该组暂无成员，「本周计划岗位（组员）」列为空——请先在「系统管理 → 组管理」为该组添加成员。'
+                : '请先在上方选择「所属组」，「本周计划岗位（组员）」列会按该组成员自动出现。'}
+            </p>
           )}
         </div>
       </Modal>
