@@ -215,7 +215,7 @@ export default function SupplementsPage() {
         width={720}
       >
         <div className="grid grid-cols-2 gap-4">
-          <Field label="关联客户" required>
+          <Field label="客户名称" required>
             <SearchSelect
               value={String(form.customerId ?? '')}
               onChange={(v) => setField('customerId', v)}
