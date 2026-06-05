@@ -113,8 +113,13 @@ export async function runWebSearchJson(input: string): Promise<any> {
       const data = await call(input)
       if (data) return data
       lastErr = new HttpError(502, 'AI 返回解析失败')
+      console.error(`[AI] ${provider}/${MODEL} 第 ${attempt + 1} 次：返回内容无法解析为 JSON`)
     } catch (e) {
       lastErr = e
+      // 记录真实上游错误（状态码 / 报文），避免最终只看到笼统的 502，无从排查
+      const status = (e as any)?.status
+      const detail = (e as any)?.error ? JSON.stringify((e as any).error) : (e as Error)?.message
+      console.error(`[AI] ${provider}/${MODEL} 第 ${attempt + 1} 次失败：status=${status ?? '-'} ${String(detail).slice(0, 500)}`)
     }
   }
   if (lastErr instanceof HttpError) throw lastErr
