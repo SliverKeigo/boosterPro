@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 「可回导」导出列（客户端，无 prisma）。表头须与服务端 importConfigs 一致，以保证导出→改→导入闭环。
-// 关系列导出名称、子表列导出 JSON 数组、首列固定 id（导入据此判定更新/新增）。
+// 关系列导出名称、子表列导出「每行一条、字段用 ' | ' 分隔」的可读文本、首列固定 id（导入据此判定更新/新增）。
 
 import { EDUCATION_LEVEL_LABELS, SCHOOL_TIER_LABELS, RECOMMENDATION_STATUS_LABELS, GENDER_TYPE_LABELS, OPPORTUNITY_NATURE_LABELS } from '@/lib/enums'
 
@@ -12,6 +12,9 @@ export interface RoundTripColumn {
 const GENDER_LABELS: Record<string, string> = { MALE: '男', FEMALE: '女' }
 const fmtDate = (s: any) => (s ? String(s).slice(0, 10) : '')
 const joinTags = (t: any) => (Array.isArray(t) ? t.join('、') : (t ?? ''))
+// 子表导出为「可读文本」：每行一条记录，字段按顺序用 ' | ' 分隔（与导入端 parseSubtable 一致）
+const subRows = (rows: any, cells: (r: any) => any[]) =>
+  (Array.isArray(rows) ? rows : []).map((r) => cells(r).map((v) => String(v ?? '')).join(' | ')).join('\n')
 
 export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
   TALENT_POOL: [
@@ -58,8 +61,8 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '保证期时长(月)', getValue: (r) => r.guaranteePeriodMonths ?? '' },
     { header: '备注', getValue: (r) => r.notes ?? '' },
     { header: '候选人标签', getValue: (r) => joinTags(r.tags) },
-    { header: '保证期沟通记录(JSON)', getValue: (r) => JSON.stringify((r.guaranteeCommunications ?? []).map((x: any) => ({ date: fmtDate(x.date), content: x.content ?? '' }))) },
-    { header: '风险管理(JSON)', getValue: (r) => JSON.stringify((r.riskEvents ?? []).map((x: any) => ({ date: fmtDate(x.date), riskDescription: x.riskDescription ?? '' }))) },
+    { header: '保证期沟通记录（日期 | 内容）', getValue: (r) => subRows(r.guaranteeCommunications, (x) => [fmtDate(x.date), x.content]) },
+    { header: '风险管理（日期 | 风险描述）', getValue: (r) => subRows(r.riskEvents, (x) => [fmtDate(x.date), x.riskDescription]) },
   ],
 
   CUSTOMER: [
@@ -75,7 +78,7 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '开场白', getValue: (r) => r.openingSpeech ?? '' },
     { header: '对标企业', getValue: (r) => r.benchmarkCompanies ?? '' },
     { header: '附件', getValue: (r) => r.attachmentUrl ?? '' },
-    { header: '办公地址(JSON)', getValue: (r) => JSON.stringify((r.officeAddresses ?? []).map((x: any) => ({ address: x.address ?? '' }))) },
+    { header: '办公地址（地址）', getValue: (r) => subRows(r.officeAddresses, (x) => [x.address]) },
   ],
 
   REQUIREMENT: [
@@ -105,7 +108,7 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '最新进展', getValue: (r) => r.latestUpdate ?? '' },
     { header: '所属行业', getValue: (r) => r.industry ?? '' },
     { header: '跟进日期', getValue: (r) => fmtDate(r.followDate) },
-    { header: '职位知识画像(JSON)', getValue: (r) => JSON.stringify((r.positionProfiles ?? []).map((x: any) => ({ knowledgeCategory: x.knowledgeCategory ?? '', knowledgeAmount: x.knowledgeAmount ?? '' }))) },
+    { header: '职位知识画像（知识类别 | 知识要求）', getValue: (r) => subRows(r.positionProfiles, (x) => [x.knowledgeCategory, x.knowledgeAmount]) },
   ],
 
   CLIENT_SUPPLEMENT: [
@@ -116,15 +119,15 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '企业文化福利', getValue: (r) => r.companyCultureWelfare ?? '' },
     { header: '备注', getValue: (r) => r.notes ?? '' },
     { header: '附件', getValue: (r) => r.attachmentUrl ?? '' },
-    { header: '需求更新(JSON)', getValue: (r) => JSON.stringify((r.demandUpdates ?? []).map((x: any) => ({ date: fmtDate(x.date), content: x.content ?? '' }))) },
-    { header: '客户特长画像(JSON)', getValue: (r) => JSON.stringify((r.customerProfiles ?? []).map((x: any) => ({ specialty: x.specialty ?? '', description: x.description ?? '' }))) },
+    { header: '需求更新（日期 | 内容）', getValue: (r) => subRows(r.demandUpdates, (x) => [fmtDate(x.date), x.content]) },
+    { header: '客户特长画像（专长 | 描述）', getValue: (r) => subRows(r.customerProfiles, (x) => [x.specialty, x.description]) },
   ],
 
   CUSTOMER_CONTACT: [
     { header: 'id', getValue: (r) => r.id },
     { header: '标题', getValue: (r) => r.title ?? '' },
     { header: '客户名称', getValue: (r) => r.customer?.shortName ?? r.customer?.fullName ?? '' },
-    { header: '联系人(JSON)', getValue: (r) => JSON.stringify((r.contacts ?? []).map((x: any) => ({ contactName: x.contactName ?? '', contactTitle: x.contactTitle ?? '', contactPhone: x.contactPhone ?? '', contactEmail: x.contactEmail ?? '', contactHobby: x.contactHobby ?? '' }))) },
+    { header: '联系人（姓名 | 职位 | 电话 | 邮箱 | 爱好）', getValue: (r) => subRows(r.contacts, (x) => [x.contactName, x.contactTitle, x.contactPhone, x.contactEmail, x.contactHobby]) },
   ],
 
   OPPORTUNITY: [
@@ -142,7 +145,7 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '决策人描述', getValue: (r) => r.decisionMakerDescription ?? '' },
     { header: '销售负责人', getValue: (r) => r.salesOwner?.name ?? '' },
     { header: '附件', getValue: (r) => r.attachmentUrl ?? '' },
-    { header: '进展记录(JSON)', getValue: (r) => JSON.stringify((r.progressRecords ?? []).map((x: any) => ({ date: fmtDate(x.date), description: x.description ?? '' }))) },
+    { header: '进展记录（日期 | 描述）', getValue: (r) => subRows(r.progressRecords, (x) => [fmtDate(x.date), x.description]) },
   ],
 
   CONTRACT: [
@@ -163,7 +166,7 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '开票信息', getValue: (r) => r.invoiceInfoText ?? '' },
     { header: '开票信息文件', getValue: (r) => r.invoiceInfoFileUrl ?? '' },
     { header: '备注', getValue: (r) => r.notes ?? '' },
-    { header: '发票(JSON)', getValue: (r) => JSON.stringify((r.invoices ?? []).map((x: any) => ({ invoiceType: x.invoiceType ?? '', verificationResult: x.verificationResult ?? '' }))) },
+    { header: '发票（类型 | 核销结果）', getValue: (r) => subRows(r.invoices, (x) => [x.invoiceType, x.verificationResult]) },
   ],
 
   KNOWLEDGE: [
@@ -176,6 +179,6 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '培训大纲', getValue: (r) => r.trainingOutline ?? '' },
     { header: '内部讲师', getValue: (r) => r.internalLecturer?.name ?? '' },
     { header: '外部讲师', getValue: (r) => r.externalLecturer ?? '' },
-    { header: '管理记录(JSON)', getValue: (r) => JSON.stringify((r.managementRecords ?? []).map((x: any) => ({ date: fmtDate(x.date), details: x.details ?? '' }))) },
+    { header: '管理记录（日期 | 详情）', getValue: (r) => subRows(r.managementRecords, (x) => [fmtDate(x.date), x.details]) },
   ],
 }

@@ -80,14 +80,14 @@ describe('importRows —— 候选人（关系 + 子表 + 枚举反查）', () =
   const CAND = CONFIGS.CANDIDATE
   const runC = (rows: any[]) => importRows(CAND, rows, user)
 
-  it('客户名称→customerId、教育/状态枚举反查、子表 JSON 解析为 nested create', async () => {
+  it('客户名称→customerId、教育/状态枚举反查、子表文本解析为 nested create', async () => {
     mock(prisma.customer.findMany).mockResolvedValue([{ id: 30 }])
     mock(prisma.requirement.findMany).mockResolvedValue([{ id: 40 }])
     mock(prisma.candidate.create).mockResolvedValue({ id: 1 })
     const res = await runC([{
       __row: 2, 姓名: '赵六', 招聘渠道: '猎聘', 推荐状态: '面试中', 教育经历: '本科',
       客户名称: '华成电力', 岗位名称: '财务主管',
-      '保证期沟通记录(JSON)': '[{"date":"2026-01-01","content":"已沟通"}]',
+      '保证期沟通记录（日期 | 内容）': '2026-01-01 | 已沟通',
     }])
     expect(res).toMatchObject({ created: 1, failed: 0 })
     const data = mock(prisma.candidate.create).mock.calls[0][0].data
@@ -111,12 +111,18 @@ describe('importRows —— 候选人（关系 + 子表 + 枚举反查）', () =
     expect(res.errors[0].msg).toContain('重名')
   })
 
-  it('子表 JSON 非法 → 该行报错', async () => {
+  it('子表多行文本 → 解析为多条；最后一个字段吸收多余的 |', async () => {
     mock(prisma.customer.findMany).mockResolvedValue([{ id: 30 }])
     mock(prisma.requirement.findMany).mockResolvedValue([{ id: 40 }])
-    const res = await runC([{ __row: 2, 姓名: 'X', 招聘渠道: '猎聘', 推荐状态: '面试中', '保证期沟通记录(JSON)': '不是JSON' }])
-    expect(res.failed).toBe(1)
-    expect(res.errors[0].msg).toContain('JSON')
+    mock(prisma.candidate.create).mockResolvedValue({ id: 1 })
+    const res = await runC([{
+      __row: 2, 姓名: 'X', 招聘渠道: '猎聘', 推荐状态: '面试中',
+      '保证期沟通记录（日期 | 内容）': '2026-01-01 | 已沟通\n2026-02-01 | 又聊了 | 含竖线',
+    }])
+    expect(res).toMatchObject({ created: 1, failed: 0 })
+    const rows = mock(prisma.candidate.create).mock.calls[0][0].data.guaranteeCommunications.create
+    expect(rows).toHaveLength(2)
+    expect(rows[1].content).toBe('又聊了 | 含竖线') // 最后字段吸收剩余的 |
   })
 })
 

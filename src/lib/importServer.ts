@@ -98,22 +98,33 @@ function coerce(type: FieldType | undefined, raw: any): any {
   }
 }
 
-// 解析子表 JSON 单元格 → 行数组
+// 解析子表单元格 → 行数组。可读文本格式：每行一条记录，字段按配置顺序用「|」分隔
+// （如 "2026-01-01 | 已沟通"）。最后一个字段吸收多余的「|」，以容忍正文里出现「|」。
 function parseSubtable(raw: any, st: ImportSubtable): any[] {
   const s = String(raw ?? '').trim()
   if (!s) return []
-  let arr: any
-  try {
-    arr = JSON.parse(s)
-  } catch {
-    throw new Error(`「${st.header}」不是合法 JSON`)
-  }
-  if (!Array.isArray(arr)) throw new Error(`「${st.header}」应为 JSON 数组`)
-  return arr.map((r: any) => {
-    const out: any = {}
-    for (const f of st.fields) out[f.key] = coerce(f.type, r?.[f.key])
-    return out
-  })
+  return s
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((line) => {
+      // 按前 (n-1) 个「|」切分，最后一个字段吃掉剩余（保留正文里的「|」与空格）
+      const out: any = {}
+      let rest = line
+      st.fields.forEach((f, i) => {
+        const isLast = i === st.fields.length - 1
+        let val: string
+        if (isLast) {
+          val = rest.trim()
+        } else {
+          const idx = rest.indexOf('|')
+          if (idx === -1) { val = rest.trim(); rest = '' }
+          else { val = rest.slice(0, idx).trim(); rest = rest.slice(idx + 1) }
+        }
+        out[f.key] = coerce(f.type, val)
+      })
+      return out
+    })
 }
 
 // 构建一行的写入数据（含关系解析、子表解析、id 存在性/归属校验）。出错抛 Error(带原因)。

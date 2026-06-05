@@ -85,8 +85,8 @@ export const CONFIGS: Record<string, ImportResource> = {
       { header: '候选人标签', field: 'tags', type: 'string[]' },
     ],
     subtables: [
-      { header: '保证期沟通记录(JSON)', relationField: 'guaranteeCommunications', fields: [{ key: 'date', type: 'date' }, { key: 'content' }] },
-      { header: '风险管理(JSON)', relationField: 'riskEvents', fields: [{ key: 'date', type: 'date' }, { key: 'riskDescription' }] },
+      { header: '保证期沟通记录（日期 | 内容）', relationField: 'guaranteeCommunications', fields: [{ key: 'date', type: 'date' }, { key: 'content' }] },
+      { header: '风险管理（日期 | 风险描述）', relationField: 'riskEvents', fields: [{ key: 'date', type: 'date' }, { key: 'riskDescription' }] },
     ],
   },
 
@@ -106,7 +106,7 @@ export const CONFIGS: Record<string, ImportResource> = {
       { header: '附件', field: 'attachmentUrl' },
     ],
     subtables: [
-      { header: '办公地址(JSON)', relationField: 'officeAddresses', fields: [{ key: 'address' }] },
+      { header: '办公地址（地址）', relationField: 'officeAddresses', fields: [{ key: 'address' }] },
     ],
   },
 
@@ -140,7 +140,7 @@ export const CONFIGS: Record<string, ImportResource> = {
       { header: '跟进日期', field: 'followDate', type: 'date' },
     ],
     subtables: [
-      { header: '职位知识画像(JSON)', relationField: 'positionProfiles', fields: [{ key: 'knowledgeCategory' }, { key: 'knowledgeAmount' }] },
+      { header: '职位知识画像（知识类别 | 知识要求）', relationField: 'positionProfiles', fields: [{ key: 'knowledgeCategory' }, { key: 'knowledgeAmount' }] },
     ],
   },
 
@@ -155,8 +155,8 @@ export const CONFIGS: Record<string, ImportResource> = {
       { header: '附件', field: 'attachmentUrl' },
     ],
     subtables: [
-      { header: '需求更新(JSON)', relationField: 'demandUpdates', fields: [{ key: 'date', type: 'date' }, { key: 'content' }] },
-      { header: '客户特长画像(JSON)', relationField: 'customerProfiles', fields: [{ key: 'specialty' }, { key: 'description' }] },
+      { header: '需求更新（日期 | 内容）', relationField: 'demandUpdates', fields: [{ key: 'date', type: 'date' }, { key: 'content' }] },
+      { header: '客户特长画像（专长 | 描述）', relationField: 'customerProfiles', fields: [{ key: 'specialty' }, { key: 'description' }] },
     ],
   },
 
@@ -167,7 +167,7 @@ export const CONFIGS: Record<string, ImportResource> = {
       { header: '客户名称', field: 'customerId', required: true, relation: { idField: 'customerId', resolve: resolveCustomer } },
     ],
     subtables: [
-      { header: '联系人(JSON)', relationField: 'contacts', fields: [{ key: 'contactName' }, { key: 'contactTitle' }, { key: 'contactPhone' }, { key: 'contactEmail' }, { key: 'contactHobby' }] },
+      { header: '联系人（姓名 | 职位 | 电话 | 邮箱 | 爱好）', relationField: 'contacts', fields: [{ key: 'contactName' }, { key: 'contactTitle' }, { key: 'contactPhone' }, { key: 'contactEmail' }, { key: 'contactHobby' }] },
     ],
   },
 
@@ -189,7 +189,7 @@ export const CONFIGS: Record<string, ImportResource> = {
       { header: '附件', field: 'attachmentUrl' },
     ],
     subtables: [
-      { header: '进展记录(JSON)', relationField: 'progressRecords', fields: [{ key: 'date', type: 'date' }, { key: 'description' }] },
+      { header: '进展记录（日期 | 描述）', relationField: 'progressRecords', fields: [{ key: 'date', type: 'date' }, { key: 'description' }] },
     ],
   },
 
@@ -214,7 +214,7 @@ export const CONFIGS: Record<string, ImportResource> = {
       { header: '备注', field: 'notes' },
     ],
     subtables: [
-      { header: '发票(JSON)', relationField: 'invoices', fields: [{ key: 'invoiceType' }, { key: 'verificationResult' }] },
+      { header: '发票（类型 | 核销结果）', relationField: 'invoices', fields: [{ key: 'invoiceType' }, { key: 'verificationResult' }] },
     ],
   },
 
@@ -231,7 +231,7 @@ export const CONFIGS: Record<string, ImportResource> = {
       { header: '外部讲师', field: 'externalLecturer' },
     ],
     subtables: [
-      { header: '管理记录(JSON)', relationField: 'managementRecords', fields: [{ key: 'date', type: 'date' }, { key: 'details' }] },
+      { header: '管理记录（日期 | 详情）', relationField: 'managementRecords', fields: [{ key: 'date', type: 'date' }, { key: 'details' }] },
     ],
   },
 }

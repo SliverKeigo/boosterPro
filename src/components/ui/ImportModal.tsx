@@ -70,7 +70,7 @@ export function ImportModal({
       <div className="space-y-3">
         <div className="rounded-lg bg-base-200/60 p-3 text-xs text-base-content/70">
           先「导出」当前列表得到 .xlsx，改完再从这里导入。<b>含 id 的行=更新、id 留空的行=新增</b>；
-          关系列（如客户/岗位）按名称匹配；子表列填 JSON 数组。<b>任一行校验失败将整批不写入</b>，请按提示改对后重试。
+          关系列（如客户/岗位）按名称匹配；子表列<b>每行一条、字段用 | 分隔</b>（表头已标字段顺序）。<b>任一行校验失败将整批不写入</b>，请按提示改对后重试。
         </div>
 
         {!result && (
