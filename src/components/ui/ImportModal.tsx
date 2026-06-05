@@ -16,12 +16,14 @@ export function ImportModal({
   open,
   onClose,
   resource,
+  endpoint,
   title = '导入',
   onDone,
 }: {
   open: boolean
   onClose: () => void
-  resource: string
+  resource?: string
+  endpoint?: string // 自定义导入端点（如工作计划 /api/work-plans/import）；不传则用 /api/import/<resource>
   title?: string
   onDone?: () => void
 }) {
@@ -40,7 +42,7 @@ export function ImportModal({
     try {
       const fd = new FormData()
       fd.append('file', file)
-      const res = await fetch(`/api/import/${resource}`, { method: 'POST', body: fd })
+      const res = await fetch(endpoint || `/api/import/${resource}`, { method: 'POST', body: fd })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { toast.error(json.error || '导入失败'); return }
       setResult(json as ImportResult)

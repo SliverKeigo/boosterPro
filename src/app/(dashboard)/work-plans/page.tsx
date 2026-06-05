@@ -14,6 +14,7 @@ import {
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
+import { exportToExcel } from '@/lib/exportExcel'
 
 const fmtDate = (s?: string | null) => (s ? String(s).slice(0, 10) : '')
 let _keySeq = 1
@@ -219,6 +220,26 @@ export default function WorkPlansPage() {
 
   const canWriteRow = (r: any) => isAdmin || (ledGroupId != null && r.groupId === ledGroupId)
 
+  // 「可回导」导出：扁平到每行一个明细行（组员分配＝「组员名=日期」多行），与 /api/work-plans/import 对应
+  const doExport = () => {
+    const cols = [
+      { header: '周计划id', getValue: (x: any) => x.plan.id },
+      { header: '明细id', getValue: (x: any) => x.item.id ?? '' },
+      { header: '组', getValue: (x: any) => x.plan.group?.name ?? '' },
+      { header: '周开始', getValue: (x: any) => fmtDate(x.plan.weekStart) },
+      { header: '周结束', getValue: (x: any) => fmtDate(x.plan.weekEnd) },
+      { header: '交付策略', getValue: (x: any) => x.plan.deliveryStrategy ?? '' },
+      { header: '客户名称', getValue: (x: any) => x.item.customer?.shortName ?? '' },
+      { header: '岗位名称', getValue: (x: any) => x.item.requirement?.positionName ?? '' },
+      { header: '交付进展', getValue: (x: any) => x.item.progressNote ?? '' },
+      { header: '岗位开放时间', getValue: (x: any) => fmtDate(x.item.positionOpenDate) },
+      { header: '是否例行寻猎', getValue: (x: any) => (x.item.routineHunting === true ? '是' : x.item.routineHunting === false ? '否' : '') },
+      { header: '组员分配', getValue: (x: any) => (x.item.assignments ?? []).map((a: any) => `${a.member?.name ?? ''}=${a.planDates ?? ''}`).filter((s: string) => !s.startsWith('=') && !s.endsWith('=')).join('\n') },
+    ]
+    const flat = data.flatMap((plan: any) => (plan.items?.length ? plan.items.map((item: any) => ({ plan, item })) : [{ plan, item: {} }]))
+    void exportToExcel({ title: '工作计划', columns: cols, rows: flat })
+  }
+
   const columns: BoostColumn<any>[] = [
     { key: 'group', title: '组', accessor: (r) => r.group?.name ?? '—', render: (v) => <span className="font-medium">{v}</span> },
     { key: 'week', title: '本周', accessor: (r) => `${fmtDate(r.weekStart)} ~ ${fmtDate(r.weekEnd)}` },
@@ -252,6 +273,9 @@ export default function WorkPlansPage() {
         rowKey="id"
         onCreate={canCreate ? openCreate : undefined}
         createText="新增周计划"
+        onExport={doExport}
+        importResource={canCreate ? 'WORK_PLAN' : undefined}
+        importEndpoint="/api/work-plans/import"
         onRefresh={() => fetchData(true)}
         searchPlaceholder="搜索组 / 交付策略 / 创建人…"
         actions={(r) =>

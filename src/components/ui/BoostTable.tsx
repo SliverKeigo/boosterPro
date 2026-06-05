@@ -67,8 +67,10 @@ interface BoostTableProps<T> {
   onCreate?: () => void
   createText?: string
   onImport?: () => void
-  /** 传入资源 key（如 'TALENT_POOL'）即开启「可回导」导出 + 导入：导出含 id/关系名/子表 JSON、导入走 /api/import/<resource> */
+  /** 传入资源 key（如 'TALENT_POOL'）即开启「可回导」导出 + 导入：导出含 id/关系名/子表文本、导入走 /api/import/<resource> */
   importResource?: string
+  /** 自定义导入端点（覆盖 /api/import/<resource>，如工作计划 /api/work-plans/import）。配合自定义 onExport 用 */
+  importEndpoint?: string
   /** 不传则使用内置 Excel 导出（.xlsx，按可见列 + 当前筛选/排序结果） */
   onExport?: () => void
   /** 是否显示导出按钮（受导出权限控制），默认 true */
@@ -210,6 +212,7 @@ export function BoostTable<T extends Record<string, any>>({
   createText = '新增',
   onImport,
   importResource,
+  importEndpoint,
   onExport,
   showExport = true,
   onRefresh,
@@ -1277,6 +1280,7 @@ export function BoostTable<T extends Record<string, any>>({
           open={importOpen}
           onClose={() => setImportOpen(false)}
           resource={importResource}
+          endpoint={importEndpoint}
           title={`导入${title || ''}`}
           onDone={onRefresh}
         />
