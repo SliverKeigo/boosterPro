@@ -24,7 +24,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - 列表 API 的 GET 返回**全量数据** `{ data, total }`，搜索 / 排序 / 分页由前端 BoostTable 负责；返回的每行需含 `createdById`，前端据此判断行级归属。
 - `BoostTable` 支持**多字段自定义排序**：排序面板里可叠加多条规则（按顺序主排序 → 依次 tie-break，稳定排序），配了规则即覆盖列表默认序；表头点击与排序面板共享同一份 `sortRules`。
 - 列表默认排序：业务列表按 `updatedAt desc`；**系统管理菜单（users/roles/departments/permission-groups）按 `createdAt asc`**（稳定、不随编辑跳动）；字典管理维持原序（`dict-types` 按 `code`、`dict-items` 按 `sort`，勿改成时间）。
-- **导入功能暂下线**：`BoostTable` 顶部 `IMPORT_ENABLED = false`，所有列表都不渲染「导入」按钮；权限项 `IMPORT` 仍在 `resources.ts` 保留但已隐藏（恢复时改回 `true`）。**导出保留**。
+- **导入已恢复（导出→改→导入回写）**：`BoostTable` 传 `importResource='<RESOURCE_KEY>'` 即开启该列表的「可回导导出 + 导入」。导出走 `src/lib/importColumns.ts` 的可回导列（首列 `id`、关系列出名称、子表列出 JSON 数组）；导入走 `/api/import/[resource]`（`src/lib/importServer.ts` 引擎 + `importConfigs.ts` 配置）：**有 id 更新（`assertRowWritable`）、无 id 新增（置 `createdById`）；关系列按名称唯一反查 id（重名/查无→该行报错）；子表 JSON 解码为 nested create；整文件事务（任一行校验失败则整批不写）；必填校验、`omitIfEmpty`（NOT NULL+默认值列空则省略）**。已接入九大业务列表模块；`resources.ts` 的 `IMPORT` 权限已恢复可配置。新增模块导入＝在 `importConfigs.ts`(服务端字段/关系/子表) + `importColumns.ts`(客户端导出列，表头须一致) 各加一项 + 页面传 `importResource`。**工作计划是主从-矩阵、不走通用引擎**（待专用实现）。
+- **组 / 工作计划**：「组」挂在部门之下（`Group.departmentId` + `leaderId` 组长 + `User.groupId` 成员，管理员在「系统管理→组管理」维护）。「工作计划」是三层（`WorkPlan` 周计划 → `WorkPlanItem` 明细行 → `WorkPlanAssignment` 组员日期矩阵），按组鉴权：组长写本组、组员读本组、管理员看全部（守卫见 `src/lib/groups.ts` 的 `assertCanWriteWorkPlan`；`/api/permissions/my` 回 `groupId`/`ledGroupId`）。
 - 字典下拉用 `useDict(code)`：每次挂载会后台 revalidate（无 TTL 卡死），管理员改字典后无需整页刷新即可在一个导航周期内更新。
 - 年份字段用通用组件 `YearSelect`（合同签订年份、候选人/人才出生年份）：范围 `[minYear, 今年+maxFuture]` 降序，**越界的已存值会自动补进选项可正常回显**，不丢历史/未来年份。列筛选用配套的 `yearOptions()`，与表单同口径。
 - 文件字段用 `FileUpload`（上传到 `UPLOAD_DIR`，经 `/api/files/[name]` 下载）；富文本字段用 `RichText`；表单内的"子表 / 表中表"用 `SubTable`。
