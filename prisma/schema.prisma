@@ -269,8 +269,7 @@ model Requirement {
   recruiter            String?                      @db.VarChar(255)
   positionName         String                       @map("position_name") @db.VarChar(255)
   headcount            Int
-  monthlySalaryMin     Int?                         @map("monthly_salary_min")
-  monthlySalaryMax     Int?                         @map("monthly_salary_max")
+  monthlySalary        String?                      @map("monthly_salary") @db.VarChar(50)
   annualSalaryMin      Decimal?                     @map("annual_salary_min") @db.Decimal(10, 2)
   annualSalaryMax      Decimal?                     @map("annual_salary_max") @db.Decimal(10, 2)
   ageMin               Int?                         @map("age_min")
@@ -332,7 +331,7 @@ model RequirementUrgentRecord {
 model Candidate {
   id                       Int                               @id @default(autoincrement())
   name                     String                            @db.VarChar(100)
-  birthYear                Int?                              @map("birth_year")
+  birthYear                String?                           @map("birth_year") @db.VarChar(7) // 出生年月 YYYY-MM
   phone                    String?                           @db.VarChar(50)
   email                    String?                           @db.VarChar(255)
   education                EducationLevel?

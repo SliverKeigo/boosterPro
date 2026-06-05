@@ -93,7 +93,7 @@ export function buildCandidateData(body: any, mode: 'create' | 'update') {
   if (!Array.isArray(data.tags)) data.tags = data.tags ? [data.tags] : []
 
   // 数字外键 / 数值字段：空串归 null，否则转 Number
-  for (const f of ['customerId', 'requirementId', 'submitterId', 'submitDepartmentId', 'birthYear', 'guaranteePeriodMonths']) {
+  for (const f of ['customerId', 'requirementId', 'submitterId', 'submitDepartmentId', 'guaranteePeriodMonths']) {
     if (data[f] === '' || data[f] === undefined) data[f] = null
     else if (data[f] !== null) data[f] = Number(data[f])
   }

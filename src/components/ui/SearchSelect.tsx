@@ -15,6 +15,8 @@ export interface SearchSelectOption {
 interface SearchSelectProps {
   value: string
   onChange: (value: string) => void
+  /** 选中某项时额外回调（带完整选项），用于联动带出关联字段（如客户简称）。清空时不触发 */
+  onPick?: (option: SearchSelectOption) => void
   /** 静态模式：全部选项，前端按输入过滤 */
   options?: SearchSelectOption[]
   /** 异步模式：按搜索词从后端拉取（后端过滤）。与 options 二选一 */
@@ -32,6 +34,7 @@ interface SearchSelectProps {
 export function SearchSelect({
   value,
   onChange,
+  onPick,
   options,
   fetchOptions,
   initialLabel,
@@ -112,6 +115,7 @@ export function SearchSelect({
   const pick = (o: SearchSelectOption) => {
     setPicked(o)
     onChange(o.value)
+    onPick?.(o)
     setOpen(false)
   }
 

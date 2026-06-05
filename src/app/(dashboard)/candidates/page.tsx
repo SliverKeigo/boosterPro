@@ -12,8 +12,6 @@ import {
   Popconfirm,
   Field,
   FileUpload,
-  YearSelect,
-  yearOptions,
   SearchSelect,
   useToast,
 } from '@/components/ui'
@@ -299,7 +297,7 @@ export default function CandidatesPage() {
     { key: 'recruitmentChannel', title: '招聘渠道', defaultVisible: false, filterType: 'select', filterOptions: channelOptions },
     { key: 'phone', title: '联系电话', defaultVisible: false },
     { key: 'email', title: '邮箱', defaultVisible: false },
-    { key: 'birthYear', title: '出生年份', defaultVisible: false, filterType: 'select', filterOptions: yearOptions(1950, 0) },
+    { key: 'birthYear', title: '出生年份', defaultVisible: false, filterType: 'text' },
     { key: 'education', title: '教育经历', defaultVisible: false, accessor: (r) => EDUCATION_LABELS[r.education] ?? '',
       filterType: 'select', filterOptions: Object.values(EDUCATION_LABELS).map((l) => ({ label: l, value: l })) },
     { key: 'schoolTier', title: '院校', defaultVisible: false, accessor: (r) => SCHOOL_TIER_LABELS[r.schoolTier] ?? '',
@@ -405,7 +403,7 @@ export default function CandidatesPage() {
             <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="出生年份" required>
-            <YearSelect value={form.birthYear} onChange={(v) => setField('birthYear', v)} minYear={1950} />
+            <input type="month" className="input input-bordered w-full" value={form.birthYear} onChange={(e) => setField('birthYear', e.target.value)} />
           </Field>
           <Field label="联系电话" required>
             <input className="input input-bordered w-full" value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="请输入" />

@@ -59,8 +59,7 @@ describe('buildRequirementData - 字段映射与清洗', () => {
         positionName: 'A',
         customerId: '3',
         headcount: '2',
-        monthlySalaryMin: '15000',
-        monthlySalaryMax: '',
+        monthlySalary: '15-20K',
         annualSalaryMin: 200000,
         ageMin: '25',
         // annualSalaryMax / ageMax 缺失
@@ -69,8 +68,7 @@ describe('buildRequirementData - 字段映射与清洗', () => {
     )
     expect(out.customerId).toBe(3)
     expect(out.headcount).toBe(2)
-    expect(out.monthlySalaryMin).toBe(15000)
-    expect(out.monthlySalaryMax).toBeNull()
+    expect(out.monthlySalary).toBe('15-20K') // 月薪为自由文本，原样保留、不转数字
     expect(out.annualSalaryMin).toBe(200000)
     expect(out.ageMin).toBe(25)
     expect(out.annualSalaryMax).toBeNull()

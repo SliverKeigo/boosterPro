@@ -84,7 +84,7 @@ describe('buildCandidateData - 字段映射与清洗', () => {
         customerId: '12',
         requirementId: '',
         submitterId: 5,
-        birthYear: '1990',
+        birthYear: '1990-05',
         guaranteePeriodMonths: '3',
         // submitDepartmentId 缺失
       },
@@ -93,7 +93,7 @@ describe('buildCandidateData - 字段映射与清洗', () => {
     expect(out.customerId).toBe(12)
     expect(out.requirementId).toBeNull()
     expect(out.submitterId).toBe(5)
-    expect(out.birthYear).toBe(1990)
+    expect(out.birthYear).toBe('1990-05') // 出生年月为 YYYY-MM 文本，原样保留、不转数字
     expect(out.guaranteePeriodMonths).toBe(3)
     expect(out.submitDepartmentId).toBeNull()
   })

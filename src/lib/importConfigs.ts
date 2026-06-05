@@ -57,7 +57,7 @@ export const CONFIGS: Record<string, ImportResource> = {
     model: 'candidate',
     fields: [
       { header: '姓名', field: 'name', required: true },
-      { header: '出生年份', field: 'birthYear', type: 'int' },
+      { header: '出生年份', field: 'birthYear' },
       { header: '联系电话', field: 'phone' },
       { header: '邮箱', field: 'email' },
       { header: '教育经历', field: 'education', transform: EDU_IN },
@@ -116,8 +116,7 @@ export const CONFIGS: Record<string, ImportResource> = {
       { header: '招聘负责人', field: 'recruiter' },
       { header: '岗位名称', field: 'positionName', required: true },
       { header: '招聘人数', field: 'headcount', type: 'int', required: true },
-      { header: '月薪下限', field: 'monthlySalaryMin', type: 'int' },
-      { header: '月薪上限', field: 'monthlySalaryMax', type: 'int' },
+      { header: '月薪范围', field: 'monthlySalary' },
       { header: '年薪下限', field: 'annualSalaryMin', type: 'number' },
       { header: '年薪上限', field: 'annualSalaryMax', type: 'number' },
       { header: '年龄下限', field: 'ageMin', type: 'int' },

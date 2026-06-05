@@ -12,8 +12,7 @@ const REQUIREMENT_SCALAR_FIELDS = [
   'recruiter',
   'positionName',
   'headcount',
-  'monthlySalaryMin',
-  'monthlySalaryMax',
+  'monthlySalary',
   'annualSalaryMin',
   'annualSalaryMax',
   'ageMin',
@@ -76,8 +75,6 @@ export function buildRequirementData(body: any, mode: 'create' | 'update') {
   for (const f of [
     'customerId',
     'headcount',
-    'monthlySalaryMin',
-    'monthlySalaryMax',
     'annualSalaryMin',
     'annualSalaryMax',
     'ageMin',

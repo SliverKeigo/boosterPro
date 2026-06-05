@@ -42,7 +42,7 @@ const num = (v: any) => (v === null || v === undefined || v === '' ? '—' : Str
 
 const EMPTY_FORM: any = {
   customerId: '', recruiter: '', positionName: '', headcount: '',
-  monthlySalaryMin: '', monthlySalaryMax: '', annualSalaryMin: '', annualSalaryMax: '',
+  monthlySalary: '', annualSalaryMin: '', annualSalaryMax: '',
   ageMin: '', ageMax: '', genderRequirement: '', educationRequirement: '',
   languageRequirement: '', status: [], deadline: '', baseCity: '',
   jobDescription: '', talentProfile: '', projectExperience: '',
@@ -127,9 +127,9 @@ export default function RequirementsPage() {
       ...r,
       status: Array.isArray(r.status) ? r.status : r.status ? [r.status] : [],
       customerId: r.customerId ?? '',
+      recruiter: r.customer?.shortName ?? r.recruiter ?? '',
       headcount: r.headcount ?? '',
-      monthlySalaryMin: r.monthlySalaryMin ?? '',
-      monthlySalaryMax: r.monthlySalaryMax ?? '',
+      monthlySalary: r.monthlySalary ?? '',
       annualSalaryMin: r.annualSalaryMin ?? '',
       annualSalaryMax: r.annualSalaryMax ?? '',
       ageMin: r.ageMin ?? '',
@@ -165,8 +165,7 @@ export default function RequirementsPage() {
     if (!form.customerId || String(form.customerId).trim() === '') return toast.error('请选择客户名称')
     if (!form.positionName?.trim()) return toast.error('请填写岗位名称')
     if (form.headcount === '' || form.headcount === null) return toast.error('请填写需求人数')
-    if (form.monthlySalaryMin === '' || form.monthlySalaryMin === null || form.monthlySalaryMax === '' || form.monthlySalaryMax === null)
-      return toast.error('请填写月薪范围')
+    if (!form.monthlySalary || String(form.monthlySalary).trim() === '') return toast.error('请填写月薪范围')
     if (!form.genderRequirement) return toast.error('请选择性别要求')
     if (!form.educationRequirement?.trim()) return toast.error('请填写学历要求')
     if (statusList.length === 0) return toast.error('请选择岗位状态')
@@ -213,8 +212,7 @@ export default function RequirementsPage() {
     { key: 'createdAt', title: '创建时间', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
     // 以下默认隐藏，可在“显示列”开启
     { key: 'customerId', title: '客户 ID', defaultVisible: false },
-    { key: 'monthlySalaryMin', title: '月薪下限', defaultVisible: false, filterType: 'number', render: (v) => num(v) },
-    { key: 'monthlySalaryMax', title: '月薪上限', defaultVisible: false, filterType: 'number', render: (v) => num(v) },
+    { key: 'monthlySalary', title: '月薪范围', defaultVisible: false, filterType: 'text', render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'annualSalaryMin', title: '年薪下限', defaultVisible: false, filterType: 'number', render: (v) => num(v) },
     { key: 'annualSalaryMax', title: '年薪上限', defaultVisible: false, filterType: 'number', render: (v) => num(v) },
     { key: 'ageMin', title: '年龄下限', defaultVisible: false, filterType: 'number', render: (v) => num(v) },
@@ -329,13 +327,15 @@ export default function RequirementsPage() {
             <SearchSelect
               value={String(form.customerId ?? '')}
               onChange={(v) => setField('customerId', v)}
+              onPick={(o) => setField('recruiter', o.label)}
               fetchOptions={searchFetch('/api/clients/options', (c) => ({ value: String(c.id), label: c.shortName || c.fullName }))}
               initialLabel={editing?.customer?.shortName ?? ''}
               placeholder="请选择客户"
             />
           </Field>
           <Field label="招聘需求方">
-            <input className="input input-bordered w-full" value={form.recruiter} onChange={(e) => setField('recruiter', e.target.value)} placeholder="请输入" />
+            {/* 自动索引：选中客户后带出其「客户简称」，只读不可改 */}
+            <input className="input input-bordered w-full cursor-not-allowed bg-base-200" value={form.recruiter} readOnly placeholder="选择客户后自动带出客户简称" />
           </Field>
           {/* 岗位名称 / 需求人数 */}
           <Field label="岗位名称" required>
@@ -345,12 +345,8 @@ export default function RequirementsPage() {
             <input type="number" className="input input-bordered w-full" value={form.headcount} onChange={(e) => setField('headcount', e.target.value)} placeholder="请输入数字" />
           </Field>
           {/* 月薪范围 / 年薪范围(万) */}
-          <Field label="月薪范围（元）" required>
-            <div className="flex items-center gap-2">
-              <input type="number" className="input input-bordered w-full" value={form.monthlySalaryMin} onChange={(e) => setField('monthlySalaryMin', e.target.value)} placeholder="最低" />
-              <span className="text-base-content/40">-</span>
-              <input type="number" className="input input-bordered w-full" value={form.monthlySalaryMax} onChange={(e) => setField('monthlySalaryMax', e.target.value)} placeholder="最高" />
-            </div>
+          <Field label="月薪范围" required>
+            <input className="input input-bordered w-full" value={form.monthlySalary} onChange={(e) => setField('monthlySalary', e.target.value)} placeholder="如 15-20K / 面议 / 15K·13薪" />
           </Field>
           <Field label="年薪范围（万）">
             <div className="flex items-center gap-2">
