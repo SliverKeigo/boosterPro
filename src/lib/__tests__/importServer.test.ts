@@ -15,7 +15,7 @@ vi.mock('@/lib/permissions', () => ({ assertRowWritable: vi.fn() }))
 
 import { prisma } from '@/lib/prisma'
 import { assertRowWritable } from '@/lib/permissions'
-import { importRows } from '@/lib/importServer'
+import { importRows, normHeader } from '@/lib/importServer'
 import { CONFIGS } from '@/lib/importConfigs'
 
 const mock = (fn: unknown) => fn as ReturnType<typeof vi.fn>
@@ -158,5 +158,18 @@ describe('importRows —— omitIfEmpty（NOT NULL + 默认值列）', () => {
     expect('status' in data).toBe(false) // 空 → 省略，用默认「线索阶段」
     expect('nature' in data).toBe(false) // 空 → 省略，用默认 DIRECT
     expect(data.name).toBe('某商机')
+  })
+})
+
+describe('normHeader（去掉必填标记 *，使导出的 * 表头仍能匹配配置）', () => {
+  it('去掉末尾的 * / ＊ / （必填）', () => {
+    expect(normHeader('客户简称*')).toBe('客户简称')
+    expect(normHeader('客户简称 ＊')).toBe('客户简称')
+    expect(normHeader('客户简称（必填）')).toBe('客户简称')
+    expect(normHeader('客户简称(必填)')).toBe('客户简称')
+  })
+  it('普通表头不变；中间的 * 不动', () => {
+    expect(normHeader('客户简称')).toBe('客户简称')
+    expect(normHeader('a*b')).toBe('a*b')
   })
 })

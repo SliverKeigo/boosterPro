@@ -31,6 +31,7 @@ export function ImportModal({
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
+  const [dragOver, setDragOver] = useState(false)
 
   const reset = () => { setFile(null); setLoading(false); setResult(null) }
   const close = () => { reset(); onClose() }
@@ -72,13 +73,23 @@ export function ImportModal({
       <div className="space-y-3">
         <div className="rounded-lg bg-base-200/60 p-3 text-xs text-base-content/70">
           先「导出」当前列表得到 .xlsx，改完再从这里导入。<b>含 id 的行=更新、id 留空的行=新增</b>；
-          关系列（如客户/岗位）按名称匹配；子表列<b>每行一条、字段用 | 分隔</b>（表头已标字段顺序）。<b>任一行校验失败将整批不写入</b>，请按提示改对后重试。
+          <b>表头带 * 的列为必填</b>；关系列（如客户/岗位）按名称匹配；子表列<b>每行一条、字段用 | 分隔</b>（表头已标字段顺序）。<b>任一行校验失败将整批不写入</b>，请按提示改对后重试。
         </div>
 
         {!result && (
-          <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-base-300 p-6 hover:border-primary">
-            <UploadCloud className="h-8 w-8 text-base-content/40" />
-            <span className="text-sm">{file ? file.name : '点击选择 .xlsx 文件'}</span>
+          <label
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault()
+              setDragOver(false)
+              const f = e.dataTransfer.files?.[0]
+              if (f) setFile(f)
+            }}
+            className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed p-6 ${dragOver ? 'border-primary bg-primary/5' : 'border-base-300 hover:border-primary'}`}
+          >
+            <UploadCloud className={`h-8 w-8 ${dragOver ? 'text-primary' : 'text-base-content/40'}`} />
+            <span className="text-sm">{file ? file.name : '点击选择，或将 .xlsx 文件拖拽到此处'}</span>
             <input
               type="file"
               accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

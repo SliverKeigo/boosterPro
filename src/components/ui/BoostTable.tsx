@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import { Dropdown } from './Dropdown'
 import { exportToExcel } from '@/lib/exportExcel'
-import { IMPORT_COLUMNS } from '@/lib/importColumns'
+import { IMPORT_COLUMNS, markRequired } from '@/lib/importColumns'
 import { ImportModal } from './ImportModal'
 
 export interface BoostColumn<T> {
@@ -531,10 +531,9 @@ export function BoostTable<T extends Record<string, any>>({
   const doExport = (rows: T[]) =>
     exportToExcel({
       title: title || '导出',
-      columns: roundTripCols ?? visibleColumns.map((c) => ({
-        header: c.title,
-        getValue: c.exportValue ?? accessorOf(c),
-      })),
+      columns: roundTripCols
+        ? roundTripCols.map((c) => ({ ...c, header: markRequired(importResource, c.header) }))
+        : visibleColumns.map((c) => ({ header: c.title, getValue: c.exportValue ?? accessorOf(c) })),
       rows,
     })
 

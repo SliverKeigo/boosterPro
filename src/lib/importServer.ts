@@ -42,7 +42,7 @@ export async function parseWorkbook(buf: ArrayBuffer): Promise<Record<string, an
   if (!ws) return []
   const headers: string[] = []
   ws.getRow(1).eachCell({ includeEmpty: true }, (cell: any, col: number) => {
-    headers[col - 1] = String(cellText(cell.value) ?? '').trim()
+    headers[col - 1] = normHeader(String(cellText(cell.value) ?? '').trim())
   })
   const rows: Record<string, any>[] = []
   ws.eachRow((row: any, rn: number) => {
@@ -61,6 +61,11 @@ export async function parseWorkbook(buf: ArrayBuffer): Promise<Record<string, an
     }
   })
   return rows
+}
+
+// 去掉表头末尾的「必填」标记（导出给必填列加了 * / （必填）），以便与配置里的干净表头匹配
+export function normHeader(h: string): string {
+  return h.replace(/\s*[*＊]$/, '').replace(/\s*[（(]\s*必填\s*[）)]$/, '').trim()
 }
 
 function cellText(v: any): any {

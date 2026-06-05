@@ -16,6 +16,22 @@ const joinTags = (t: any) => (Array.isArray(t) ? t.join('、') : (t ?? ''))
 const subRows = (rows: any, cells: (r: any) => any[]) =>
   (Array.isArray(rows) ? rows : []).map((r) => cells(r).map((v) => String(v ?? '')).join(' | ')).join('\n')
 
+// 每个资源的必填列（导出给这些表头加 * 提示；导入端 parseWorkbook 会去掉 * 再匹配，与 importConfigs 的 required 对应）
+export const REQUIRED_HEADERS: Record<string, string[]> = {
+  TALENT_POOL: ['姓名', '当前职位'],
+  CANDIDATE: ['姓名', '招聘渠道', '推荐状态'],
+  CUSTOMER: ['客户简称', '区域', '地址', '详细地址'],
+  REQUIREMENT: ['客户名称', '岗位名称', '招聘人数', 'base城市'],
+  CLIENT_SUPPLEMENT: ['客户名称'],
+  CUSTOMER_CONTACT: ['标题', '客户名称'],
+  OPPORTUNITY: ['商机名称', '描述', '区域', '销售决策信息', '客户决策人', '决策人描述'],
+  CONTRACT: ['客户名称', '合同名称', '签订年份', '生效开始', '生效结束', '到期日期', '服务类型', '合同文件'],
+  KNOWLEDGE: ['分类', '关键词'],
+}
+// 必填表头加 * 标识
+export const markRequired = (resource: string | undefined, header: string) =>
+  resource && REQUIRED_HEADERS[resource]?.includes(header) ? `${header}*` : header
+
 export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
   TALENT_POOL: [
     { header: 'id', getValue: (r) => r.id },

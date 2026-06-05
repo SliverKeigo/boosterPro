@@ -225,9 +225,9 @@ export default function WorkPlansPage() {
     const cols = [
       { header: '周计划id', getValue: (x: any) => x.plan.id },
       { header: '明细id', getValue: (x: any) => x.item.id ?? '' },
-      { header: '组', getValue: (x: any) => x.plan.group?.name ?? '' },
-      { header: '周开始', getValue: (x: any) => fmtDate(x.plan.weekStart) },
-      { header: '周结束', getValue: (x: any) => fmtDate(x.plan.weekEnd) },
+      { header: '组*', getValue: (x: any) => x.plan.group?.name ?? '' },
+      { header: '周开始*', getValue: (x: any) => fmtDate(x.plan.weekStart) },
+      { header: '周结束*', getValue: (x: any) => fmtDate(x.plan.weekEnd) },
       { header: '交付策略', getValue: (x: any) => x.plan.deliveryStrategy ?? '' },
       { header: '客户名称', getValue: (x: any) => x.item.customer?.shortName ?? '' },
       { header: '岗位名称', getValue: (x: any) => x.item.requirement?.positionName ?? '' },
