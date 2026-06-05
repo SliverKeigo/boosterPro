@@ -16,6 +16,7 @@ import {
   Settings,
   User,
   Network,
+  Users2,
   ShieldCheck,
   Lock,
   BookMarked,
@@ -91,6 +92,7 @@ const GROUPS: NavGroup[] = [
     items: [
       { href: '/settings/users', label: '用户管理', icon: User },
       { href: '/settings/departments', label: '部门管理', icon: Network },
+      { href: '/settings/groups', label: '组管理', icon: Users2 },
       { href: '/settings/roles', label: '角色管理', icon: ShieldCheck },
       { href: '/settings/permissions', label: '权限设置', icon: Lock },
       { href: '/settings/dictionaries', label: '字典管理', icon: BookMarked },

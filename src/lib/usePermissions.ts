@@ -6,6 +6,8 @@ export interface MyPermissions {
   isAdmin: boolean
   userId: number | null
   departmentId: number | null // 当前用户所属部门，供表单"提交人部门"自动预填
+  groupId: number | null // 当前用户所属组
+  ledGroupId: number | null // 作为组长所领的组（工作计划「新增」据此显隐）
   permissions: Record<string, string[]> // resource → actions
 }
 
@@ -108,6 +110,8 @@ export function useMyPermissions() {
     isAdmin: perm?.isAdmin ?? false,
     userId: perm?.userId ?? null,
     departmentId: perm?.departmentId ?? null,
+    groupId: perm?.groupId ?? null,
+    ledGroupId: perm?.ledGroupId ?? null,
   }
 }
 

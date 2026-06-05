@@ -66,10 +66,27 @@ model Department {
   id        Int      @id @default(autoincrement())
   name      String   @db.VarChar(100)
   users     User[]
+  groups    Group[]
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("departments")
+}
+
+// 组：挂在部门之下（部门 → 多个组）。组有组长(leaderId)与成员(User.groupId)。支撑工作计划「仅组长可新增」。
+model Group {
+  id           Int        @id @default(autoincrement())
+  name         String     @db.VarChar(100)
+  department   Department @relation(fields: [departmentId], references: [id])
+  departmentId Int        @map("department_id")
+  leader       User?      @relation("GroupLeader", fields: [leaderId], references: [id])
+  leaderId     Int?       @map("leader_id")
+  members      User[]     @relation("GroupMembers")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@index([departmentId])
+  @@map("groups")
 }
 
 model Role {
@@ -91,6 +108,9 @@ model User {
   passwordHash         String?                     @map("password_hash") @db.VarChar(255)
   department           Department?                 @relation(fields: [departmentId], references: [id])
   departmentId         Int?                        @map("department_id")
+  group                Group?                      @relation("GroupMembers", fields: [groupId], references: [id])
+  groupId              Int?                        @map("group_id")
+  ledGroups            Group[]                     @relation("GroupLeader")
   role                 Role?                       @relation(fields: [roleId], references: [id])
   roleId               Int?                        @map("role_id")
   submittedCandidates  Candidate[]                 @relation("CandidateSubmitter")

@@ -13,6 +13,7 @@ export interface CurrentUser {
   email: string | null
   isAdmin: boolean
   departmentId: number | null
+  groupId: number | null
   roleId: number | null
 }
 
@@ -25,7 +26,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   if (!payload) return null
   return prisma.user.findUnique({
     where: { id: payload.userId },
-    select: { id: true, name: true, email: true, isAdmin: true, departmentId: true, roleId: true },
+    select: { id: true, name: true, email: true, isAdmin: true, departmentId: true, groupId: true, roleId: true },
   })
 })
 

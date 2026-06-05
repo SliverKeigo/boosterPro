@@ -5,14 +5,19 @@ vi.mock('@/lib/permissions', () => ({
   getCurrentUser: vi.fn(),
   getPermissionMap: vi.fn(),
 }))
+vi.mock('@/lib/groups', () => ({
+  getMyLedGroupId: vi.fn(),
+}))
 
 import { getCurrentUser, getPermissionMap } from '@/lib/permissions'
+import { getMyLedGroupId } from '@/lib/groups'
 import { GET } from '@/app/api/permissions/my/route'
 
 const mock = (fn: unknown) => fn as ReturnType<typeof vi.fn>
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mock(getMyLedGroupId).mockResolvedValue(null)
 })
 
 describe('GET /api/permissions/my', () => {
@@ -24,19 +29,24 @@ describe('GET /api/permissions/my', () => {
     expect(getPermissionMap).not.toHaveBeenCalled()
   })
 
-  it('已登录 → 返回 {isAdmin,userId,permissions}', async () => {
-    const user = { id: 7, isAdmin: false }
+  it('已登录 → 返回 {isAdmin,userId,departmentId,groupId,ledGroupId,permissions}', async () => {
+    const user = { id: 7, isAdmin: false, departmentId: 3, groupId: 4 }
     const permMap = { CANDIDATE: ['VIEW', 'CREATE'], KNOWLEDGE: ['VIEW'] }
     mock(getCurrentUser).mockResolvedValue(user)
     mock(getPermissionMap).mockResolvedValue(permMap)
+    mock(getMyLedGroupId).mockResolvedValue(4)
     const res = await GET()
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({
       isAdmin: false,
       userId: 7,
+      departmentId: 3,
+      groupId: 4,
+      ledGroupId: 4,
       permissions: permMap,
     })
     expect(getPermissionMap).toHaveBeenCalledWith(user)
+    expect(getMyLedGroupId).toHaveBeenCalledWith(user)
   })
 
   it('管理员 → isAdmin true', async () => {
