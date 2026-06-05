@@ -12,7 +12,7 @@ export default function GroupsPage() {
   const toast = useToast()
   const { isAdmin, loading: permLoading } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
-  const [allUsers, setAllUsers] = useState<{ id: number; name: string }[]>([])
+  const [allUsers, setAllUsers] = useState<{ id: number; name: string; departmentId: number | null }[]>([])
   const [allDepts, setAllDepts] = useState<{ id: number; name: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -41,7 +41,7 @@ export default function GroupsPage() {
   const fetchRefs = useCallback(async () => {
     try {
       const [u, d] = await Promise.all([fetch('/api/users'), fetch('/api/departments')])
-      if (u.ok) setAllUsers((await u.json()).data.map((x: any) => ({ id: x.id, name: x.name })))
+      if (u.ok) setAllUsers((await u.json()).data.map((x: any) => ({ id: x.id, name: x.name, departmentId: x.departmentId ?? x.department?.id ?? null })))
       if (d.ok) setAllDepts((await d.json()).data.map((x: any) => ({ id: x.id, name: x.name })))
     } catch {
       /* 忽略：下拉为空时仍可手填，不阻断主流程 */
@@ -206,14 +206,14 @@ export default function GroupsPage() {
         confirmLoading={submitting}
         width={560}
       >
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid min-h-[300px] grid-cols-2 content-start gap-4">
           <Field label="组名称" required>
             <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="如：交付一组" />
           </Field>
           <Field label="所属部门" required>
             <SearchSelect
               value={form.departmentId}
-              onChange={(v) => setField('departmentId', v)}
+              onChange={(v) => setForm((f: any) => ({ ...f, departmentId: v, memberIds: [], leaderId: '' }))}
               options={allDepts.map((d) => ({ value: String(d.id), label: d.name }))}
               placeholder="请选择部门"
             />
@@ -222,9 +222,10 @@ export default function GroupsPage() {
             <SearchSelect
               value=""
               onChange={addMember}
-              options={allUsers.filter((u) => !form.memberIds.includes(u.id)).map((u) => ({ value: String(u.id), label: u.name }))}
-              placeholder="搜索并选择用户加入本组"
+              options={allUsers.filter((u) => !form.memberIds.includes(u.id) && !!form.departmentId && u.departmentId === Number(form.departmentId)).map((u) => ({ value: String(u.id), label: u.name }))}
+              placeholder={form.departmentId ? '搜索并选择本部门用户加入本组' : '请先选择所属部门'}
             />
+            {!form.departmentId && <p className="mt-1 text-xs text-base-content/50">成员从「所属部门」下的用户中选择，请先选部门。</p>}
             {form.memberIds.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {form.memberIds.map((id: number) => (

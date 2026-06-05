@@ -35,6 +35,8 @@ const emptyItem = (): ItemRow => ({
   _key: newKey(), customerId: '', customerName: '', requirementId: '', requirementName: '',
   progressNote: '', positionOpenDate: '', routineHunting: '', participation: '', assignments: {},
 })
+// 本周参与度 = 该行「填了计划日期的组员数」，自动计算（不手填）
+const partCount = (it: ItemRow) => Object.values(it.assignments).filter((v) => String(v ?? '').trim()).length
 
 export default function WorkPlansPage() {
   const toast = useToast()
@@ -159,7 +161,7 @@ export default function WorkPlansPage() {
 
   // 小计（前端计算，不入库）
   const subtotal = useMemo(() => {
-    const participation = items.reduce((s, it) => s + (Number(it.participation) || 0), 0)
+    const participation = items.reduce((s, it) => s + partCount(it), 0)
     const perMember: Record<number, number> = {}
     for (const m of members) perMember[m.id] = items.filter((it) => (it.assignments[m.id] ?? '').trim()).length
     return { participation, perMember }
@@ -191,7 +193,7 @@ export default function WorkPlansPage() {
           progressNote: it.progressNote,
           positionOpenDate: it.positionOpenDate || null,
           routineHunting: it.routineHunting,
-          participation: it.participation,
+          participation: partCount(it), // 自动算：该行有日期的组员数
           sortOrder: i,
           assignments: Object.entries(it.assignments)
             .filter(([, v]) => String(v).trim())
@@ -351,7 +353,7 @@ export default function WorkPlansPage() {
                         <option value="">—</option><option value="是">是</option><option value="否">否</option>
                       </select>
                     </td>
-                    <td><input type="number" className="input input-bordered input-xs w-full" value={it.participation} onChange={(e) => setItem(it._key, { participation: e.target.value })} /></td>
+                    <td className="text-center font-medium" title="自动计算＝本行填了计划日期的组员数">{partCount(it)}</td>
                     {members.map((m) => (
                       <td key={m.id} className="bg-base-100">
                         <input className="input input-bordered input-xs w-full" value={it.assignments[m.id] ?? ''}
