@@ -5,7 +5,7 @@ vi.mock('@/lib/prisma', () => {
     talentPool: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     candidate: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     customer: { findMany: vi.fn() }, // resolveCustomer
-    requirement: { findMany: vi.fn() }, // resolveRequirement
+    requirement: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() }, // resolveRequirement + REQUIREMENT 导入
   }
   prisma.$transaction = vi.fn(async (cb: any) => cb(prisma))
   return { prisma }
@@ -116,5 +116,26 @@ describe('importRows —— 候选人（关系 + 子表 + 枚举反查）', () =
     const res = await runC([{ __row: 2, 姓名: 'X', 招聘渠道: '猎聘', 推荐状态: '面试中', '保证期沟通记录(JSON)': '不是JSON' }])
     expect(res.failed).toBe(1)
     expect(res.errors[0].msg).toContain('JSON')
+  })
+})
+
+describe('importRows —— 客户需求（必填关系 + 多值状态）', () => {
+  const REQ = CONFIGS.REQUIREMENT
+  const runR = (rows: any[]) => importRows(REQ, rows, user)
+
+  it('必填关系「客户名称」为空 → 报错，不创建', async () => {
+    const res = await runR([{ __row: 2, 岗位名称: '后端', 招聘人数: '2', base城市: '深圳' }])
+    expect(res.failed).toBe(1)
+    expect(res.errors[0].msg).toContain('客户名称')
+    expect(prisma.requirement.create).not.toHaveBeenCalled()
+  })
+
+  it('合法 → 客户解析 + 岗位状态拆数组 + 性别要求枚举', async () => {
+    mock(prisma.customer.findMany).mockResolvedValue([{ id: 30 }])
+    mock(prisma.requirement.create).mockResolvedValue({ id: 1 })
+    const res = await runR([{ __row: 2, 客户名称: '华成电力', 岗位名称: '后端', 招聘人数: '2', base城市: '深圳', 岗位状态: '新增、加急', 性别要求: '不限' }])
+    expect(res).toMatchObject({ created: 1, failed: 0 })
+    const data = mock(prisma.requirement.create).mock.calls[0][0].data
+    expect(data).toMatchObject({ customerId: 30, positionName: '后端', headcount: 2, baseCity: '深圳', status: ['新增', '加急'], genderRequirement: 'ANY' })
   })
 })

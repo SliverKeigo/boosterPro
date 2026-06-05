@@ -32,6 +32,7 @@ const reverse = (labels: Record<string, string>) =>
 const EDU_IN = mapEnum(reverse(EDUCATION_LEVEL_LABELS))
 const TIER_IN = mapEnum(reverse(SCHOOL_TIER_LABELS))
 const RECSTATUS_IN = mapEnum(reverse(RECOMMENDATION_STATUS_LABELS))
+const GENDER_REQ_IN = mapEnum({ 男: 'MALE', 女: 'FEMALE', 不限: 'ANY', MALE: 'MALE', FEMALE: 'FEMALE', ANY: 'ANY' })
 
 export const CONFIGS: Record<string, ImportResource> = {
   TALENT_POOL: {
@@ -85,6 +86,60 @@ export const CONFIGS: Record<string, ImportResource> = {
     subtables: [
       { header: '保证期沟通记录(JSON)', relationField: 'guaranteeCommunications', fields: [{ key: 'date', type: 'date' }, { key: 'content' }] },
       { header: '风险管理(JSON)', relationField: 'riskEvents', fields: [{ key: 'date', type: 'date' }, { key: 'riskDescription' }] },
+    ],
+  },
+
+  CUSTOMER: {
+    model: 'customer',
+    fields: [
+      { header: '客户全称', field: 'fullName' },
+      { header: '客户简称', field: 'shortName', required: true },
+      { header: '曾用名', field: 'formerName' },
+      { header: '所属行业', field: 'industry' },
+      { header: '区域', field: 'region', required: true },
+      { header: '地址', field: 'address', required: true },
+      { header: '详细地址', field: 'detailedAddress', required: true },
+      { header: '企业文化', field: 'companyCulture' },
+      { header: '开场白', field: 'openingSpeech' },
+      { header: '对标企业', field: 'benchmarkCompanies' },
+      { header: '附件', field: 'attachmentUrl' },
+    ],
+    subtables: [
+      { header: '办公地址(JSON)', relationField: 'officeAddresses', fields: [{ key: 'address' }] },
+    ],
+  },
+
+  REQUIREMENT: {
+    model: 'requirement',
+    fields: [
+      { header: '客户名称', field: 'customerId', required: true, relation: { idField: 'customerId', resolve: resolveCustomer } },
+      { header: '招聘负责人', field: 'recruiter' },
+      { header: '岗位名称', field: 'positionName', required: true },
+      { header: '招聘人数', field: 'headcount', type: 'int', required: true },
+      { header: '月薪下限', field: 'monthlySalaryMin', type: 'int' },
+      { header: '月薪上限', field: 'monthlySalaryMax', type: 'int' },
+      { header: '年薪下限', field: 'annualSalaryMin', type: 'number' },
+      { header: '年薪上限', field: 'annualSalaryMax', type: 'number' },
+      { header: '年龄下限', field: 'ageMin', type: 'int' },
+      { header: '年龄上限', field: 'ageMax', type: 'int' },
+      { header: '性别要求', field: 'genderRequirement', transform: GENDER_REQ_IN },
+      { header: '学历要求', field: 'educationRequirement' },
+      { header: '语言要求', field: 'languageRequirement' },
+      { header: '岗位状态', field: 'status', type: 'string[]' },
+      { header: '截止日期', field: 'deadline', type: 'date' },
+      { header: 'base城市', field: 'baseCity', required: true },
+      { header: '职位描述', field: 'jobDescription' },
+      { header: '人才画像', field: 'talentProfile' },
+      { header: '项目经验', field: 'projectExperience' },
+      { header: '关闭原因', field: 'closeReason' },
+      { header: '备注', field: 'notes' },
+      { header: '附件', field: 'attachmentUrl' },
+      { header: '最新进展', field: 'latestUpdate' },
+      { header: '所属行业', field: 'industry' },
+      { header: '跟进日期', field: 'followDate', type: 'date' },
+    ],
+    subtables: [
+      { header: '职位知识画像(JSON)', relationField: 'positionProfiles', fields: [{ key: 'knowledgeCategory' }, { key: 'knowledgeAmount' }] },
     ],
   },
 }

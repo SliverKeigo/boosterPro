@@ -126,6 +126,7 @@ async function buildRow(
     const raw = row[f.header]
     if (f.relation) {
       if (raw == null || raw === '') {
+        if (f.required) throw new Error(`「${f.header}」必填`)
         scalars[f.relation.idField] = null
         continue
       }

@@ -2,7 +2,7 @@
 // 「可回导」导出列（客户端，无 prisma）。表头须与服务端 importConfigs 一致，以保证导出→改→导入闭环。
 // 关系列导出名称、子表列导出 JSON 数组、首列固定 id（导入据此判定更新/新增）。
 
-import { EDUCATION_LEVEL_LABELS, SCHOOL_TIER_LABELS, RECOMMENDATION_STATUS_LABELS } from '@/lib/enums'
+import { EDUCATION_LEVEL_LABELS, SCHOOL_TIER_LABELS, RECOMMENDATION_STATUS_LABELS, GENDER_TYPE_LABELS } from '@/lib/enums'
 
 export interface RoundTripColumn {
   header: string
@@ -60,5 +60,51 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '候选人标签', getValue: (r) => joinTags(r.tags) },
     { header: '保证期沟通记录(JSON)', getValue: (r) => JSON.stringify((r.guaranteeCommunications ?? []).map((x: any) => ({ date: fmtDate(x.date), content: x.content ?? '' }))) },
     { header: '风险管理(JSON)', getValue: (r) => JSON.stringify((r.riskEvents ?? []).map((x: any) => ({ date: fmtDate(x.date), riskDescription: x.riskDescription ?? '' }))) },
+  ],
+
+  CUSTOMER: [
+    { header: 'id', getValue: (r) => r.id },
+    { header: '客户全称', getValue: (r) => r.fullName ?? '' },
+    { header: '客户简称', getValue: (r) => r.shortName ?? '' },
+    { header: '曾用名', getValue: (r) => r.formerName ?? '' },
+    { header: '所属行业', getValue: (r) => r.industry ?? '' },
+    { header: '区域', getValue: (r) => r.region ?? '' },
+    { header: '地址', getValue: (r) => r.address ?? '' },
+    { header: '详细地址', getValue: (r) => r.detailedAddress ?? '' },
+    { header: '企业文化', getValue: (r) => r.companyCulture ?? '' },
+    { header: '开场白', getValue: (r) => r.openingSpeech ?? '' },
+    { header: '对标企业', getValue: (r) => r.benchmarkCompanies ?? '' },
+    { header: '附件', getValue: (r) => r.attachmentUrl ?? '' },
+    { header: '办公地址(JSON)', getValue: (r) => JSON.stringify((r.officeAddresses ?? []).map((x: any) => ({ address: x.address ?? '' }))) },
+  ],
+
+  REQUIREMENT: [
+    { header: 'id', getValue: (r) => r.id },
+    { header: '客户名称', getValue: (r) => r.customer?.shortName ?? r.customer?.fullName ?? '' },
+    { header: '招聘负责人', getValue: (r) => r.recruiter ?? '' },
+    { header: '岗位名称', getValue: (r) => r.positionName ?? '' },
+    { header: '招聘人数', getValue: (r) => r.headcount ?? '' },
+    { header: '月薪下限', getValue: (r) => r.monthlySalaryMin ?? '' },
+    { header: '月薪上限', getValue: (r) => r.monthlySalaryMax ?? '' },
+    { header: '年薪下限', getValue: (r) => r.annualSalaryMin ?? '' },
+    { header: '年薪上限', getValue: (r) => r.annualSalaryMax ?? '' },
+    { header: '年龄下限', getValue: (r) => r.ageMin ?? '' },
+    { header: '年龄上限', getValue: (r) => r.ageMax ?? '' },
+    { header: '性别要求', getValue: (r) => GENDER_TYPE_LABELS[r.genderRequirement] ?? '' },
+    { header: '学历要求', getValue: (r) => r.educationRequirement ?? '' },
+    { header: '语言要求', getValue: (r) => r.languageRequirement ?? '' },
+    { header: '岗位状态', getValue: (r) => (Array.isArray(r.status) ? r.status.join('、') : (r.status ?? '')) },
+    { header: '截止日期', getValue: (r) => fmtDate(r.deadline) },
+    { header: 'base城市', getValue: (r) => r.baseCity ?? '' },
+    { header: '职位描述', getValue: (r) => r.jobDescription ?? '' },
+    { header: '人才画像', getValue: (r) => r.talentProfile ?? '' },
+    { header: '项目经验', getValue: (r) => r.projectExperience ?? '' },
+    { header: '关闭原因', getValue: (r) => r.closeReason ?? '' },
+    { header: '备注', getValue: (r) => r.notes ?? '' },
+    { header: '附件', getValue: (r) => r.attachmentUrl ?? '' },
+    { header: '最新进展', getValue: (r) => r.latestUpdate ?? '' },
+    { header: '所属行业', getValue: (r) => r.industry ?? '' },
+    { header: '跟进日期', getValue: (r) => fmtDate(r.followDate) },
+    { header: '职位知识画像(JSON)', getValue: (r) => JSON.stringify((r.positionProfiles ?? []).map((x: any) => ({ knowledgeCategory: x.knowledgeCategory ?? '', knowledgeAmount: x.knowledgeAmount ?? '' }))) },
   ],
 }
