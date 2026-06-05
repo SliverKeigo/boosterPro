@@ -82,6 +82,7 @@ model Group {
   leader       User?      @relation("GroupLeader", fields: [leaderId], references: [id])
   leaderId     Int?       @map("leader_id")
   members      User[]     @relation("GroupMembers")
+  workPlans    WorkPlan[]
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
 
@@ -118,7 +119,8 @@ model User {
   salesOpportunities   Opportunity[]               @relation("OpportunitySalesOwner")
   contractSales        Contract[]                  @relation("ContractSalesOwner")
   contractDeliveries   Contract[]                  @relation("ContractDeliveryOwner")
-  workPlans            WorkPlan[]
+  createdWorkPlans     WorkPlan[]                  @relation("WorkPlanCreatedBy")
+  planAssignments      WorkPlanAssignment[]
   urgentRecords        RequirementUrgentRecord[]
   knowledgeRecords     KnowledgeManagementRecord[]
   knowledgeInternalLectures KnowledgeBase[]        @relation("KnowledgeInternalLecturer")
@@ -159,6 +161,7 @@ model Customer {
   requirements       Requirement[]
   candidates         Candidate[]
   contracts          Contract[]
+  workPlanItems      WorkPlanItem[]
   createdAt          DateTime                @default(now()) @map("created_at")
   updatedAt          DateTime                @updatedAt @map("updated_at")
 
@@ -291,6 +294,7 @@ model Requirement {
   positionProfiles     RequirementPositionProfile[]
   urgentRecords        RequirementUrgentRecord[]
   candidates           Candidate[]
+  workPlanItems        WorkPlanItem[]
   createdAt            DateTime                     @default(now()) @map("created_at")
   updatedAt            DateTime                     @updatedAt @map("updated_at")
 
@@ -542,19 +546,56 @@ model KnowledgeManagementRecord {
   @@map("knowledge_management_records")
 }
 
+// 工作计划 = 某组×某周的「交付需求与计划管理表」。三层：周计划 → 明细行 → 组员分配矩阵。
 model WorkPlan {
-  id        Int       @id @default(autoincrement())
-  title     String?   @db.VarChar(200)
-  owner     User?     @relation(fields: [ownerId], references: [id])
-  ownerId   Int?      @map("owner_id")
-  startDate DateTime? @map("start_date") @db.Date
-  endDate   DateTime? @map("end_date") @db.Date
-  status    String?   @db.VarChar(50)
-  notes     String?   @db.Text
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  id               Int            @id @default(autoincrement())
+  group            Group          @relation(fields: [groupId], references: [id])
+  groupId          Int            @map("group_id")
+  weekStart        DateTime       @map("week_start") @db.Date // 周一
+  weekEnd          DateTime       @map("week_end") @db.Date // 周日
+  deliveryStrategy String?        @map("delivery_strategy") @db.Text // 本周交付策略
+  items            WorkPlanItem[]
+  createdBy        User?          @relation("WorkPlanCreatedBy", fields: [createdById], references: [id])
+  createdById      Int?           @map("created_by_id")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
 
+  @@index([groupId])
+  @@index([createdById])
   @@map("work_plans")
+}
+
+// 工作计划明细行：一行 = 一个(客户 × 岗位)的本周交付情况
+model WorkPlanItem {
+  id               Int                  @id @default(autoincrement())
+  workPlan         WorkPlan             @relation(fields: [workPlanId], references: [id], onDelete: Cascade)
+  workPlanId       Int                  @map("work_plan_id")
+  customer         Customer?            @relation(fields: [customerId], references: [id])
+  customerId       Int?                 @map("customer_id")
+  requirement      Requirement?         @relation(fields: [requirementId], references: [id]) // 岗位
+  requirementId    Int?                 @map("requirement_id")
+  progressNote     String?              @map("progress_note") @db.Text // 交付进展简述
+  positionOpenDate DateTime?            @map("position_open_date") @db.Date // 岗位开放时间
+  routineHunting   Boolean?             @map("routine_hunting") // 是否例行寻猎
+  participation    Int? // 本周参与度
+  sortOrder        Int                  @default(0) @map("sort_order")
+  assignments      WorkPlanAssignment[]
+
+  @@index([workPlanId])
+  @@map("work_plan_items")
+}
+
+// 组员分配矩阵：明细行 × 组员 → 该员工在该岗位的本周计划日期（自由文本，如 "6.1、6.3"）
+model WorkPlanAssignment {
+  id        Int          @id @default(autoincrement())
+  item      WorkPlanItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId    Int          @map("item_id")
+  member    User         @relation(fields: [memberId], references: [id])
+  memberId  Int          @map("member_id")
+  planDates String?      @map("plan_dates") @db.VarChar(100)
+
+  @@unique([itemId, memberId])
+  @@map("work_plan_assignments")
 }
 
 // 权限组：八个业务菜单(resource)各可配置多个权限组，每组持有若干功能权限(actions)与一组成员

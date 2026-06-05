@@ -23,6 +23,7 @@ import {
   LogOut,
   ChevronDown,
   Briefcase,
+  ClipboardList,
   Zap,
   BarChart3,
   Contact,
@@ -56,6 +57,7 @@ const GROUPS: NavGroup[] = [
       { href: '/requirements', label: '客户需求管理', icon: FileText },
       { href: '/supplements', label: '客户补充信息', icon: FilePlus },
       { href: '/talent-pool', label: '人才储备库', icon: UsersRound },
+      { href: '/work-plans', label: '工作计划', icon: ClipboardList },
     ],
   },
   {
