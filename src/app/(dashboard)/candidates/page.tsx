@@ -365,7 +365,7 @@ export default function CandidatesPage() {
         rowKey="id"
         onCreate={can(RES, 'CREATE') ? openCreate : undefined}
         createText="新增"
-        onImport={can(RES, 'IMPORT') ? () => toast.info('导入功能开发中') : undefined}
+        importResource={can(RES, 'IMPORT') ? RES : undefined}
         onRefresh={() => fetchData(true)}
         showExport={can(RES, 'EXPORT')}
         searchPlaceholder="搜索姓名 / 客户 / 岗位 / 状态…"

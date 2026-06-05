@@ -3,6 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('@/lib/prisma', () => {
   const prisma: any = {
     talentPool: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+    candidate: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+    customer: { findMany: vi.fn() }, // resolveCustomer
+    requirement: { findMany: vi.fn() }, // resolveRequirement
   }
   prisma.$transaction = vi.fn(async (cb: any) => cb(prisma))
   return { prisma }
@@ -69,5 +72,49 @@ describe('importRows —— 人才储备库', () => {
     expect(res.failed).toBe(1)
     expect(res.errors[0].msg).toContain('999')
     expect(prisma.talentPool.update).not.toHaveBeenCalled()
+  })
+})
+
+describe('importRows —— 候选人（关系 + 子表 + 枚举反查）', () => {
+  const CAND = CONFIGS.CANDIDATE
+  const runC = (rows: any[]) => importRows(CAND, rows, user)
+
+  it('客户名称→customerId、教育/状态枚举反查、子表 JSON 解析为 nested create', async () => {
+    mock(prisma.customer.findMany).mockResolvedValue([{ id: 30 }])
+    mock(prisma.requirement.findMany).mockResolvedValue([{ id: 40 }])
+    mock(prisma.candidate.create).mockResolvedValue({ id: 1 })
+    const res = await runC([{
+      __row: 2, 姓名: '赵六', 招聘渠道: '猎聘', 推荐状态: '面试中', 教育经历: '本科',
+      客户名称: '华成电力', 岗位名称: '财务主管',
+      '保证期沟通记录(JSON)': '[{"date":"2026-01-01","content":"已沟通"}]',
+    }])
+    expect(res).toMatchObject({ created: 1, failed: 0 })
+    const data = mock(prisma.candidate.create).mock.calls[0][0].data
+    expect(data).toMatchObject({ name: '赵六', customerId: 30, requirementId: 40, recommendationStatus: 'INTERVIEWING', education: 'BACHELOR', createdById: 7 })
+    expect(data.guaranteeCommunications.create[0]).toMatchObject({ content: '已沟通' })
+    expect(data.guaranteeCommunications.create[0].date).toBeInstanceOf(Date)
+  })
+
+  it('关系名称查无 → 该行报错', async () => {
+    mock(prisma.customer.findMany).mockResolvedValue([])
+    const res = await runC([{ __row: 2, 姓名: 'X', 招聘渠道: '猎聘', 推荐状态: '面试中', 客户名称: '不存在的客户' }])
+    expect(res.failed).toBe(1)
+    expect(res.errors[0].msg).toContain('客户名称')
+    expect(prisma.candidate.create).not.toHaveBeenCalled()
+  })
+
+  it('关系名称重名 → 该行报错', async () => {
+    mock(prisma.customer.findMany).mockResolvedValue([{ id: 1 }, { id: 2 }])
+    const res = await runC([{ __row: 2, 姓名: 'X', 招聘渠道: '猎聘', 推荐状态: '面试中', 客户名称: '腾讯' }])
+    expect(res.failed).toBe(1)
+    expect(res.errors[0].msg).toContain('重名')
+  })
+
+  it('子表 JSON 非法 → 该行报错', async () => {
+    mock(prisma.customer.findMany).mockResolvedValue([{ id: 30 }])
+    mock(prisma.requirement.findMany).mockResolvedValue([{ id: 40 }])
+    const res = await runC([{ __row: 2, 姓名: 'X', 招聘渠道: '猎聘', 推荐状态: '面试中', '保证期沟通记录(JSON)': '不是JSON' }])
+    expect(res.failed).toBe(1)
+    expect(res.errors[0].msg).toContain('JSON')
   })
 })
