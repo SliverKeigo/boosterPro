@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { runWebSearchJson } from '@/lib/ai'
+import { getPrompt } from '@/lib/aiPrompts'
 import { HttpError, handleApiError } from '@/lib/apiError'
 import { getCurrentUser, getPermissionMap } from '@/lib/permissions'
 
@@ -23,12 +24,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '请先填写公司名称' }, { status: 400 })
     }
 
-    const data = await runWebSearchJson(
-      `请联网搜索「${companyName}」的最新公开信息，提取用于自动填充客户档案的字段。\n` +
-        '对标企业务必是【当前真实存在】的竞品（排除已倒闭 / 已被收购 / 已退出市场的）。\n\n' +
-        '严格只返回 JSON（不要多余文字、不要 markdown 围栏、不要引用角标）：\n' +
-        '{"industry":"所属行业","region":"总部所在城市或地区","formerName":"公司曾用名（无则空字符串）","companyCulture":"企业文化与福利简述(150字内)","benchmarkCompanies":"对标竞品公司，多个用顿号分隔"}',
-    )
+    // 提示词从库读取（管理员可在「提示词管理」改），缺失则回退代码内置默认值
+    const prompt = await getPrompt('company_info', { companyName: String(companyName) })
+    const data = await runWebSearchJson(prompt)
 
     return NextResponse.json({
       industry: data.industry || '',

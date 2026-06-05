@@ -24,6 +24,7 @@ import {
   ChevronDown,
   Briefcase,
   ClipboardList,
+  Sparkles,
   Zap,
   BarChart3,
   Contact,
@@ -98,6 +99,7 @@ const GROUPS: NavGroup[] = [
       { href: '/settings/roles', label: '角色管理', icon: ShieldCheck },
       { href: '/settings/permissions', label: '权限设置', icon: Lock },
       { href: '/settings/dictionaries', label: '字典管理', icon: BookMarked },
+      { href: '/settings/ai-prompts', label: '提示词管理', icon: Sparkles },
     ],
   },
 ]

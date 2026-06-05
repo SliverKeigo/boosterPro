@@ -49,7 +49,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - `next.config.ts` 配 `allowedDevOrigins`（`192.168.31.208` + `192.168.31.*`）放行局域网设备访问 dev server 的 HMR；换网段需把对应 IP 加进去。`proxyClientMaxBodySize: '60mb'` 给大文件上传留余量。
 
 ## AI 功能
-- 通过 OpenAI **Responses API** + `web_search` 工具联网：`(openai as any).responses.create({ tools: [{ type: 'web_search' }], input })`（已封装为 `src/lib/ai.ts` 的 `runWebSearchJson`）。
+- **提示词外置到库**：各 AI 功能的提示词不写死在代码，由 `getPrompt(key, vars)`（`src/lib/aiPrompts.ts`）从 `ai_prompts` 表读取（管理员在「系统管理 → 提示词管理」改），库中无该 key 时回退 `PROMPT_DEFAULTS` 内置默认值（保证 AI 不因缺提示词而崩）；模板用 `{{变量}}` 占位、运行时填充。内置 key：`job_profile`（岗位画像）、`company_info`（客户信息填充）、`supplement_opening`（客户补充-开聊话术）。新增 AI 功能＝加 `PROMPT_DEFAULTS` 一项 + 路由 `getPrompt('<key>', {...})`。
+- 通过 OpenAI **Responses API** + `web_search` 工具联网：`(openai as any).responses.create({ tools: [{ type: 'web_search' }], input })`（已封装为 `src/lib/ai.ts` 的 `runWebSearchJson`）。三处联网 AI 接口：岗位画像、客户信息填充、客户补充开聊话术（`/api/ai/supplement-opening`，按所选客户联网生成填入「开聊话术」）。
 - 联网工具正式名是 `web_search`（GA），**不是** `web_search_preview`（旧预览名，会 upstream 失败）。
 - `OPENAI_MODEL` 必须是该 API 实际支持的有效模型名。
 - **服务商靠 `.env` 切换**，由 `AI_PROVIDER` 在 `ai.ts` 的 `runWebSearchJson` 分流（模型名 `MODEL = AI_MODEL ?? OPENAI_MODEL`）：

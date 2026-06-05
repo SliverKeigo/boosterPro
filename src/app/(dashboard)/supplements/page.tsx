@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, Sparkles } from 'lucide-react'
 import {
   BoostTable,
   type BoostColumn,
@@ -43,6 +43,28 @@ export default function SupplementsPage() {
   const [form, setForm] = useState<any>(EMPTY_FORM)
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
+  const [aiLoading, setAiLoading] = useState(false)
+
+  // AI 生成开聊话术（联网了解该客户后，生成向候选人介绍/推荐的话术），填入「开聊话术」
+  const genOpening = async () => {
+    if (!form.customerId) return toast.error('请先选择客户名称')
+    setAiLoading(true)
+    try {
+      const res = await fetch('/api/ai/supplement-opening', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId: form.customerId, demand: form.demandCustomer }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { toast.error(json.error || 'AI 生成失败'); return }
+      setField('openingSpeech', json.opening)
+      toast.success('已生成开聊话术')
+    } catch {
+      toast.error('AI 请求失败')
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   const fetchData = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true)
@@ -233,7 +255,14 @@ export default function SupplementsPage() {
 
         <div className="grid grid-cols-1 gap-4">
           <Field label="开聊话术">
-            <textarea className="textarea textarea-bordered w-full" rows={3} value={form.openingSpeech} onChange={(e) => setField('openingSpeech', e.target.value)} placeholder="与候选人开聊时使用的话术" />
+            <div className="mb-1.5">
+              <button type="button" className="btn btn-outline btn-xs gap-1 text-primary" disabled={aiLoading} onClick={genOpening}>
+                {aiLoading ? <span className="loading loading-spinner loading-xs" /> : <Sparkles className="h-3.5 w-3.5" />}
+                AI 生成开聊话术
+              </button>
+              <span className="ml-2 text-xs text-base-content/40">据所选客户联网生成（约 10~20s）</span>
+            </div>
+            <textarea className="textarea textarea-bordered w-full" rows={4} value={form.openingSpeech} onChange={(e) => setField('openingSpeech', e.target.value)} placeholder="与候选人开聊时使用的话术（可点上方 AI 生成）" />
           </Field>
           <Field label="企业文化福利等说明">
             <RichText value={form.companyCultureWelfare} onChange={(html) => setField('companyCultureWelfare', html)} placeholder="企业文化、福利待遇等" />

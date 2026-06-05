@@ -655,3 +655,17 @@ model DictItem {
   @@index([typeId])
   @@map("dict_items")
 }
+
+// AI 提示词：把各 AI 功能的提示词从代码外置到库，管理员可在「提示词管理」改。
+// 模板含 {{变量}} 占位，运行时由 getPrompt(key, vars) 填充；库中无该 key 时回退代码内置默认值。
+model AiPrompt {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique @db.VarChar(100) // 业务键，如 job_profile / company_info / supplement_opening
+  name        String   @db.VarChar(200) // 显示名
+  content     String   @db.Text // 提示词模板（含 {{占位}}）
+  description String?  @db.Text // 说明 / 可用变量
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("ai_prompts")
+}
