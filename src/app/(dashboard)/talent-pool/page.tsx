@@ -145,7 +145,7 @@ export default function TalentPoolPage() {
         rowKey="id"
         onCreate={can(RES, 'CREATE') ? openCreate : undefined}
         createText="新建人才"
-        onImport={can(RES, 'IMPORT') ? () => toast.info('导入功能开发中') : undefined}
+        importResource={can(RES, 'IMPORT') ? RES : undefined}
         onRefresh={() => fetchData(true)}
         showExport={can(RES, 'EXPORT')}
         searchPlaceholder="搜索姓名 / 职位 / 标签…"

@@ -23,6 +23,8 @@ import {
 } from 'lucide-react'
 import { Dropdown } from './Dropdown'
 import { exportToExcel } from '@/lib/exportExcel'
+import { IMPORT_COLUMNS } from '@/lib/importColumns'
+import { ImportModal } from './ImportModal'
 
 export interface BoostColumn<T> {
   key: string
@@ -65,6 +67,8 @@ interface BoostTableProps<T> {
   onCreate?: () => void
   createText?: string
   onImport?: () => void
+  /** 传入资源 key（如 'TALENT_POOL'）即开启「可回导」导出 + 导入：导出含 id/关系名/子表 JSON、导入走 /api/import/<resource> */
+  importResource?: string
   /** 不传则使用内置 Excel 导出（.xlsx，按可见列 + 当前筛选/排序结果） */
   onExport?: () => void
   /** 是否显示导出按钮（受导出权限控制），默认 true */
@@ -205,6 +209,7 @@ export function BoostTable<T extends Record<string, any>>({
   onCreate,
   createText = '新增',
   onImport,
+  importResource,
   onExport,
   showExport = true,
   onRefresh,
@@ -217,6 +222,8 @@ export function BoostTable<T extends Record<string, any>>({
   emptyText = '暂无数据',
 }: BoostTableProps<T>) {
   const [search, setSearch] = useState('')
+  // 导入弹窗开关（importResource 提供时启用）
+  const [importOpen, setImportOpen] = useState(false)
   /** 已生效的排序规则（驱动排序管线）；为空数组时保持数据原始（API 默认）顺序 */
   const [sortRules, setSortRules] = useState<SortRule[]>([])
   /** 排序面板内正在编辑的草稿规则 */
@@ -516,10 +523,12 @@ export function BoostTable<T extends Record<string, any>>({
     close()
   }
 
+  // importResource 提供时，导出走「可回导」列（id + 关系名 + 子表 JSON），否则按可见列。
+  const roundTripCols = importResource ? IMPORT_COLUMNS[importResource] : undefined
   const doExport = (rows: T[]) =>
     exportToExcel({
       title: title || '导出',
-      columns: visibleColumns.map((c) => ({
+      columns: roundTripCols ?? visibleColumns.map((c) => ({
         header: c.title,
         getValue: c.exportValue ?? accessorOf(c),
       })),
@@ -601,12 +610,17 @@ export function BoostTable<T extends Record<string, any>>({
             {createText}
           </button>
         )}
-        {IMPORT_ENABLED && onImport && (
+        {importResource ? (
+          <button type="button" className={ICON_BTN} onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4" />
+            导入
+          </button>
+        ) : IMPORT_ENABLED && onImport ? (
           <button type="button" className={ICON_BTN} onClick={onImport}>
             <Upload className="h-4 w-4" />
             导入
           </button>
-        )}
+        ) : null}
         {showExport &&
           (onExport ? (
             <button type="button" className={ICON_BTN} onClick={onExport}>
@@ -1257,6 +1271,16 @@ export function BoostTable<T extends Record<string, any>>({
           </div>
         )}
       </div>
+
+      {importResource && (
+        <ImportModal
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          resource={importResource}
+          title={`导入${title || ''}`}
+          onDone={onRefresh}
+        />
+      )}
     </div>
   )
 }
