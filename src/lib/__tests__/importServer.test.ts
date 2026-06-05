@@ -6,6 +6,7 @@ vi.mock('@/lib/prisma', () => {
     candidate: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     customer: { findMany: vi.fn() }, // resolveCustomer
     requirement: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() }, // resolveRequirement + REQUIREMENT 导入
+    opportunity: { create: vi.fn() }, // OPPORTUNITY 导入(omitIfEmpty)
   }
   prisma.$transaction = vi.fn(async (cb: any) => cb(prisma))
   return { prisma }
@@ -137,5 +138,19 @@ describe('importRows —— 客户需求（必填关系 + 多值状态）', () =
     expect(res).toMatchObject({ created: 1, failed: 0 })
     const data = mock(prisma.requirement.create).mock.calls[0][0].data
     expect(data).toMatchObject({ customerId: 30, positionName: '后端', headcount: 2, baseCity: '深圳', status: ['新增', '加急'], genderRequirement: 'ANY' })
+  })
+})
+
+describe('importRows —— omitIfEmpty（NOT NULL + 默认值列）', () => {
+  it('商机 状态/性质 留空 → 不写该字段（走 DB 默认）', async () => {
+    mock(prisma.opportunity.create).mockResolvedValue({ id: 1 })
+    const res = await importRows(CONFIGS.OPPORTUNITY, [{
+      __row: 2, 商机名称: '某商机', 描述: 'd', 区域: '华南', 销售决策信息: 's', 客户决策人: 'c', 决策人描述: 'dm',
+    }], user)
+    expect(res).toMatchObject({ created: 1, failed: 0 })
+    const data = mock(prisma.opportunity.create).mock.calls[0][0].data
+    expect('status' in data).toBe(false) // 空 → 省略，用默认「线索阶段」
+    expect('nature' in data).toBe(false) // 空 → 省略，用默认 DIRECT
+    expect(data.name).toBe('某商机')
   })
 })

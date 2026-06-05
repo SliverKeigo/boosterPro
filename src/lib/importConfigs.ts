@@ -2,7 +2,7 @@
 // 各模块的导入配置（服务端）。新增模块即在 CONFIGS 加一项：声明字段/关系/子表。
 import { prisma } from '@/lib/prisma'
 import type { ImportResource } from '@/lib/importServer'
-import { EDUCATION_LEVEL_LABELS, SCHOOL_TIER_LABELS, RECOMMENDATION_STATUS_LABELS } from '@/lib/enums'
+import { EDUCATION_LEVEL_LABELS, SCHOOL_TIER_LABELS, RECOMMENDATION_STATUS_LABELS, OPPORTUNITY_NATURE_LABELS } from '@/lib/enums'
 
 // ── 关系按名称唯一反查 id：重名 → 抛错（该行报错）；查无 → 返回 null（buildRow 报「找不到匹配」）──
 async function resolveUnique(model: string, where: any, label: string): Promise<number | null> {
@@ -33,6 +33,7 @@ const EDU_IN = mapEnum(reverse(EDUCATION_LEVEL_LABELS))
 const TIER_IN = mapEnum(reverse(SCHOOL_TIER_LABELS))
 const RECSTATUS_IN = mapEnum(reverse(RECOMMENDATION_STATUS_LABELS))
 const GENDER_REQ_IN = mapEnum({ 男: 'MALE', 女: 'FEMALE', 不限: 'ANY', MALE: 'MALE', FEMALE: 'FEMALE', ANY: 'ANY' })
+const OPP_NATURE_IN = mapEnum(reverse(OPPORTUNITY_NATURE_LABELS))
 
 export const CONFIGS: Record<string, ImportResource> = {
   TALENT_POOL: {
@@ -140,6 +141,97 @@ export const CONFIGS: Record<string, ImportResource> = {
     ],
     subtables: [
       { header: '职位知识画像(JSON)', relationField: 'positionProfiles', fields: [{ key: 'knowledgeCategory' }, { key: 'knowledgeAmount' }] },
+    ],
+  },
+
+  CLIENT_SUPPLEMENT: {
+    model: 'clientSupplement',
+    fields: [
+      { header: '客户名称', field: 'customerId', required: true, relation: { idField: 'customerId', resolve: resolveCustomer } },
+      { header: '需求客户', field: 'demandCustomer' },
+      { header: '开场白', field: 'openingSpeech' },
+      { header: '企业文化福利', field: 'companyCultureWelfare' },
+      { header: '备注', field: 'notes' },
+      { header: '附件', field: 'attachmentUrl' },
+    ],
+    subtables: [
+      { header: '需求更新(JSON)', relationField: 'demandUpdates', fields: [{ key: 'date', type: 'date' }, { key: 'content' }] },
+      { header: '客户特长画像(JSON)', relationField: 'customerProfiles', fields: [{ key: 'specialty' }, { key: 'description' }] },
+    ],
+  },
+
+  CUSTOMER_CONTACT: {
+    model: 'customerContact',
+    fields: [
+      { header: '标题', field: 'title', required: true },
+      { header: '客户名称', field: 'customerId', required: true, relation: { idField: 'customerId', resolve: resolveCustomer } },
+    ],
+    subtables: [
+      { header: '联系人(JSON)', relationField: 'contacts', fields: [{ key: 'contactName' }, { key: 'contactTitle' }, { key: 'contactPhone' }, { key: 'contactEmail' }, { key: 'contactHobby' }] },
+    ],
+  },
+
+  OPPORTUNITY: {
+    model: 'opportunity',
+    fields: [
+      { header: '商机名称', field: 'name', required: true },
+      { header: '描述', field: 'description', required: true },
+      { header: '区域', field: 'region', required: true },
+      { header: '状态', field: 'status', omitIfEmpty: true },
+      { header: '性质', field: 'nature', transform: OPP_NATURE_IN, omitIfEmpty: true },
+      { header: '联系人姓名', field: 'contactName' },
+      { header: '联系人职位', field: 'contactTitle' },
+      { header: '联系方式', field: 'contactInfo' },
+      { header: '销售决策信息', field: 'salesDecisionInfo', required: true },
+      { header: '客户决策人', field: 'customerDecisionMaker', required: true },
+      { header: '决策人描述', field: 'decisionMakerDescription', required: true },
+      { header: '销售负责人', field: 'salesOwnerId', relation: { idField: 'salesOwnerId', resolve: resolveUserByName } },
+      { header: '附件', field: 'attachmentUrl' },
+    ],
+    subtables: [
+      { header: '进展记录(JSON)', relationField: 'progressRecords', fields: [{ key: 'date', type: 'date' }, { key: 'description' }] },
+    ],
+  },
+
+  CONTRACT: {
+    model: 'contract',
+    fields: [
+      { header: '客户名称', field: 'customerId', required: true, relation: { idField: 'customerId', resolve: resolveCustomer } },
+      { header: '合同名称', field: 'contractName', required: true },
+      { header: '签订年份', field: 'signingYear', type: 'int', required: true },
+      { header: '生效开始', field: 'effectiveStart', type: 'date', required: true },
+      { header: '生效结束', field: 'effectiveEnd', type: 'date', required: true },
+      { header: '到期日期', field: 'expiryDate', type: 'date', required: true },
+      { header: '服务类型', field: 'serviceType', required: true },
+      { header: '猎头费率', field: 'headhunterFeeRate', type: 'number' },
+      { header: '开票月数', field: 'billingMonths', type: 'int' },
+      { header: 'ROP费率', field: 'ropFeeRate', type: 'number' },
+      { header: '销售负责人', field: 'salesOwnerId', relation: { idField: 'salesOwnerId', resolve: resolveUserByName } },
+      { header: '交付负责人', field: 'deliveryOwnerId', relation: { idField: 'deliveryOwnerId', resolve: resolveUserByName } },
+      { header: '合同文件', field: 'contractFileUrl', required: true },
+      { header: '开票信息', field: 'invoiceInfoText' },
+      { header: '开票信息文件', field: 'invoiceInfoFileUrl' },
+      { header: '备注', field: 'notes' },
+    ],
+    subtables: [
+      { header: '发票(JSON)', relationField: 'invoices', fields: [{ key: 'invoiceType' }, { key: 'verificationResult' }] },
+    ],
+  },
+
+  KNOWLEDGE: {
+    model: 'knowledgeBase',
+    fields: [
+      { header: '分类', field: 'category', required: true },
+      { header: '标签', field: 'tags', type: 'string[]' },
+      { header: '关键词', field: 'keywords', required: true },
+      { header: '文件', field: 'fileUrl' },
+      { header: '备注', field: 'notes' },
+      { header: '培训大纲', field: 'trainingOutline' },
+      { header: '内部讲师', field: 'internalLecturerId', relation: { idField: 'internalLecturerId', resolve: resolveUserByName } },
+      { header: '外部讲师', field: 'externalLecturer' },
+    ],
+    subtables: [
+      { header: '管理记录(JSON)', relationField: 'managementRecords', fields: [{ key: 'date', type: 'date' }, { key: 'details' }] },
     ],
   },
 }

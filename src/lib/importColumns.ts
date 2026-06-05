@@ -2,7 +2,7 @@
 // 「可回导」导出列（客户端，无 prisma）。表头须与服务端 importConfigs 一致，以保证导出→改→导入闭环。
 // 关系列导出名称、子表列导出 JSON 数组、首列固定 id（导入据此判定更新/新增）。
 
-import { EDUCATION_LEVEL_LABELS, SCHOOL_TIER_LABELS, RECOMMENDATION_STATUS_LABELS, GENDER_TYPE_LABELS } from '@/lib/enums'
+import { EDUCATION_LEVEL_LABELS, SCHOOL_TIER_LABELS, RECOMMENDATION_STATUS_LABELS, GENDER_TYPE_LABELS, OPPORTUNITY_NATURE_LABELS } from '@/lib/enums'
 
 export interface RoundTripColumn {
   header: string
@@ -106,5 +106,76 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '所属行业', getValue: (r) => r.industry ?? '' },
     { header: '跟进日期', getValue: (r) => fmtDate(r.followDate) },
     { header: '职位知识画像(JSON)', getValue: (r) => JSON.stringify((r.positionProfiles ?? []).map((x: any) => ({ knowledgeCategory: x.knowledgeCategory ?? '', knowledgeAmount: x.knowledgeAmount ?? '' }))) },
+  ],
+
+  CLIENT_SUPPLEMENT: [
+    { header: 'id', getValue: (r) => r.id },
+    { header: '客户名称', getValue: (r) => r.customer?.shortName ?? r.customer?.fullName ?? '' },
+    { header: '需求客户', getValue: (r) => r.demandCustomer ?? '' },
+    { header: '开场白', getValue: (r) => r.openingSpeech ?? '' },
+    { header: '企业文化福利', getValue: (r) => r.companyCultureWelfare ?? '' },
+    { header: '备注', getValue: (r) => r.notes ?? '' },
+    { header: '附件', getValue: (r) => r.attachmentUrl ?? '' },
+    { header: '需求更新(JSON)', getValue: (r) => JSON.stringify((r.demandUpdates ?? []).map((x: any) => ({ date: fmtDate(x.date), content: x.content ?? '' }))) },
+    { header: '客户特长画像(JSON)', getValue: (r) => JSON.stringify((r.customerProfiles ?? []).map((x: any) => ({ specialty: x.specialty ?? '', description: x.description ?? '' }))) },
+  ],
+
+  CUSTOMER_CONTACT: [
+    { header: 'id', getValue: (r) => r.id },
+    { header: '标题', getValue: (r) => r.title ?? '' },
+    { header: '客户名称', getValue: (r) => r.customer?.shortName ?? r.customer?.fullName ?? '' },
+    { header: '联系人(JSON)', getValue: (r) => JSON.stringify((r.contacts ?? []).map((x: any) => ({ contactName: x.contactName ?? '', contactTitle: x.contactTitle ?? '', contactPhone: x.contactPhone ?? '', contactEmail: x.contactEmail ?? '', contactHobby: x.contactHobby ?? '' }))) },
+  ],
+
+  OPPORTUNITY: [
+    { header: 'id', getValue: (r) => r.id },
+    { header: '商机名称', getValue: (r) => r.name ?? '' },
+    { header: '描述', getValue: (r) => r.description ?? '' },
+    { header: '区域', getValue: (r) => r.region ?? '' },
+    { header: '状态', getValue: (r) => r.status ?? '' },
+    { header: '性质', getValue: (r) => OPPORTUNITY_NATURE_LABELS[r.nature] ?? '' },
+    { header: '联系人姓名', getValue: (r) => r.contactName ?? '' },
+    { header: '联系人职位', getValue: (r) => r.contactTitle ?? '' },
+    { header: '联系方式', getValue: (r) => r.contactInfo ?? '' },
+    { header: '销售决策信息', getValue: (r) => r.salesDecisionInfo ?? '' },
+    { header: '客户决策人', getValue: (r) => r.customerDecisionMaker ?? '' },
+    { header: '决策人描述', getValue: (r) => r.decisionMakerDescription ?? '' },
+    { header: '销售负责人', getValue: (r) => r.salesOwner?.name ?? '' },
+    { header: '附件', getValue: (r) => r.attachmentUrl ?? '' },
+    { header: '进展记录(JSON)', getValue: (r) => JSON.stringify((r.progressRecords ?? []).map((x: any) => ({ date: fmtDate(x.date), description: x.description ?? '' }))) },
+  ],
+
+  CONTRACT: [
+    { header: 'id', getValue: (r) => r.id },
+    { header: '客户名称', getValue: (r) => r.customer?.shortName ?? r.customer?.fullName ?? '' },
+    { header: '合同名称', getValue: (r) => r.contractName ?? '' },
+    { header: '签订年份', getValue: (r) => r.signingYear ?? '' },
+    { header: '生效开始', getValue: (r) => fmtDate(r.effectiveStart) },
+    { header: '生效结束', getValue: (r) => fmtDate(r.effectiveEnd) },
+    { header: '到期日期', getValue: (r) => fmtDate(r.expiryDate) },
+    { header: '服务类型', getValue: (r) => r.serviceType ?? '' },
+    { header: '猎头费率', getValue: (r) => r.headhunterFeeRate ?? '' },
+    { header: '开票月数', getValue: (r) => r.billingMonths ?? '' },
+    { header: 'ROP费率', getValue: (r) => r.ropFeeRate ?? '' },
+    { header: '销售负责人', getValue: (r) => r.salesOwner?.name ?? '' },
+    { header: '交付负责人', getValue: (r) => r.deliveryOwner?.name ?? '' },
+    { header: '合同文件', getValue: (r) => r.contractFileUrl ?? '' },
+    { header: '开票信息', getValue: (r) => r.invoiceInfoText ?? '' },
+    { header: '开票信息文件', getValue: (r) => r.invoiceInfoFileUrl ?? '' },
+    { header: '备注', getValue: (r) => r.notes ?? '' },
+    { header: '发票(JSON)', getValue: (r) => JSON.stringify((r.invoices ?? []).map((x: any) => ({ invoiceType: x.invoiceType ?? '', verificationResult: x.verificationResult ?? '' }))) },
+  ],
+
+  KNOWLEDGE: [
+    { header: 'id', getValue: (r) => r.id },
+    { header: '分类', getValue: (r) => r.category ?? '' },
+    { header: '标签', getValue: (r) => joinTags(r.tags) },
+    { header: '关键词', getValue: (r) => r.keywords ?? '' },
+    { header: '文件', getValue: (r) => r.fileUrl ?? '' },
+    { header: '备注', getValue: (r) => r.notes ?? '' },
+    { header: '培训大纲', getValue: (r) => r.trainingOutline ?? '' },
+    { header: '内部讲师', getValue: (r) => r.internalLecturer?.name ?? '' },
+    { header: '外部讲师', getValue: (r) => r.externalLecturer ?? '' },
+    { header: '管理记录(JSON)', getValue: (r) => JSON.stringify((r.managementRecords ?? []).map((x: any) => ({ date: fmtDate(x.date), details: x.details ?? '' }))) },
   ],
 }

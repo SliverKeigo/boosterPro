@@ -11,6 +11,7 @@ export interface ImportField {
   field: string // prisma 标量字段名
   type?: FieldType
   required?: boolean
+  omitIfEmpty?: boolean // 空值时不写该字段（用于 NOT NULL+默认值列：新增走默认、更新不改）
   transform?: (raw: any) => any // 值映射（如 男→MALE）；返回 undefined 视为无法识别 → 该行报错
   relation?: { idField: string; resolve: (name: string) => Promise<number | null> } // 关系列：名称→id 写入 idField
 }
@@ -142,6 +143,7 @@ async function buildRow(
       } else {
         val = coerce(f.type, raw)
       }
+      if (val === null && f.omitIfEmpty) continue // NOT NULL+默认值列：空则不写，用默认/不改
       scalars[f.field] = val
     }
   }
