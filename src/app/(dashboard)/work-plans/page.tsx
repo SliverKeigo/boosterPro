@@ -310,7 +310,7 @@ export default function WorkPlansPage() {
             <span className="text-sm font-semibold">本周计划明细（{items.length} 行）</span>
             <button className="btn btn-outline btn-xs gap-1" onClick={addItem}><Plus className="h-3.5 w-3.5" />添加行</button>
           </div>
-          <div className="overflow-x-auto rounded-lg border border-base-300">
+          <div className="min-h-[320px] max-h-[56vh] overflow-auto rounded-lg border border-base-300">
             <table className="table table-xs">
               <thead>
                 <tr>
