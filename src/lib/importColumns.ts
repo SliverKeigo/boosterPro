@@ -16,17 +16,18 @@ const joinTags = (t: any) => (Array.isArray(t) ? t.join('、') : (t ?? ''))
 const subRows = (rows: any, cells: (r: any) => any[]) =>
   (Array.isArray(rows) ? rows : []).map((r) => cells(r).map((v) => String(v ?? '')).join(' | ')).join('\n')
 
-// 每个资源的必填列（导出给这些表头加 * 提示；导入端 parseWorkbook 会去掉 * 再匹配，与 importConfigs 的 required 对应）
+// 每个资源的必填列（导出给这些表头加 * 提示；导入端 parseWorkbook 会去掉 * 再匹配）。
+// 口径＝各模块**表单**的「无条件必填」字段（映射到导出表头），与界面保持一致；条件必填(如需求的招聘重启日期/关闭原因)不计入。
 export const REQUIRED_HEADERS: Record<string, string[]> = {
-  TALENT_POOL: ['姓名', '当前职位'],
-  CANDIDATE: ['姓名', '招聘渠道', '推荐状态'],
-  CUSTOMER: ['客户简称', '区域', '地址', '详细地址'],
-  REQUIREMENT: ['客户名称', '岗位名称', '招聘人数', 'base城市'],
+  TALENT_POOL: ['姓名', '当前职位', '简历及相关资料'],
+  CANDIDATE: ['姓名', '出生年份', '联系电话', '邮箱', '教育经历', '客户名称', '客户简称', '招聘需求方', '岗位名称', '推荐时间', '招聘渠道', '推荐报告', '推荐状态', '推荐理由'],
+  CUSTOMER: ['客户全称', '客户简称', '区域', '地址', '详细地址'],
+  REQUIREMENT: ['客户名称', '岗位名称', '招聘人数', '月薪下限', '月薪上限', '性别要求', '学历要求', '岗位状态', 'base城市'],
   CLIENT_SUPPLEMENT: ['客户名称'],
   CUSTOMER_CONTACT: ['标题', '客户名称'],
-  OPPORTUNITY: ['商机名称', '描述', '区域', '销售决策信息', '客户决策人', '决策人描述'],
+  OPPORTUNITY: ['商机名称', '描述', '区域', '状态', '性质', '销售决策信息', '客户决策人', '决策人描述', '销售负责人'],
   CONTRACT: ['客户名称', '合同名称', '签订年份', '生效开始', '生效结束', '到期日期', '服务类型', '合同文件'],
-  KNOWLEDGE: ['分类', '关键词'],
+  KNOWLEDGE: ['分类', '标签', '关键词'],
 }
 // 必填表头加 * 标识
 export const markRequired = (resource: string | undefined, header: string) =>
