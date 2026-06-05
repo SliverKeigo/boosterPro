@@ -51,7 +51,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - 通过 OpenAI **Responses API** + `web_search` 工具联网：`(openai as any).responses.create({ tools: [{ type: 'web_search' }], input })`（已封装为 `src/lib/ai.ts` 的 `runWebSearchJson`）。
 - 联网工具正式名是 `web_search`（GA），**不是** `web_search_preview`（旧预览名，会 upstream 失败）。
 - `OPENAI_MODEL` 必须是该 API 实际支持的有效模型名。
-- **服务商无关，靠 `.env` 切换**（`src/lib/openai.ts` 只读 `OPENAI_BASE_URL/OPENAI_API_KEY/OPENAI_MODEL`）。接入**字节跳动豆包（火山方舟 Ark）**只改这三个变量：`OPENAI_BASE_URL=https://ark.cn-beijing.volces.com/api/v3`、`OPENAI_MODEL=doubao-seed-1-6-250615`（需支持联网）——Ark 的 Responses API 与 `web_search` 工具同 OpenAI 同形，故无需改代码。响应取文本用 `ai.ts` 的 `extractOutputText`（`output_text` 优先、`output[].content[].text` 兜底），兼容两家对 `output_text` 填充不一致的情况。
+- **服务商靠 `.env` 切换**，由 `AI_PROVIDER` 在 `ai.ts` 的 `runWebSearchJson` 分流（模型名 `MODEL = AI_MODEL ?? OPENAI_MODEL`）：
+  - **OpenAI / 豆包（默认 `openai`）**：走 Responses API + `web_search`（`responses.create`，二者同形）。豆包(火山方舟 Ark)只改 `OPENAI_BASE_URL=https://ark.cn-beijing.volces.com/api/v3`、`OPENAI_MODEL=doubao-seed-1-6-250615`。响应取文本用 `extractOutputText`（`output_text` 优先、`output[].content[].text` 兜底）。
+  - **DeepSeek（`AI_PROVIDER=deepseek`）**：DeepSeek 官方 API 无 Responses API、无原生联网,但其 **Anthropic 兼容接口**(`ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic`)支持**托管 web_search**(联网由 DeepSeek 后端执行,无需外接搜索)。故走 `@anthropic-ai/sdk` 的 `messages.create` + `tools:[{type:'web_search_20250305',name:'web_search'}]`(类型可 `ANTHROPIC_WEB_SEARCH_TYPE` 覆盖)，取 `content[]` 里的 `text` 块。`.env`：`AI_PROVIDER=deepseek`、`ANTHROPIC_API_KEY=<DeepSeek Key>`、`AI_MODEL=deepseek-v4-flash`。**勿把 DeepSeek 当 OpenAI 接口接**——它的 `chat.completions` 只有客户端自执行的 function calling、没有托管联网。
 
 ## ⚠️ 重要经验教训（务必遵守）
 

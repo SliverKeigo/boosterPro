@@ -208,11 +208,17 @@ NEXT_PUBLIC_APP_NAME="BoosterPro"
 UPLOAD_DIR="./uploads"
 NODE_ENV="production"
 # AI 功能：填入下面的 key 后重启服务即可启用（留空则仅 AI 相关接口不可用，其余正常）
-# 服务商可切（只认这三个变量）：豆包(火山方舟 Ark) 填 OPENAI_BASE_URL=https://ark.cn-beijing.volces.com/api/v3、
-#   OPENAI_MODEL=doubao-seed-1-6-250615（需支持联网 web_search）；用 OpenAI 则保持下方默认值。
+# 服务商由 AI_PROVIDER 分流：
+#  · OpenAI/豆包(默认)：豆包(火山方舟 Ark) 填 OPENAI_BASE_URL=https://ark.cn-beijing.volces.com/api/v3、
+#    OPENAI_MODEL=doubao-seed-1-6-250615（需支持联网 web_search）；用 OpenAI 则保持下方默认值。
 OPENAI_API_KEY=""
 OPENAI_BASE_URL="https://api.openai.com/v1"
 OPENAI_MODEL="gpt-4o"
+#  · DeepSeek（走 Anthropic 兼容接口，联网由 DeepSeek 后端托管）：取消下面注释并填 key
+#AI_PROVIDER="deepseek"
+#ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
+#ANTHROPIC_API_KEY=""
+#AI_MODEL="deepseek-v4-flash"
 EOF
   [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ] && chown "$SUDO_USER" "$ENV_FILE"
   ok "已生成 .env（DB 密码与 JWT_SECRET 已随机生成）"
