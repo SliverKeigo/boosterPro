@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export const SUPPLEMENT_INCLUDE = {
+  createdBy: { select: { id: true, name: true, department: { select: { name: true } } } },
   customer: { select: { id: true, shortName: true } },
   demandUpdates: true,
   customerProfiles: true,

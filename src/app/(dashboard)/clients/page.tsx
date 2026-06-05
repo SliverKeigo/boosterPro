@@ -161,6 +161,8 @@ export default function ClientsPage() {
   }
 
   const columns: BoostColumn<any>[] = [
+    { key: 'createdByName', title: '提交人', accessor: (r) => r.createdBy?.name ?? '—', filterType: 'text' },
+    { key: 'createdByDept', title: '部门', accessor: (r) => r.createdBy?.department?.name ?? '—', filterType: 'text' },
     { key: 'fullName', title: '客户名称', render: (v) => v ? <span className="font-medium">{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'shortName', title: '客户简称', render: (v) => <span className="font-medium text-primary">{v}</span> },
     { key: 'industry', title: '所属行业', filterType: 'select', filterOptions: industryOptions, render: (v) => v || <span className="text-base-content/30">—</span> },

@@ -22,6 +22,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## 通用约定
 - 列表页一律用 `BoostTable`，列定义需**覆盖该模型所有字段**（不常用的设 `defaultVisible:false`）。
 - 列表 API 的 GET 返回**全量数据** `{ data, total }`，搜索 / 排序 / 分页由前端 BoostTable 负责；返回的每行需含 `createdById`，前端据此判断行级归属。
+- **每个业务列表默认展示「提交人 + 部门」两列**（口径统一＝录入人）：列表 `include` 带 `createdBy: { select: { id, name, department: { select: { name } } } }`，前端加 `{ key:'createdByName', title:'提交人', accessor: r=>r.createdBy?.name }` + `{ key:'createdByDept', title:'部门', accessor: r=>r.createdBy?.department?.name }`（默认可见）。候选人 / 客户联系人另有的业务字段 `submitter` 不是这个口径：它们的列分别叫「推荐人」「提报人」，勿与「提交人(createdBy)」混淆。新增业务模块照此办理。
 - `BoostTable` 支持**多字段自定义排序**：排序面板里可叠加多条规则（按顺序主排序 → 依次 tie-break，稳定排序），配了规则即覆盖列表默认序；表头点击与排序面板共享同一份 `sortRules`。
 - 列表默认排序：业务列表按 `updatedAt desc`；**系统管理菜单（users/roles/departments/permission-groups）按 `createdAt asc`**（稳定、不随编辑跳动）；字典管理维持原序（`dict-types` 按 `code`、`dict-items` 按 `sort`，勿改成时间）。
 - **导入已恢复（导出→改→导入回写）**：`BoostTable` 传 `importResource='<RESOURCE_KEY>'` 即开启该列表的「可回导导出 + 导入」。导出走 `src/lib/importColumns.ts` 的可回导列（首列 `id`、关系列出名称、子表列出 JSON 数组）；导入走 `/api/import/[resource]`（`src/lib/importServer.ts` 引擎 + `importConfigs.ts` 配置）：**有 id 更新（`assertRowWritable`）、无 id 新增（置 `createdById`）；关系列按名称唯一反查 id（重名/查无→该行报错）；子表 JSON 解码为 nested create；整文件事务（任一行校验失败则整批不写）；必填校验、`omitIfEmpty`（NOT NULL+默认值列空则省略）**。已接入九大业务列表模块；`resources.ts` 的 `IMPORT` 权限已恢复可配置。新增模块导入＝在 `importConfigs.ts`(服务端字段/关系/子表) + `importColumns.ts`(客户端导出列，表头须一致) 各加一项 + 页面传 `importResource`。**工作计划是主从-矩阵、不走通用引擎**（待专用实现）。

@@ -193,6 +193,8 @@ export default function KnowledgePage() {
   }
 
   const columns: BoostColumn<any>[] = [
+    { key: 'createdByName', title: '提交人', accessor: (r) => r.createdBy?.name ?? '—', filterType: 'text' },
+    { key: 'createdByDept', title: '部门', accessor: (r) => r.createdBy?.department?.name ?? '—', filterType: 'text' },
     // 知识分类：表单用 useDict('knowledge_category') 下拉，列无 accessor 比较原始值（字典 value）→ 用同一份字典项
     { key: 'category', title: '知识分类', filterType: 'select', filterOptions: categoryOptions, render: (v) => <span className="font-medium">{v}</span> },
     {

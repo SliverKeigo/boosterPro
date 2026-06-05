@@ -282,6 +282,8 @@ export default function CandidatesPage() {
   }
 
   const columns: BoostColumn<any>[] = [
+    { key: 'createdByName', title: '提交人', accessor: (r) => r.createdBy?.name ?? '—', filterType: 'text' },
+    { key: 'createdByDept', title: '部门', accessor: (r) => r.createdBy?.department?.name ?? '—', filterType: 'text' },
     { key: 'customerName', title: '客户简称', accessor: (r) => r.customer?.shortName,
       render: (v) => v ? <span className="font-medium text-primary">{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'positionName', title: '岗位名称', accessor: (r) => r.requirement?.positionName },
@@ -290,7 +292,7 @@ export default function CandidatesPage() {
       render: (v) => <span className="text-base-content/60">{v ? String(v).slice(0, 16).replace('T', ' ') : '—'}</span> },
     { key: 'recommendationStatus', title: '推荐状态', filterType: 'select', filterOptions: opts(STATUS_LABELS),
       render: (v) => <span className={`badge ${STATUS_BADGE[v] ?? 'badge-ghost'} badge-sm`}>{STATUS_LABELS[v] ?? v}</span> },
-    { key: 'submitterName', title: '提交人', accessor: (r) => r.submitter?.name },
+    { key: 'submitterName', title: '推荐人', accessor: (r) => r.submitter?.name },
     { key: 'interviewProgress', title: '面试进展', render: (v) => v ? <span className="line-clamp-1 max-w-[200px]">{v}</span> : <span className="text-base-content/30">—</span> },
     // 以下默认隐藏，可在"显示列"开启 —— 覆盖全部字段
     { key: 'recruitmentParty', title: '招聘需求方', defaultVisible: false },

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export const KNOWLEDGE_INCLUDE = {
+  createdBy: { select: { id: true, name: true, department: { select: { name: true } } } },
   managementRecords: {
     include: { submitter: { select: { id: true, name: true } } },
   },

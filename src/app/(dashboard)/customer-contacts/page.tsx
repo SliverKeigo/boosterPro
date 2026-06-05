@@ -140,10 +140,12 @@ export default function CustomerContactsPage() {
   }
 
   const columns: BoostColumn<any>[] = [
+    { key: 'createdByName', title: '提交人', accessor: (r) => r.createdBy?.name ?? '—', filterType: 'text' },
+    { key: 'createdByDept', title: '部门', accessor: (r) => r.createdBy?.department?.name ?? '—', filterType: 'text' },
     { key: 'title', title: '实例标题', render: (v) => <span className="font-medium">{v}</span> },
     { key: 'customerName', title: '客户名称', accessor: (r) => r.customer?.shortName,
       render: (v) => v ? <span className="font-medium text-primary">{v}</span> : <span className="text-base-content/30">—</span> },
-    { key: 'submitterName', title: '提交人', accessor: (r) => r.submitter?.name,
+    { key: 'submitterName', title: '提报人', accessor: (r) => r.submitter?.name,
       render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'contacts', title: '客户联系人信息', sortable: false,
       accessor: (r) =>

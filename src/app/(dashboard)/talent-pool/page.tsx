@@ -110,6 +110,8 @@ export default function TalentPoolPage() {
   }
 
   const columns: BoostColumn<any>[] = [
+    { key: 'createdByName', title: '提交人', accessor: (r) => r.createdBy?.name ?? '—', filterType: 'text' },
+    { key: 'createdByDept', title: '部门', accessor: (r) => r.createdBy?.department?.name ?? '—', filterType: 'text' },
     { key: 'name', title: '姓名', render: (v) => <span className="font-medium">{v}</span> },
     { key: 'gender', title: '性别', accessor: (r) => GENDER_LABELS[r.gender] ?? '',
       filterType: 'select', filterOptions: Object.values(GENDER_LABELS).map((l) => ({ label: l, value: l })) },

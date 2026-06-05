@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export const OPPORTUNITY_INCLUDE = {
+  createdBy: { select: { id: true, name: true, department: { select: { name: true } } } },
   salesOwner: { select: { id: true, name: true } },
   progressRecords: true,
 }

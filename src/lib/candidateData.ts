@@ -2,6 +2,7 @@
 
 // 列表用：含保证期沟通 / 风险事件子表（列表页“显示列”可开启其摘要列）
 export const CANDIDATE_LIST_INCLUDE = {
+  createdBy: { select: { id: true, name: true, department: { select: { name: true } } } },
   customer: { select: { id: true, shortName: true } },
   requirement: { select: { id: true, positionName: true } },
   submitter: { select: { id: true, name: true } },

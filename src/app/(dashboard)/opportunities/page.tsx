@@ -153,6 +153,8 @@ export default function OpportunitiesPage() {
   }
 
   const columns: BoostColumn<any>[] = [
+    { key: 'createdByName', title: '提交人', accessor: (r) => r.createdBy?.name ?? '—', filterType: 'text' },
+    { key: 'createdByDept', title: '部门', accessor: (r) => r.createdBy?.department?.name ?? '—', filterType: 'text' },
     { key: 'name', title: '商机名称', render: (v) => <span className="font-medium text-primary">{v}</span> },
     // 所属区域：表单用 RegionCascade 自由拼接的省市区字符串，非字典/枚举 → 文本筛选
     { key: 'region', title: '所属区域', filterType: 'text' },
