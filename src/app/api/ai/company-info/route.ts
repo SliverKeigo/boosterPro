@@ -32,6 +32,7 @@ export async function POST(req: Request) {
       industry: data.industry || '',
       region: data.region || '',
       formerName: data.formerName || '',
+      detailedAddress: data.detailedAddress || '',
       companyCulture: data.companyCulture || '',
       benchmarkCompanies: Array.isArray(data.benchmarkCompanies)
         ? data.benchmarkCompanies.join('、')

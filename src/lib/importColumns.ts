@@ -21,7 +21,7 @@ const subRows = (rows: any, cells: (r: any) => any[]) =>
 export const REQUIRED_HEADERS: Record<string, string[]> = {
   TALENT_POOL: ['姓名', '当前职位', '简历及相关资料'],
   CANDIDATE: ['姓名', '出生年份', '联系电话', '邮箱', '教育经历', '客户名称', '客户简称', '招聘需求方', '岗位名称', '推荐时间', '招聘渠道', '推荐报告', '推荐状态', '推荐理由'],
-  CUSTOMER: ['客户全称', '客户简称', '区域', '地址', '详细地址'],
+  CUSTOMER: ['客户全称', '客户简称', '区域', '详细地址'],
   REQUIREMENT: ['客户名称', '岗位名称', '招聘人数', '月薪下限', '月薪上限', '性别要求', '学历要求', '岗位状态', 'base城市'],
   CLIENT_SUPPLEMENT: ['客户名称'],
   CUSTOMER_CONTACT: ['标题', '客户名称'],
@@ -89,7 +89,6 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '曾用名', getValue: (r) => r.formerName ?? '' },
     { header: '所属行业', getValue: (r) => r.industry ?? '' },
     { header: '区域', getValue: (r) => r.region ?? '' },
-    { header: '地址', getValue: (r) => r.address ?? '' },
     { header: '详细地址', getValue: (r) => r.detailedAddress ?? '' },
     { header: '企业文化', getValue: (r) => r.companyCulture ?? '' },
     { header: '开场白', getValue: (r) => r.openingSpeech ?? '' },

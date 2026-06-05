@@ -98,7 +98,6 @@ export const CONFIGS: Record<string, ImportResource> = {
       { header: '曾用名', field: 'formerName' },
       { header: '所属行业', field: 'industry' },
       { header: '区域', field: 'region', required: true },
-      { header: '地址', field: 'address', required: true },
       { header: '详细地址', field: 'detailedAddress', required: true },
       { header: '企业文化', field: 'companyCulture' },
       { header: '开场白', field: 'openingSpeech' },

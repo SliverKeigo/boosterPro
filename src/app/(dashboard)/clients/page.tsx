@@ -13,7 +13,6 @@ import {
   Field,
   FileUpload,
   RichText,
-  RegionCascade,
   SearchSelect,
   useToast,
 } from '@/components/ui'
@@ -31,7 +30,6 @@ const EMPTY_FORM: any = {
   formerName: '',
   industry: '',
   region: '',
-  address: '',
   detailedAddress: '',
   companyCulture: '',
   openingSpeech: '',
@@ -66,7 +64,7 @@ export default function ClientsPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'AI 生成失败')
-      const fields = ['industry', 'region', 'formerName', 'companyCulture', 'benchmarkCompanies']
+      const fields = ['industry', 'region', 'formerName', 'companyCulture', 'benchmarkCompanies', 'detailedAddress']
       let filled = 0
       for (const f of fields) {
         if (data[f]) {
@@ -142,7 +140,6 @@ export default function ClientsPage() {
     if (!form.fullName?.trim()) return toast.error('请填写客户名称')
     if (!form.shortName?.trim()) return toast.error('请填写客户简称')
     if (!form.region?.trim()) return toast.error('请填写所属区域')
-    if (!form.address?.trim()) return toast.error('请填写公司地址')
     if (!form.detailedAddress?.trim()) return toast.error('请填写详细地址')
     setSubmitting(true)
     try {
@@ -168,7 +165,6 @@ export default function ClientsPage() {
     { key: 'shortName', title: '客户简称', render: (v) => <span className="font-medium text-primary">{v}</span> },
     { key: 'industry', title: '所属行业', filterType: 'select', filterOptions: industryOptions, render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'region', title: '所属区域' },
-    { key: 'address', title: '公司地址', render: (v) => v ? <span className="line-clamp-1 max-w-[200px]">{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'officeAddresses', title: '办公地址', sortable: false,
       accessor: (r) => (r.officeAddresses ?? []).map((x: any) => x.address).filter(Boolean).join('；'),
       render: (_v, r) => (
@@ -271,9 +267,6 @@ export default function ClientsPage() {
           </Field>
           <Field label="所属区域" required>
             <input className="input input-bordered w-full" value={form.region} onChange={(e) => setField('region', e.target.value)} placeholder="请输入" />
-          </Field>
-          <Field label="公司地址" required>
-            <RegionCascade value={form.address} onChange={(v) => setField('address', v)} />
           </Field>
           <Field label="详细地址" required>
             <input className="input input-bordered w-full" value={form.detailedAddress} onChange={(e) => setField('detailedAddress', e.target.value)} placeholder="请输入" />

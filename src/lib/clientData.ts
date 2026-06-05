@@ -11,7 +11,6 @@ const CUSTOMER_SCALAR_FIELDS = [
   'formerName',
   'industry',
   'region',
-  'address',
   'detailedAddress',
   'companyCulture',
   'openingSpeech',

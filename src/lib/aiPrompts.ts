@@ -19,8 +19,8 @@ export const PROMPT_DEFAULTS: Record<string, { name: string; content: string; de
       '请联网搜索「{{companyName}}」的最新公开信息，提取用于自动填充客户档案的字段。\n' +
       '对标企业务必是【当前真实存在】的竞品（排除已倒闭 / 已被收购 / 已退出市场的）。\n\n' +
       '严格只返回 JSON（不要多余文字、不要 markdown 围栏、不要引用角标）：\n' +
-      '{"industry":"所属行业","region":"总部所在城市或地区","formerName":"公司曾用名（无则空字符串）","companyCulture":"企业文化与福利简述(150字内)","benchmarkCompanies":"对标竞品公司，多个用顿号分隔"}',
-    description: '可用变量：{{companyName}} 公司名称。要求返回 {industry,region,formerName,companyCulture,benchmarkCompanies}。',
+      '{"industry":"所属行业","region":"总部所在城市或地区","formerName":"公司曾用名（无则空字符串）","detailedAddress":"总部详细地址（街道门牌等，能查到则填，查不到则空字符串）","companyCulture":"企业文化与福利简述(150字内)","benchmarkCompanies":"对标竞品公司，多个用顿号分隔"}',
+    description: '可用变量：{{companyName}} 公司名称。要求返回 {industry,region,formerName,detailedAddress,companyCulture,benchmarkCompanies}。',
   },
   supplement_opening: {
     name: '客户补充-开聊话术',

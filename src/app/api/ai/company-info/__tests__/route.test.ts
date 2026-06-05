@@ -55,6 +55,7 @@ describe('POST /api/ai/company-info', () => {
       industry: '互联网',
       region: '北京',
       formerName: '',
+      detailedAddress: '北京市海淀区中关村软件园 1 号楼',
       companyCulture: '狼性',
       benchmarkCompanies: ['腾讯', '阿里'],
     })
@@ -66,6 +67,7 @@ describe('POST /api/ai/company-info', () => {
       industry: '互联网',
       region: '北京',
       formerName: '',
+      detailedAddress: '北京市海淀区中关村软件园 1 号楼',
       companyCulture: '狼性',
       benchmarkCompanies: '腾讯、阿里',
     })

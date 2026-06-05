@@ -147,7 +147,6 @@ model Customer {
   formerName         String?                 @map("former_name") @db.VarChar(200)
   industry           String?                 @db.VarChar(100)
   region             String                  @db.VarChar(100)
-  address            String                  @db.VarChar(500)
   detailedAddress    String                  @map("detailed_address") @db.VarChar(500)
   companyCulture     String?                 @map("company_culture") @db.Text
   openingSpeech      String?                 @map("opening_speech") @db.Text
