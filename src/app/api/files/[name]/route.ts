@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { readFile, stat } from 'fs/promises'
 import path from 'path'
-import { getSessionPayload } from '@/lib/permissions'
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads'
 
@@ -23,13 +22,11 @@ const MIME: Record<string, string> = {
 
 export async function GET(req: Request, { params }: { params: Promise<{ name: string }> }) {
   try {
-    // 接口级登录校验（不只依赖 middleware）：未登录禁止下载任何文件
-    if (!(await getSessionPayload())) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // 注意：附件接口已在 middleware 放行（免登录），以便本地 Office 经 ms-word: 协议拉取。
+    // ⚠️ 安全降级：附件凭 URL 可下载、不做登录校验（内网部署 + 文件名随机前缀作弱保护）。
     const { name } = await params
     const decoded = decodeURIComponent(name)
-    // 防目录穿越
+    // 防目录穿越（必须保留，否则可读 uploads 外的任意文件）
     if (decoded.includes('..') || decoded.includes('/') || decoded.includes('\\')) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
     }

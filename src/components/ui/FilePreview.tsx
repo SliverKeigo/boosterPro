@@ -86,17 +86,20 @@ export function FilePreview({ open, url, fileName, onClose }: FilePreviewProps) 
   // 以逃离详情态外层 fieldset[disabled] 的 pointer-events-none（否则预览弹窗自身点不动）。
   if (!open || typeof document === 'undefined') return null
 
+  // 本机 Word 打开：ms-word 协议需【绝对 URL】（Word 自带 HTTP 栈、不知道页面 host），
+  // 且文件名段需 URL 编码（协议不会像浏览器那样自动编码，含中文会拉取失败）。ofe=编辑打开。
+  const storedName = decodeURIComponent((url.split('?')[0] || '').split('/').pop() || '')
+  const wordHref = `ms-word:ofe|u|${window.location.origin}/api/files/${encodeURIComponent(storedName)}`
+
   return createPortal(
     <Modal open={open} onClose={onClose} width={960} footer={null} title={name || '附件预览'}>
       <div className="flex flex-col gap-3">
         <div className="flex justify-end gap-2">
           {isWord && (
             <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={wordHref}
               className="btn btn-ghost btn-sm gap-1.5"
-              title="用本机 Word 打开该文件"
+              title="用本机 Microsoft Word 打开（需 Windows + 桌面版 Word）"
             >
               <FileText className="h-4 w-4" />
               用 Word 打开

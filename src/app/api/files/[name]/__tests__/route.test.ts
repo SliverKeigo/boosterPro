@@ -4,13 +4,8 @@ vi.mock('fs/promises', () => ({
   readFile: vi.fn(async () => Buffer.from('hello')),
   stat: vi.fn(async () => ({})),
 }))
-// 文件下载现要求登录：mock 轻量登录校验为已登录
-vi.mock('@/lib/permissions', () => ({
-  getSessionPayload: vi.fn(async () => ({ userId: 1 })),
-}))
 
 import { readFile, stat } from 'fs/promises'
-import { getSessionPayload } from '@/lib/permissions'
 import { GET } from '@/app/api/files/[name]/route'
 
 const mock = (fn: unknown) => fn as ReturnType<typeof vi.fn>
@@ -36,12 +31,10 @@ describe('GET /api/files/[name]', () => {
     expect(buf.toString()).toBe('imgbytes')
   })
 
-  it('未登录 → 401，不读盘', async () => {
-    mock(getSessionPayload).mockResolvedValueOnce(null)
+  it('免登录放行（附件接口已在 middleware 放行，供 ms-word 协议拉取）', async () => {
+    mock(readFile).mockResolvedValue(Buffer.from('imgbytes'))
     const res = await get('1700000000-abc123-头像.png')
-    expect(res.status).toBe(401)
-    expect(stat).not.toHaveBeenCalled()
-    expect(readFile).not.toHaveBeenCalled()
+    expect(res.status).toBe(200)
   })
 
   it('?download=1 → 强制 attachment', async () => {

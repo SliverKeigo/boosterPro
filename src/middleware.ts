@@ -14,6 +14,9 @@ export async function middleware(req: NextRequest) {
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
+    // 附件下载放行：本地 Office（ms-word: 协议）拉文件不带登录 cookie，故 /api/files/* 免登录。
+    // ⚠️ 安全降级：附件凭 URL 即可下载（无登录校验）；靠文件名的时间戳+随机前缀作弱保护。
+    pathname.startsWith('/api/files/') ||
     PUBLIC_PATHS.includes(pathname)
   ) {
     return NextResponse.next()
