@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export const CUSTOMER_CONTACT_INCLUDE = {
-  createdBy: { select: { id: true, name: true, department: { select: { name: true } } } },
+  createdBy: { select: { id: true, name: true, departmentId: true, department: { select: { name: true } } } },
   customer: { select: { id: true, shortName: true } },
   submitter: { select: { id: true, name: true } },
   contacts: true,

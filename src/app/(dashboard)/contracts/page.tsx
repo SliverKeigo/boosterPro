@@ -47,7 +47,7 @@ const EMPTY_FORM: any = {
 
 export default function ContractsPage() {
   const toast = useToast()
-  const { can, isOwner, userId } = useMyPermissions()
+  const { can, canEditRow, userId } = useMyPermissions()
   const { items: serviceTypeOptions } = useDict('service_type')
   const { items: invoiceTypeOptions } = useDict('invoice_type')
   const { items: verificationResultOptions } = useDict('verification_result')
@@ -250,7 +250,7 @@ export default function ContractsPage() {
               <Eye className="h-3.5 w-3.5" />
               详情
             </button>
-            {can(RES, 'DELETE') && isOwner(r) && (
+            {can(RES, 'DELETE') && canEditRow(RES, r) && (
               <Popconfirm title="确认删除该合同？" onConfirm={() => handleDelete(r.id)}>
                 <button className="btn btn-ghost btn-xs gap-1 text-error">
                   <Trash2 className="h-3.5 w-3.5" />
@@ -270,7 +270,7 @@ export default function ContractsPage() {
         okText={editing ? '保存' : '创建'}
         confirmLoading={submitting}
         readOnly={mode === 'view'}
-        onEdit={can(RES, 'EDIT') && isOwner(editing) ? () => setMode('edit') : undefined}
+        onEdit={can(RES, 'EDIT') && canEditRow(RES, editing) ? () => setMode('edit') : undefined}
         width={760}
       >
         <div className="grid grid-cols-2 gap-4">

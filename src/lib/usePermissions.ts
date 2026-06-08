@@ -9,6 +9,9 @@ export interface MyPermissions {
   groupId: number | null // 当前用户所属组
   ledGroupId: number | null // 作为组长所领的组（工作计划「新增」据此显隐）
   permissions: Record<string, string[]> // resource → actions
+  // 「可编辑授权概要」：被授予 EDIT 的数据来源（创建者 userId / 创建者部门 deptId），
+  // 供 canEditRow 镜像后端行级编辑权（view 由后端过滤保证，前端只需 edit 维度）。
+  grants?: Record<string, { editUserIds: number[]; editDeptIds: number[] }>
 }
 
 // ─── 模块级 store ────────────────────────────────────────────────────────────
@@ -102,11 +105,32 @@ export function useMyPermissions() {
   const isOwner = (row: { createdById?: number | null } | null | undefined): boolean =>
     !!perm && (perm.isAdmin || (!!row && row.createdById === perm.userId))
 
+  // 行级：是否可编辑该行（镜像后端 assertRowAccess 的 write 判定）。
+  // 本人创建 / 管理员 / 被授「编辑」该行来源（按创建者 userId 或创建者部门 deptId）→ 可编辑。
+  // 注意仍需配合 can(resource,'EDIT'/'DELETE') —— 本函数只判数据归属，不判功能权限。
+  const canEditRow = (
+    resource: string,
+    row: {
+      createdById?: number | null
+      createdBy?: { id?: number | null; departmentId?: number | null } | null
+    },
+  ): boolean => {
+    if (!perm) return false
+    if (perm.isAdmin) return true
+    if (row.createdById === perm.userId) return true
+    const g = perm.grants?.[resource]
+    if (!g) return false
+    if (row.createdById != null && g.editUserIds.includes(row.createdById)) return true
+    if (row.createdBy?.departmentId != null && g.editDeptIds.includes(row.createdBy.departmentId)) return true
+    return false
+  }
+
   return {
     perm,
     loading: perm === null,
     can,
     isOwner,
+    canEditRow,
     isAdmin: perm?.isAdmin ?? false,
     userId: perm?.userId ?? null,
     departmentId: perm?.departmentId ?? null,

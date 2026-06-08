@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
-import { requirePermission, assertRowWritable } from '@/lib/permissions'
+import { requirePermission, assertRowAccess } from '@/lib/permissions'
 import { buildTalentPoolData } from '@/lib/talentPoolData'
 
 export async function GET(
@@ -9,10 +9,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requirePermission('TALENT_POOL', 'VIEW')
+    const user = await requirePermission('TALENT_POOL', 'VIEW')
     const { id } = await params
-    const item = await prisma.talentPool.findUnique({ where: { id: parseInt(id) } })
-    if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    const item = await prisma.talentPool.findUnique({
+      where: { id: parseInt(id) },
+      include: { createdBy: { select: { departmentId: true } } },
+    })
+    await assertRowAccess(user, item, 'TALENT_POOL', 'view')
     return NextResponse.json(item)
   } catch (e) {
     return handleApiError(e)
@@ -28,9 +31,9 @@ export async function PUT(
     const { id } = await params
     const existing = await prisma.talentPool.findUnique({
       where: { id: parseInt(id) },
-      select: { createdById: true },
+      select: { createdById: true, createdBy: { select: { departmentId: true } } },
     })
-    assertRowWritable(user, existing)
+    await assertRowAccess(user, existing, 'TALENT_POOL', 'write')
     const body = await req.json()
     const item = await prisma.talentPool.update({
       where: { id: parseInt(id) },
@@ -51,9 +54,9 @@ export async function DELETE(
     const { id } = await params
     const existing = await prisma.talentPool.findUnique({
       where: { id: parseInt(id) },
-      select: { createdById: true },
+      select: { createdById: true, createdBy: { select: { departmentId: true } } },
     })
-    assertRowWritable(user, existing)
+    await assertRowAccess(user, existing, 'TALENT_POOL', 'write')
     await prisma.talentPool.delete({ where: { id: parseInt(id) } })
     return NextResponse.json({ success: true })
   } catch (e) {

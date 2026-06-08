@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { HttpError } from '@/lib/apiError'
 
 export const CUSTOMER_INCLUDE = {
-  createdBy: { select: { id: true, name: true, department: { select: { name: true } } } },
+  createdBy: { select: { id: true, name: true, departmentId: true, department: { select: { name: true } } } },
   officeAddresses: true,
 }
 

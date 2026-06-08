@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
-import { requirePermission } from '@/lib/permissions'
+import { requirePermission, buildRowFilter } from '@/lib/permissions'
 import { buildTalentPoolData } from '@/lib/talentPoolData'
 
 // 返回全量数据，前端 BoostTable 负责搜索 / 排序 / 分页
 export async function GET() {
   try {
-    await requirePermission('TALENT_POOL', 'VIEW')
+    const user = await requirePermission('TALENT_POOL', 'VIEW')
     const data = await prisma.talentPool.findMany({
+      where: await buildRowFilter(user, 'TALENT_POOL', 'view'),
       orderBy: { updatedAt: 'desc' },
-      include: { createdBy: { select: { id: true, name: true, department: { select: { name: true } } } } },
+      include: { createdBy: { select: { id: true, name: true, departmentId: true, department: { select: { name: true } } } } },
     })
     return NextResponse.json({ data, total: data.length })
   } catch (e) {

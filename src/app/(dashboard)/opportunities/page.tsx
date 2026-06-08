@@ -55,7 +55,7 @@ const EMPTY_FORM: any = {
 
 export default function OpportunitiesPage() {
   const toast = useToast()
-  const { can, isOwner, userId } = useMyPermissions()
+  const { can, canEditRow, userId } = useMyPermissions()
   const { items: statusOptions } = useDict('opportunity_status')
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -217,7 +217,7 @@ export default function OpportunitiesPage() {
               <Eye className="h-3.5 w-3.5" />
               详情
             </button>
-            {can(RES, 'DELETE') && isOwner(r) && (
+            {can(RES, 'DELETE') && canEditRow(RES, r) && (
               <Popconfirm title="确认删除该商机？" onConfirm={() => handleDelete(r.id)}>
                 <button className="btn btn-ghost btn-xs gap-1 text-error">
                   <Trash2 className="h-3.5 w-3.5" />
@@ -238,7 +238,7 @@ export default function OpportunitiesPage() {
         okText={editing ? '保存' : '创建'}
         confirmLoading={submitting}
         readOnly={mode === 'view'}
-        onEdit={can(RES, 'EDIT') && isOwner(editing) ? () => setMode('edit') : undefined}
+        onEdit={can(RES, 'EDIT') && canEditRow(RES, editing) ? () => setMode('edit') : undefined}
         width={760}
       >
         <div className="grid grid-cols-2 gap-4">

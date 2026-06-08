@@ -36,7 +36,7 @@ const EMPTY_FORM: any = {
 export default function SupplementsPage() {
   const toast = useToast()
   const router = useRouter()
-  const { can, isOwner } = useMyPermissions()
+  const { can, canEditRow } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -219,7 +219,7 @@ export default function SupplementsPage() {
               <Eye className="h-3.5 w-3.5" />
               详情
             </button>
-            {can(RES, 'DELETE') && isOwner(r) && (
+            {can(RES, 'DELETE') && canEditRow(RES, r) && (
               <Popconfirm title="确认删除该补充信息？" onConfirm={() => handleDelete(r.id)}>
                 <button className="btn btn-ghost btn-xs gap-1 text-error">
                   <Trash2 className="h-3.5 w-3.5" />
@@ -240,7 +240,7 @@ export default function SupplementsPage() {
         okText={editing ? '保存' : '创建'}
         confirmLoading={submitting}
         readOnly={mode === 'view'}
-        onEdit={can(RES, 'EDIT') && isOwner(editing) ? () => setMode('edit') : undefined}
+        onEdit={can(RES, 'EDIT') && canEditRow(RES, editing) ? () => setMode('edit') : undefined}
         width={720}
       >
         <div className="grid grid-cols-2 gap-4">

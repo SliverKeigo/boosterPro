@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
-import { requirePermission } from '@/lib/permissions'
+import { requirePermission, buildRowFilter } from '@/lib/permissions'
 import { SUPPLEMENT_INCLUDE, buildSupplementData } from '@/lib/supplementData'
 
 // 返回全量数据，前端 BoostTable 负责搜索 / 排序 / 分页
 export async function GET() {
   try {
-    await requirePermission('CLIENT_SUPPLEMENT', 'VIEW')
+    const user = await requirePermission('CLIENT_SUPPLEMENT', 'VIEW')
     const data = await prisma.clientSupplement.findMany({
+      where: await buildRowFilter(user, 'CLIENT_SUPPLEMENT', 'view'),
       orderBy: { updatedAt: 'desc' },
       include: SUPPLEMENT_INCLUDE,
     })

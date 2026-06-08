@@ -4,6 +4,7 @@ import { HttpError } from '@/lib/apiError'
 vi.mock('@/lib/permissions', () => ({
   getCurrentUser: vi.fn(),
   getPermissionMap: vi.fn(),
+  getGrantsForUser: vi.fn(async () => ({})),
 }))
 vi.mock('@/lib/groups', () => ({
   getMyLedGroupId: vi.fn(),
@@ -44,6 +45,7 @@ describe('GET /api/permissions/my', () => {
       groupId: 4,
       ledGroupId: 4,
       permissions: permMap,
+      grants: {},
     })
     expect(getPermissionMap).toHaveBeenCalledWith(user)
     expect(getMyLedGroupId).toHaveBeenCalledWith(user)

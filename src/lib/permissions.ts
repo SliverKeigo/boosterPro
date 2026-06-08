@@ -106,3 +106,53 @@ export function assertRowWritable(user: CurrentUser, row: { createdById?: number
     throw new HttpError(403, '该数据由他人创建，您只能查看，无法修改或删除')
   }
 }
+
+// ════════════════ 数据共享授权（data_grants）════════════════
+// 模型：把「某人/某部门 录入的 某资源数据」开放给「某用户/某部门」查看(VIEW)或编辑(EDIT)。EDIT 蕴含 VIEW。
+type GrantScope = { userIds: number[]; deptIds: number[] }
+type ResourceGrants = { view: GrantScope; edit: GrantScope }
+
+// 解析「授予给当前用户(或其所在部门)」的全部授权 → 每资源下我能 查看/编辑 的来源集合
+//（来源 = 数据创建者 userId 或 创建者所属部门 deptId）。请求级 cache 去重（user 同引用即命中）。
+export const getGrantsForUser = cache(async (user: CurrentUser): Promise<Record<string, ResourceGrants>> => {
+  const or: any[] = [{ granteeType: 'USER', granteeUserId: user.id }]
+  if (user.departmentId != null) or.push({ granteeType: 'DEPARTMENT', granteeDeptId: user.departmentId })
+  const grants = await prisma.dataGrant.findMany({
+    where: { OR: or },
+    select: { resource: true, sourceType: true, sourceUserId: true, sourceDeptId: true, access: true },
+  })
+  const map: Record<string, ResourceGrants> = {}
+  for (const g of grants) {
+    const m = (map[g.resource] ??= { view: { userIds: [], deptIds: [] }, edit: { userIds: [], deptIds: [] } })
+    const scopes = g.access === 'EDIT' ? [m.edit, m.view] : [m.view] // EDIT 同时给查看权
+    for (const s of scopes) {
+      if (g.sourceType === 'OWNER' && g.sourceUserId != null) s.userIds.push(g.sourceUserId)
+      else if (g.sourceType === 'DEPARTMENT' && g.sourceDeptId != null) s.deptIds.push(g.sourceDeptId)
+    }
+  }
+  return map
+})
+
+// 列表/读 的 Prisma where 过滤：本人创建 + 被授(view/write) + 管理员看全部。塞进 findMany({ where })。
+export async function buildRowFilter(user: CurrentUser, resource: ResourceKey, mode: 'view' | 'write'): Promise<any> {
+  if (user.isAdmin) return {}
+  const scope = (await getGrantsForUser(user))[resource]?.[mode === 'write' ? 'edit' : 'view']
+  const or: any[] = [{ createdById: user.id }]
+  if (scope?.userIds.length) or.push({ createdById: { in: scope.userIds } })
+  if (scope?.deptIds.length) or.push({ createdBy: { departmentId: { in: scope.deptIds } } })
+  return { OR: or }
+}
+
+type RowOwner = { createdById?: number | null; createdBy?: { departmentId?: number | null } | null } | null
+
+// 行级读/写鉴权（详情 GET / PUT / DELETE）：本人 / 管理员 / 被授(对应 mode) 放行，否则抛错。
+// row 需含 createdById；按部门授权判定时需含 createdBy.departmentId（取 existing 时一并 select）。
+export async function assertRowAccess(user: CurrentUser, row: RowOwner, resource: ResourceKey, mode: 'view' | 'write'): Promise<void> {
+  if (!row) throw new HttpError(404, '记录不存在或已被删除')
+  if (user.isAdmin || row.createdById === user.id) return
+  const scope = (await getGrantsForUser(user))[resource]?.[mode === 'write' ? 'edit' : 'view']
+  const okUser = row.createdById != null && !!scope?.userIds.includes(row.createdById)
+  const okDept = row.createdBy?.departmentId != null && !!scope?.deptIds.includes(row.createdBy.departmentId)
+  if (okUser || okDept) return
+  throw new HttpError(mode === 'write' ? 403 : 404, mode === 'write' ? '该数据未授权给您编辑' : '记录不存在或您无权查看')
+}

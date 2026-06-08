@@ -15,6 +15,8 @@ vi.mock('@/lib/prisma', () => ({
 vi.mock('@/lib/permissions', () => ({
   requirePermission: vi.fn(),
   assertRowWritable: vi.fn(),
+  buildRowFilter: vi.fn(),
+  assertRowAccess: vi.fn(),
 }))
 // 解耦数据构造器：路由只负责编排与归属，构造逻辑在 knowledgeData 自己的单测里覆盖。
 vi.mock('@/lib/knowledgeData', () => ({
@@ -23,7 +25,7 @@ vi.mock('@/lib/knowledgeData', () => ({
 }))
 
 import { prisma } from '@/lib/prisma'
-import { requirePermission, assertRowWritable } from '@/lib/permissions'
+import { requirePermission, buildRowFilter, assertRowAccess } from '@/lib/permissions'
 import { GET, POST } from '@/app/api/knowledge/route'
 import {
   GET as GET_ID,
@@ -38,7 +40,8 @@ const params = { params: Promise.resolve({ id: '1' }) }
 beforeEach(() => {
   vi.clearAllMocks()
   mock(requirePermission).mockResolvedValue(user)
-  mock(assertRowWritable).mockReturnValue(undefined)
+  mock(buildRowFilter).mockResolvedValue({})
+  mock(assertRowAccess).mockResolvedValue(undefined)
 })
 
 describe('GET /api/knowledge', () => {
@@ -89,6 +92,7 @@ describe('GET /api/knowledge/[id]', () => {
   })
 
   it('不存在 → 404', async () => {
+    mock(assertRowAccess).mockRejectedValue(new HttpError(404, '不存在'))
     mock(prisma.knowledgeBase.findUnique).mockResolvedValue(null)
     const res = await GET_ID(new Request('http://t'), params)
     expect(res.status).toBe(404)
@@ -102,15 +106,13 @@ describe('PUT /api/knowledge/[id]', () => {
     const req = new Request('http://t', { method: 'PUT', body: JSON.stringify({ title: 'NEW' }) })
     const res = await PUT_ID(req, params)
     expect(requirePermission).toHaveBeenCalledWith('KNOWLEDGE', 'EDIT')
-    expect(assertRowWritable).toHaveBeenCalledWith(user, { createdById: 7 })
+    expect(assertRowAccess).toHaveBeenCalledWith(user, { createdById: 7 }, 'KNOWLEDGE', 'write')
     expect(res.status).toBe(200)
   })
 
   it('非本人创建 → 403', async () => {
     mock(prisma.knowledgeBase.findUnique).mockResolvedValue({ createdById: 99 })
-    mock(assertRowWritable).mockImplementation(() => {
-      throw new HttpError(403, '无权修改他人数据')
-    })
+    mock(assertRowAccess).mockRejectedValue(new HttpError(403, '无权修改他人数据'))
     const req = new Request('http://t', { method: 'PUT', body: '{}' })
     const res = await PUT_ID(req, params)
     expect(res.status).toBe(403)
@@ -124,16 +126,14 @@ describe('DELETE /api/knowledge/[id]', () => {
     mock(prisma.knowledgeBase.delete).mockResolvedValue({ id: 1 })
     const res = await DELETE_ID(new Request('http://t', { method: 'DELETE' }), params)
     expect(requirePermission).toHaveBeenCalledWith('KNOWLEDGE', 'DELETE')
-    expect(assertRowWritable).toHaveBeenCalledWith(user, { createdById: 7 })
+    expect(assertRowAccess).toHaveBeenCalledWith(user, { createdById: 7 }, 'KNOWLEDGE', 'write')
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({ success: true })
   })
 
   it('非本人创建 → 403', async () => {
     mock(prisma.knowledgeBase.findUnique).mockResolvedValue({ createdById: 99 })
-    mock(assertRowWritable).mockImplementation(() => {
-      throw new HttpError(403, '无权删除他人数据')
-    })
+    mock(assertRowAccess).mockRejectedValue(new HttpError(403, '无权删除他人数据'))
     const res = await DELETE_ID(new Request('http://t', { method: 'DELETE' }), params)
     expect(res.status).toBe(403)
     expect(prisma.knowledgeBase.delete).not.toHaveBeenCalled()

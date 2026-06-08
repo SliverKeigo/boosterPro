@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
-import { requirePermission } from '@/lib/permissions'
+import { requirePermission, buildRowFilter } from '@/lib/permissions'
 import { KNOWLEDGE_INCLUDE, buildKnowledgeData } from '@/lib/knowledgeData'
 
 // 返回全量数据，前端 BoostTable 负责搜索 / 排序 / 分页
 export async function GET() {
   try {
-    await requirePermission('KNOWLEDGE', 'VIEW')
+    const user = await requirePermission('KNOWLEDGE', 'VIEW')
     const data = await prisma.knowledgeBase.findMany({
+      where: await buildRowFilter(user, 'KNOWLEDGE', 'view'),
       orderBy: { updatedAt: 'desc' },
       include: KNOWLEDGE_INCLUDE,
     })

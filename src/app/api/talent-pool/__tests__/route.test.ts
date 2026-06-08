@@ -16,6 +16,8 @@ vi.mock('@/lib/permissions', () => ({
   requirePermission: vi.fn(),
   requireAdmin: vi.fn(),
   assertRowWritable: vi.fn(),
+  buildRowFilter: vi.fn(),
+  assertRowAccess: vi.fn(),
 }))
 // 解耦数据构造器：路由只负责编排与归属，构造逻辑在 talentPoolData 自己的单测里覆盖。
 vi.mock('@/lib/talentPoolData', () => ({
@@ -23,7 +25,7 @@ vi.mock('@/lib/talentPoolData', () => ({
 }))
 
 import { prisma } from '@/lib/prisma'
-import { requirePermission, assertRowWritable } from '@/lib/permissions'
+import { requirePermission, buildRowFilter, assertRowAccess } from '@/lib/permissions'
 import { GET, POST } from '@/app/api/talent-pool/route'
 import {
   GET as GET_ID,
@@ -37,7 +39,8 @@ const mock = (fn: unknown) => fn as ReturnType<typeof vi.fn>
 beforeEach(() => {
   vi.clearAllMocks()
   mock(requirePermission).mockResolvedValue(user)
-  mock(assertRowWritable).mockReturnValue(undefined)
+  mock(buildRowFilter).mockResolvedValue({})
+  mock(assertRowAccess).mockResolvedValue(undefined)
 })
 
 describe('GET /api/talent-pool', () => {
@@ -97,6 +100,7 @@ describe('GET /api/talent-pool/[id]', () => {
   })
 
   it('记录不存在 → 404', async () => {
+    mock(assertRowAccess).mockRejectedValue(new HttpError(404, '不存在'))
     mock(prisma.talentPool.findUnique).mockResolvedValue(null)
     const res = await GET_ID(new Request('http://t/api/talent-pool/1'), {
       params: Promise.resolve({ id: '1' }),
@@ -123,16 +127,14 @@ describe('PUT /api/talent-pool/[id]', () => {
     })
     const res = await PUT_ID(req, { params: Promise.resolve({ id: '1' }) })
     expect(requirePermission).toHaveBeenCalledWith('TALENT_POOL', 'EDIT')
-    expect(assertRowWritable).toHaveBeenCalledWith(user, { createdById: 7 })
+    expect(assertRowAccess).toHaveBeenCalledWith(user, { createdById: 7 }, 'TALENT_POOL', 'write')
     expect(prisma.talentPool.update).toHaveBeenCalled()
     expect(res.status).toBe(200)
   })
 
   it('非本人数据 → 403', async () => {
     mock(prisma.talentPool.findUnique).mockResolvedValue({ createdById: 99 })
-    mock(assertRowWritable).mockImplementation(() => {
-      throw new HttpError(403, '无权限')
-    })
+    mock(assertRowAccess).mockRejectedValue(new HttpError(403, '无权限'))
     const req = new Request('http://t/api/talent-pool/1', { method: 'PUT', body: '{}' })
     const res = await PUT_ID(req, { params: Promise.resolve({ id: '1' }) })
     expect(prisma.talentPool.update).not.toHaveBeenCalled()
@@ -155,7 +157,7 @@ describe('DELETE /api/talent-pool/[id]', () => {
       params: Promise.resolve({ id: '1' }),
     })
     expect(requirePermission).toHaveBeenCalledWith('TALENT_POOL', 'DELETE')
-    expect(assertRowWritable).toHaveBeenCalledWith(user, { createdById: 7 })
+    expect(assertRowAccess).toHaveBeenCalledWith(user, { createdById: 7 }, 'TALENT_POOL', 'write')
     expect(prisma.talentPool.delete).toHaveBeenCalled()
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({ success: true })
@@ -163,9 +165,7 @@ describe('DELETE /api/talent-pool/[id]', () => {
 
   it('非本人数据 → 403', async () => {
     mock(prisma.talentPool.findUnique).mockResolvedValue({ createdById: 99 })
-    mock(assertRowWritable).mockImplementation(() => {
-      throw new HttpError(403, '无权限')
-    })
+    mock(assertRowAccess).mockRejectedValue(new HttpError(403, '无权限'))
     const res = await DELETE_ID(new Request('http://t/api/talent-pool/1', { method: 'DELETE' }), {
       params: Promise.resolve({ id: '1' }),
     })

@@ -7,6 +7,8 @@ vi.mock('@/lib/prisma', () => ({
 vi.mock('@/lib/permissions', () => ({
   requirePermission: vi.fn(),
   assertRowWritable: vi.fn(),
+  buildRowFilter: vi.fn(),
+  assertRowAccess: vi.fn(),
 }))
 // 解耦数据构造器：路由只负责编排与归属，构造逻辑在 candidateData 自己的单测里覆盖。
 vi.mock('@/lib/candidateData', () => ({
@@ -18,7 +20,7 @@ vi.mock('@/lib/candidateData', () => ({
 }))
 
 import { prisma } from '@/lib/prisma'
-import { requirePermission } from '@/lib/permissions'
+import { requirePermission, buildRowFilter, assertRowAccess } from '@/lib/permissions'
 import { GET, POST } from '@/app/api/candidates/route'
 
 const user = { id: 7, isAdmin: false }
@@ -27,6 +29,8 @@ const mock = (fn: unknown) => fn as ReturnType<typeof vi.fn>
 beforeEach(() => {
   vi.clearAllMocks()
   mock(requirePermission).mockResolvedValue(user)
+  mock(buildRowFilter).mockResolvedValue({})
+  mock(assertRowAccess).mockResolvedValue(undefined)
 })
 
 describe('GET /api/candidates', () => {

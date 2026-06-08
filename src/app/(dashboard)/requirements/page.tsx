@@ -54,7 +54,7 @@ const EMPTY_FORM: any = {
 export default function RequirementsPage() {
   const toast = useToast()
   const router = useRouter()
-  const { can, isOwner } = useMyPermissions()
+  const { can, canEditRow } = useMyPermissions()
   const { items: statusOptions } = useDict('requirement_status')
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -299,7 +299,7 @@ export default function RequirementsPage() {
               <Eye className="h-3.5 w-3.5" />
               详情
             </button>
-            {can(RES, 'DELETE') && isOwner(r) && (
+            {can(RES, 'DELETE') && canEditRow(RES, r) && (
               <Popconfirm title="确认删除该需求？" onConfirm={() => handleDelete(r.id)}>
                 <button className="btn btn-ghost btn-xs gap-1 text-error">
                   <Trash2 className="h-3.5 w-3.5" />
@@ -320,7 +320,7 @@ export default function RequirementsPage() {
         okText={editing ? '保存' : '创建'}
         confirmLoading={submitting}
         readOnly={mode === 'view'}
-        onEdit={can(RES, 'EDIT') && isOwner(editing) ? () => setMode('edit') : undefined}
+        onEdit={can(RES, 'EDIT') && canEditRow(RES, editing) ? () => setMode('edit') : undefined}
         width={780}
       >
         <div className="grid grid-cols-2 gap-4">

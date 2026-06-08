@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
-import { requirePermission } from '@/lib/permissions'
+import { requirePermission, buildRowFilter } from '@/lib/permissions'
 import { CONTRACT_INCLUDE, buildContractData } from '@/lib/contractData'
 
 // 返回全量数据，前端 BoostTable 负责搜索 / 排序 / 分页
 export async function GET() {
   try {
-    await requirePermission('CONTRACT', 'VIEW')
+    const user = await requirePermission('CONTRACT', 'VIEW')
     const data = await prisma.contract.findMany({
+      where: await buildRowFilter(user, 'CONTRACT', 'view'),
       orderBy: { updatedAt: 'desc' },
       include: CONTRACT_INCLUDE,
     })

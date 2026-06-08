@@ -1,18 +1,21 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
-import { requirePermission, assertRowWritable } from '@/lib/permissions'
+import { requirePermission, assertRowAccess } from '@/lib/permissions'
 import { CUSTOMER_CONTACT_INCLUDE, buildCustomerContactData } from '@/lib/customerContactData'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requirePermission('CUSTOMER_CONTACT', 'VIEW')
+    const user = await requirePermission('CUSTOMER_CONTACT', 'VIEW')
     const { id } = await params
     const item = await prisma.customerContact.findUnique({
       where: { id: parseInt(id) },
-      include: CUSTOMER_CONTACT_INCLUDE,
+      include: {
+        ...CUSTOMER_CONTACT_INCLUDE,
+        createdBy: { select: { id: true, name: true, departmentId: true, department: { select: { name: true } } } },
+      },
     })
-    if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    await assertRowAccess(user, item, 'CUSTOMER_CONTACT', 'view')
     return NextResponse.json(item)
   } catch (e) {
     return handleApiError(e)
@@ -25,9 +28,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params
     const existing = await prisma.customerContact.findUnique({
       where: { id: parseInt(id) },
-      select: { createdById: true },
+      select: { createdById: true, createdBy: { select: { departmentId: true } } },
     })
-    assertRowWritable(user, existing)
+    await assertRowAccess(user, existing, 'CUSTOMER_CONTACT', 'write')
     const body = await req.json()
     const item = await prisma.customerContact.update({
       where: { id: parseInt(id) },
@@ -46,9 +49,9 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     const { id } = await params
     const existing = await prisma.customerContact.findUnique({
       where: { id: parseInt(id) },
-      select: { createdById: true },
+      select: { createdById: true, createdBy: { select: { departmentId: true } } },
     })
-    assertRowWritable(user, existing)
+    await assertRowAccess(user, existing, 'CUSTOMER_CONTACT', 'write')
     await prisma.customerContact.delete({ where: { id: parseInt(id) } })
     return NextResponse.json({ success: true })
   } catch (e) {

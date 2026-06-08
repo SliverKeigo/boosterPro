@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
-import { requirePermission, assertRowWritable } from '@/lib/permissions'
+import { requirePermission, assertRowAccess } from '@/lib/permissions'
 import { CONTRACT_INCLUDE, buildContractData } from '@/lib/contractData'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requirePermission('CONTRACT', 'VIEW')
+    const user = await requirePermission('CONTRACT', 'VIEW')
     const { id } = await params
     const item = await prisma.contract.findUnique({
       where: { id: parseInt(id) },
-      include: CONTRACT_INCLUDE,
+      include: { ...CONTRACT_INCLUDE, createdBy: { select: { departmentId: true } } },
     })
     if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    await assertRowAccess(user, item, 'CONTRACT', 'view')
     return NextResponse.json(item)
   } catch (e) {
     return handleApiError(e)
@@ -25,9 +26,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params
     const existing = await prisma.contract.findUnique({
       where: { id: parseInt(id) },
-      select: { createdById: true },
+      select: { createdById: true, createdBy: { select: { departmentId: true } } },
     })
-    assertRowWritable(user, existing)
+    await assertRowAccess(user, existing, 'CONTRACT', 'write')
     const body = await req.json()
     const item = await prisma.contract.update({
       where: { id: parseInt(id) },
@@ -46,9 +47,9 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     const { id } = await params
     const existing = await prisma.contract.findUnique({
       where: { id: parseInt(id) },
-      select: { createdById: true },
+      select: { createdById: true, createdBy: { select: { departmentId: true } } },
     })
-    assertRowWritable(user, existing)
+    await assertRowAccess(user, existing, 'CONTRACT', 'write')
     await prisma.contract.delete({ where: { id: parseInt(id) } })
     return NextResponse.json({ success: true })
   } catch (e) {
