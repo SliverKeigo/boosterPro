@@ -50,9 +50,15 @@ describe('GET /api/files/[name]', () => {
     expect(res.headers.get('Content-Disposition')).toContain('attachment')
   })
 
-  it('非 inline 类型（docx）→ attachment + 正确 mime', async () => {
+  it('Word 文档（docx）→ inline + 正确 mime', async () => {
     const res = await get('1700000000-abc123-合同.docx')
     expect(res.headers.get('Content-Type')).toContain('wordprocessingml')
+    expect(res.headers.get('Content-Disposition')).toContain('inline')
+  })
+
+  it('非 inline 类型（xlsx）→ attachment', async () => {
+    const res = await get('1700000000-abc123-报表.xlsx')
+    expect(res.headers.get('Content-Type')).toContain('spreadsheetml')
     expect(res.headers.get('Content-Disposition')).toContain('attachment')
   })
 

@@ -37,7 +37,6 @@ export function FilePreview({ open, url, fileName, onClose }: FilePreviewProps) 
   const isWord = ext === 'docx' || ext === 'doc' // 可用本地 Word 打开的类型
 
   const [docxHtml, setDocxHtml] = useState<string | null>(null)
-  const [wordOpening, setWordOpening] = useState(false)
   // 可预览类型(图片/pdf/docx)初始为加载中，由各自的 onLoad / fetch 完成后置 false
   const previewable = isImage || isPdf || isDocx
   const [loading, setLoading] = useState(previewable)
@@ -83,26 +82,6 @@ export function FilePreview({ open, url, fileName, onClose }: FilePreviewProps) 
 
   const downloadHref = `${url}${url.includes('?') ? '&' : '?'}download=1`
 
-  // 用本机 Microsoft Word 只读打开（ms-word:ofv 协议）。
-  // 本地 Word 不带浏览器登录 cookie，故先向后端换取短时效免登录 token，
-  // 再拼成绝对 URL 交给 ms-word: 协议拉取；需客户端已装桌面版 Word。
-  const openInWord = async () => {
-    setWordOpening(true)
-    try {
-      const storedName = decodeURIComponent((url.split('?')[0] || '').split('/').pop() || '')
-      const res = await fetch(`/api/files/sign?name=${encodeURIComponent(storedName)}`)
-      if (!res.ok) throw new Error('sign failed')
-      const { token } = await res.json()
-      const sep = url.includes('?') ? '&' : '?'
-      const absolute = `${window.location.origin}${url}${sep}t=${encodeURIComponent(token)}`
-      window.location.href = `ms-word:ofv|u|${absolute}`
-    } catch {
-      alert('调起本地 Word 失败，请重试或改用「下载」。')
-    } finally {
-      setWordOpening(false)
-    }
-  }
-
   // 不渲染时直接返回 null；并用 portal 把 Modal 挂到 body，
   // 以逃离详情态外层 fieldset[disabled] 的 pointer-events-none（否则预览弹窗自身点不动）。
   if (!open || typeof document === 'undefined') return null
@@ -112,16 +91,16 @@ export function FilePreview({ open, url, fileName, onClose }: FilePreviewProps) 
       <div className="flex flex-col gap-3">
         <div className="flex justify-end gap-2">
           {isWord && (
-            <button
-              type="button"
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
               className="btn btn-ghost btn-sm gap-1.5"
-              onClick={openInWord}
-              disabled={wordOpening}
-              title="用本机 Microsoft Word 只读打开（需已安装桌面版 Word）"
+              title="用本机 Word 打开该文件"
             >
-              {wordOpening ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-              用本地 Word 打开
-            </button>
+              <FileText className="h-4 w-4" />
+              用 Word 打开
+            </a>
           )}
           <a href={downloadHref} className="btn btn-ghost btn-sm gap-1.5" download>
             <Download className="h-4 w-4" />
