@@ -398,6 +398,8 @@ export default function CandidatesPage() {
     { key: 'submitDepartmentId', title: '提交人部门 ID', defaultVisible: false },
     { key: 'submitterId', title: '提交人 ID', defaultVisible: false },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
+    { key: 'createdAt', title: '创建时间', filterType: 'date', defaultVisible: false, render: (v) => <span className="text-base-content/60">{v ? String(v).slice(0, 16).replace('T', ' ') : '—'}</span> },
+    { key: 'updatedByName', title: '修改人', accessor: (r) => r.updatedBy?.name ?? '—', filterType: 'text', defaultVisible: false },
   ]
 
   return (
@@ -572,52 +574,52 @@ export default function CandidatesPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             {visible('interviewProgress') && (
-              <Field label="面试进展" className="col-span-2">
+              <Field label="面试进展" required className="col-span-2">
                 <textarea className="textarea textarea-bordered w-full" rows={2} value={form.interviewProgress} onChange={(e) => setField('interviewProgress', e.target.value)} placeholder="描述当前面试进展" />
               </Field>
             )}
             {visible('salaryPlan') && (
-              <Field label="薪酬方案" className="col-span-2">
+              <Field label="薪酬方案" required className="col-span-2">
                 <textarea className="textarea textarea-bordered w-full" rows={2} value={form.salaryPlan} onChange={(e) => setField('salaryPlan', e.target.value)} placeholder="薪资结构、年终、股票等" />
               </Field>
             )}
             {visible('offerDate') && (
-              <Field label="Offer 日期">
+              <Field label="Offer 日期" required>
                 <input type="date" className="input input-bordered w-full" value={form.offerDate} onChange={(e) => setField('offerDate', e.target.value)} />
               </Field>
             )}
             {visible('offerOnboardDate') && (
-              <Field label="Offer 到岗日期">
+              <Field label="Offer 到岗日期" required>
                 <input type="date" className="input input-bordered w-full" value={form.offerOnboardDate} onChange={(e) => setField('offerOnboardDate', e.target.value)} />
               </Field>
             )}
             {visible('offerFileUrl') && (
-              <Field label="Offer（上传文件）" className="col-span-2">
+              <Field label="Offer（上传文件）" required className="col-span-2">
                 <FileUpload value={form.offerFileUrl} onChange={(url) => setField('offerFileUrl', url)} />
               </Field>
             )}
             {visible('backgroundCheckReportUrl') && (
-              <Field label="背景调查报告" className="col-span-2">
+              <Field label="背景调查报告" required className="col-span-2">
                 <FileUpload value={form.backgroundCheckReportUrl} onChange={(url) => setField('backgroundCheckReportUrl', url)} />
               </Field>
             )}
             {visible('actualOnboardDate') && (
-              <Field label="实际到岗日期">
+              <Field label="实际到岗日期" required>
                 <input type="date" className="input input-bordered w-full" value={form.actualOnboardDate} onChange={(e) => setField('actualOnboardDate', e.target.value)} />
               </Field>
             )}
             {visible('guaranteePeriodEnd') && (
-              <Field label="保证期结束日期">
+              <Field label="保证期结束日期" required>
                 <input type="date" className="input input-bordered w-full" value={form.guaranteePeriodEnd} onChange={(e) => setField('guaranteePeriodEnd', e.target.value)} />
               </Field>
             )}
             {visible('guaranteePeriodMonths') && (
-              <Field label="保证期时长(月)">
+              <Field label="保证期时长(月)" required>
                 <input type="number" className="input input-bordered w-full" value={form.guaranteePeriodMonths} onChange={(e) => setField('guaranteePeriodMonths', e.target.value)} placeholder="请输入数字" />
               </Field>
             )}
             {visible('failureReason') && (
-              <Field label="推荐失败原因描述" className="col-span-2">
+              <Field label="推荐失败原因描述" required className="col-span-2">
                 <textarea className="textarea textarea-bordered w-full" rows={2} value={form.failureReason} onChange={(e) => setField('failureReason', e.target.value)} placeholder="请填写失败的具体原因，如谈薪失败的实际谈薪、期望薪资、gap 等" />
               </Field>
             )}
@@ -630,7 +632,7 @@ export default function CandidatesPage() {
         <div className="space-y-4">
           {visible('guaranteeCommunications') && (
             <SubTable
-              title="保证期内沟通记录"
+              title="保证期内沟通记录（必填，至少一条）"
               value={form.guaranteeCommunications}
               onChange={(rows) => setField('guaranteeCommunications', rows)}
               columns={[

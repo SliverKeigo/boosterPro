@@ -162,6 +162,7 @@ export default function SupplementsPage() {
     { key: 'notes', title: '备注', defaultVisible: false },
     { key: 'attachmentUrl', title: '附件', defaultVisible: false, sortable: false, render: (v) => v ? '已上传' : '—' },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => fmtDateTime(v) },
+    { key: 'updatedByName', title: '修改人', accessor: (r) => r.updatedBy?.name ?? '—', filterType: 'text', defaultVisible: false },
     { key: 'demandUpdates', title: '需求更新', defaultVisible: false, sortable: false,
       accessor: (r) => (r.demandUpdates ?? []).map((x: any) => x.content).filter(Boolean).join(' '),
       render: (_v, r) => (

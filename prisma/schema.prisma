@@ -134,6 +134,15 @@ model User {
   createdCustomers     Customer[]                  @relation("CustomerCreatedBy")
   createdContracts     Contract[]                  @relation("ContractCreatedBy")
   createdKnowledge     KnowledgeBase[]             @relation("KnowledgeBaseCreatedBy")
+  updatedCandidates    Candidate[]                 @relation("CandidateUpdatedBy")
+  updatedRequirements  Requirement[]               @relation("RequirementUpdatedBy")
+  updatedSupplements   ClientSupplement[]          @relation("ClientSupplementUpdatedBy")
+  updatedCustomerContacts CustomerContact[]        @relation("CustomerContactUpdatedBy")
+  updatedTalents       TalentPool[]                @relation("TalentPoolUpdatedBy")
+  updatedOpportunities Opportunity[]               @relation("OpportunityUpdatedBy")
+  updatedCustomers     Customer[]                  @relation("CustomerUpdatedBy")
+  updatedContracts     Contract[]                  @relation("ContractUpdatedBy")
+  updatedKnowledge     KnowledgeBase[]             @relation("KnowledgeBaseUpdatedBy")
   createdAt            DateTime                    @default(now()) @map("created_at")
   updatedAt            DateTime                    @updatedAt @map("updated_at")
 
@@ -166,6 +175,8 @@ model Customer {
 
   createdBy   User? @relation("CustomerCreatedBy", fields: [createdById], references: [id])
   createdById Int?  @map("created_by_id")
+  updatedBy   User? @relation("CustomerUpdatedBy", fields: [updatedById], references: [id])
+  updatedById Int?  @map("updated_by_id")
 
   @@index([createdAt])
   @@index([createdById])
@@ -198,6 +209,8 @@ model ClientSupplement {
 
   createdBy   User? @relation("ClientSupplementCreatedBy", fields: [createdById], references: [id])
   createdById Int?  @map("created_by_id")
+  updatedBy   User? @relation("ClientSupplementUpdatedBy", fields: [updatedById], references: [id])
+  updatedById Int?  @map("updated_by_id")
 
   @@index([createdAt])
   @@index([createdById])
@@ -240,6 +253,8 @@ model CustomerContact {
 
   createdBy   User? @relation("CustomerContactCreatedBy", fields: [createdById], references: [id])
   createdById Int?  @map("created_by_id")
+  updatedBy   User? @relation("CustomerContactUpdatedBy", fields: [updatedById], references: [id])
+  updatedById Int?  @map("updated_by_id")
 
   @@index([createdAt])
   @@index([customerId])
@@ -296,6 +311,8 @@ model Requirement {
 
   createdBy   User? @relation("RequirementCreatedBy", fields: [createdById], references: [id])
   createdById Int?  @map("created_by_id")
+  updatedBy   User? @relation("RequirementUpdatedBy", fields: [updatedById], references: [id])
+  updatedById Int?  @map("updated_by_id")
 
   @@index([createdAt])
   @@index([customerId])
@@ -367,6 +384,8 @@ model Candidate {
 
   createdBy   User? @relation("CandidateCreatedBy", fields: [createdById], references: [id])
   createdById Int?  @map("created_by_id")
+  updatedBy   User? @relation("CandidateUpdatedBy", fields: [updatedById], references: [id])
+  updatedById Int?  @map("updated_by_id")
 
   @@index([createdAt])
   @@index([customerId])
@@ -416,6 +435,8 @@ model TalentPool {
 
   createdBy   User? @relation("TalentPoolCreatedBy", fields: [createdById], references: [id])
   createdById Int?  @map("created_by_id")
+  updatedBy   User? @relation("TalentPoolUpdatedBy", fields: [updatedById], references: [id])
+  updatedById Int?  @map("updated_by_id")
 
   @@index([createdAt])
   @@index([createdById])
@@ -444,6 +465,8 @@ model Opportunity {
 
   createdBy   User? @relation("OpportunityCreatedBy", fields: [createdById], references: [id])
   createdById Int?  @map("created_by_id")
+  updatedBy   User? @relation("OpportunityUpdatedBy", fields: [updatedById], references: [id])
+  updatedById Int?  @map("updated_by_id")
 
   @@index([createdAt])
   @@index([createdById])
@@ -488,6 +511,8 @@ model Contract {
 
   createdBy   User? @relation("ContractCreatedBy", fields: [createdById], references: [id])
   createdById Int?  @map("created_by_id")
+  updatedBy   User? @relation("ContractUpdatedBy", fields: [updatedById], references: [id])
+  updatedById Int?  @map("updated_by_id")
 
   @@index([createdAt])
   @@index([customerId])
@@ -523,6 +548,8 @@ model KnowledgeBase {
 
   createdBy   User? @relation("KnowledgeBaseCreatedBy", fields: [createdById], references: [id])
   createdById Int?  @map("created_by_id")
+  updatedBy   User? @relation("KnowledgeBaseUpdatedBy", fields: [updatedById], references: [id])
+  updatedById Int?  @map("updated_by_id")
 
   @@index([createdAt])
   @@index([createdById])

@@ -2,6 +2,7 @@
 
 export const OPPORTUNITY_INCLUDE = {
   createdBy: { select: { id: true, name: true, departmentId: true, department: { select: { name: true } } } },
+  updatedBy: { select: { id: true, name: true } },
   salesOwner: { select: { id: true, name: true } },
   progressRecords: true,
 }

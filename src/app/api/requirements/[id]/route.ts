@@ -34,7 +34,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const body = await req.json()
     const item = await prisma.requirement.update({
       where: { id: parseInt(id) },
-      data: buildRequirementData(body, 'update'),
+      data: { ...buildRequirementData(body, 'update'), updatedById: user.id },
       include: REQUIREMENT_INCLUDE,
     })
     return NextResponse.json(item)

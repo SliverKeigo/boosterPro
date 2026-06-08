@@ -134,6 +134,7 @@ export default function TalentPoolPage() {
       render: (v) => v ? <span className="line-clamp-1 max-w-[220px]">{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'createdAt', title: '创建时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
+    { key: 'updatedByName', title: '修改人', accessor: (r) => r.updatedBy?.name ?? '—', filterType: 'text', defaultVisible: false },
   ]
 
   return (

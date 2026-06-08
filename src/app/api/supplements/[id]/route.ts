@@ -35,7 +35,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const body = await req.json()
     const item = await prisma.clientSupplement.update({
       where: { id: parseInt(id) },
-      data: buildSupplementData(body, 'update'),
+      data: { ...buildSupplementData(body, 'update'), updatedById: user.id },
       include: SUPPLEMENT_INCLUDE,
     })
     return NextResponse.json(item)

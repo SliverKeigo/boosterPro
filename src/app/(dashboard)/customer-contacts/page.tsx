@@ -173,6 +173,7 @@ export default function CustomerContactsPage() {
     { key: 'createdAt', title: '创建时间', filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
     // 以下默认隐藏，可在“显示列”开启 —— 覆盖全部字段
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => fmtDateTime(v) },
+    { key: 'updatedByName', title: '修改人', accessor: (r) => r.updatedBy?.name ?? '—', filterType: 'text', defaultVisible: false },
     { key: 'customerId', title: '客户 ID', defaultVisible: false, filterType: 'number' },
     { key: 'submitterId', title: '提交人 ID', defaultVisible: false, filterType: 'number' },
     { key: 'submitDepartmentId', title: '提交人组织 ID', defaultVisible: false, filterType: 'number' },

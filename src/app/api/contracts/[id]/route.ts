@@ -32,7 +32,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const body = await req.json()
     const item = await prisma.contract.update({
       where: { id: parseInt(id) },
-      data: buildContractData(body, 'update'),
+      data: { ...buildContractData(body, 'update'), updatedById: user.id },
       include: CONTRACT_INCLUDE,
     })
     return NextResponse.json(item)

@@ -2,6 +2,7 @@
 
 export const CUSTOMER_CONTACT_INCLUDE = {
   createdBy: { select: { id: true, name: true, departmentId: true, department: { select: { name: true } } } },
+  updatedBy: { select: { id: true, name: true } },
   customer: { select: { id: true, shortName: true } },
   submitter: { select: { id: true, name: true } },
   contacts: true,

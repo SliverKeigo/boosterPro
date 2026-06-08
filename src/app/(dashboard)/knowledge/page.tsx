@@ -255,6 +255,7 @@ export default function KnowledgePage() {
     { key: 'internalLecturer', title: '内部讲师', defaultVisible: false, sortable: false, accessor: (r) => r.internalLecturer?.name ?? '', render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'externalLecturer', title: '外部讲师', defaultVisible: false, render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span> },
+    { key: 'updatedByName', title: '修改人', accessor: (r) => r.updatedBy?.name ?? '—', filterType: 'text', defaultVisible: false },
   ]
 
   return (

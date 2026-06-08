@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
-import { requirePermission, buildRowFilter, assertRowAccess } from '@/lib/permissions'
+import { requirePermission, buildRowFilter } from '@/lib/permissions'
 import { CANDIDATE_INCLUDE, CANDIDATE_LIST_INCLUDE, buildCandidateData, assertCandidateUnique } from '@/lib/candidateData'
 
 // 返回全量数据，前端 BoostTable 负责搜索 / 排序 / 分页

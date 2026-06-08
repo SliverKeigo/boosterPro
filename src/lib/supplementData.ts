@@ -2,6 +2,7 @@
 
 export const SUPPLEMENT_INCLUDE = {
   createdBy: { select: { id: true, name: true, departmentId: true, department: { select: { name: true } } } },
+  updatedBy: { select: { id: true, name: true } },
   customer: { select: { id: true, shortName: true } },
   demandUpdates: true,
   customerProfiles: true,

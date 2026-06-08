@@ -36,7 +36,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     await assertCustomerUnique(data, parseInt(id))
     const item = await prisma.customer.update({
       where: { id: parseInt(id) },
-      data,
+      data: { ...data, updatedById: user.id },
       include: CUSTOMER_INCLUDE,
     })
     return NextResponse.json(item)

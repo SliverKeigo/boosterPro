@@ -212,6 +212,7 @@ export default function ContractsPage() {
       render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span>,
     },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span> },
+    { key: 'updatedByName', title: '修改人', accessor: (r) => r.updatedBy?.name ?? '—', filterType: 'text', defaultVisible: false },
     // 以下默认隐藏，可在“显示列”开启
     { key: 'customerId', title: '客户 ID', defaultVisible: false, filterType: 'number' },
     { key: 'headhunterFeeRate', title: '猎头服务费率%', defaultVisible: false, filterType: 'number', render: (v) => (v ?? '') === '' ? '—' : String(v) },

@@ -190,6 +190,7 @@ export default function OpportunitiesPage() {
       ) },
     { key: 'attachmentUrl', title: '附件', defaultVisible: false, render: (v) => (v ? '有' : '—') },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
+    { key: 'updatedByName', title: '修改人', accessor: (r) => r.updatedBy?.name ?? '—', filterType: 'text', defaultVisible: false },
   ]
 
   return (

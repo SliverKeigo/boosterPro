@@ -11,7 +11,7 @@ export async function GET() {
     const data = await prisma.talentPool.findMany({
       where: await buildRowFilter(user, 'TALENT_POOL', 'view'),
       orderBy: { updatedAt: 'desc' },
-      include: { createdBy: { select: { id: true, name: true, departmentId: true, department: { select: { name: true } } } } },
+      include: { createdBy: { select: { id: true, name: true, departmentId: true, department: { select: { name: true } } } }, updatedBy: { select: { id: true, name: true } } },
     })
     return NextResponse.json({ data, total: data.length })
   } catch (e) {

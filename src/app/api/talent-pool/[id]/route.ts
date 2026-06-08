@@ -13,7 +13,7 @@ export async function GET(
     const { id } = await params
     const item = await prisma.talentPool.findUnique({
       where: { id: parseInt(id) },
-      include: { createdBy: { select: { departmentId: true } } },
+      include: { createdBy: { select: { departmentId: true } }, updatedBy: { select: { id: true, name: true } } },
     })
     await assertRowAccess(user, item, 'TALENT_POOL', 'view')
     return NextResponse.json(item)
@@ -37,7 +37,7 @@ export async function PUT(
     const body = await req.json()
     const item = await prisma.talentPool.update({
       where: { id: parseInt(id) },
-      data: buildTalentPoolData(body),
+      data: { ...buildTalentPoolData(body), updatedById: user.id },
     })
     return NextResponse.json(item)
   } catch (e) {

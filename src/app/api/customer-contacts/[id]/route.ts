@@ -34,7 +34,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const body = await req.json()
     const item = await prisma.customerContact.update({
       where: { id: parseInt(id) },
-      data: buildCustomerContactData(body, 'update'),
+      data: { ...buildCustomerContactData(body, 'update'), updatedById: user.id },
       include: CUSTOMER_CONTACT_INCLUDE,
     })
     return NextResponse.json(item)

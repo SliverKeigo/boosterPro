@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
-import { requirePermission, buildRowFilter, assertRowAccess } from '@/lib/permissions'
+import { requirePermission, assertRowAccess } from '@/lib/permissions'
 import { CANDIDATE_INCLUDE, buildCandidateData, assertCandidateUnique } from '@/lib/candidateData'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -37,7 +37,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     await assertCandidateUnique(data, parseInt(id))
     const item = await prisma.candidate.update({
       where: { id: parseInt(id) },
-      data,
+      data: { ...data, updatedById: user.id },
       include: CANDIDATE_INCLUDE,
     })
     return NextResponse.json(item)
