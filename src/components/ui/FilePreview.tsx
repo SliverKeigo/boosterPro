@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Download, Loader2, FileWarning, FileText } from 'lucide-react'
+import { Download, Loader2, FileWarning } from 'lucide-react'
 import { Modal } from './Modal'
 
 interface FilePreviewProps {
@@ -33,12 +33,10 @@ export function FilePreview({ open, url, fileName, onClose }: FilePreviewProps) 
 
   const isImage = IMAGE_EXTS.has(ext)
   const isPdf = ext === 'pdf'
-  const isDocx = ext === 'docx'
-  const isWord = ext === 'docx' || ext === 'doc' // 可用本地 Word 打开的类型
+  // Word 文档不在此网页预览：由 FileUpload 直接经 ms-word: 协议调起本机 Word。
+  // 其余非图片/PDF 类型走「下载」。
+  const previewable = isImage || isPdf
 
-  const [docxHtml, setDocxHtml] = useState<string | null>(null)
-  // 可预览类型(图片/pdf/docx)初始为加载中，由各自的 onLoad / fetch 完成后置 false
-  const previewable = isImage || isPdf || isDocx
   const [loading, setLoading] = useState(previewable)
   const [error, setError] = useState<string | null>(null)
 
@@ -48,37 +46,9 @@ export function FilePreview({ open, url, fileName, onClose }: FilePreviewProps) 
   const target = open ? url : null
   if (target !== targetRef.current) {
     targetRef.current = target
-    setDocxHtml(null)
     setError(null)
     setLoading(previewable)
   }
-
-  // docx：fetch arrayBuffer → mammoth 转 HTML（仅做异步副作用，状态在回调里更新→不触发同步级联）
-  useEffect(() => {
-    if (!open || !isDocx) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch(url)
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const arrayBuffer = await res.arrayBuffer()
-        const mammoth = await import('mammoth')
-        const result = await mammoth.convertToHtml({ arrayBuffer })
-        if (!cancelled) {
-          setDocxHtml(result.value || '<p class="text-base-content/50">（空文档）</p>')
-          setLoading(false)
-        }
-      } catch {
-        if (!cancelled) {
-          setError('文档解析失败，请尝试下载后查看')
-          setLoading(false)
-        }
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [open, isDocx, url])
 
   const downloadHref = `${url}${url.includes('?') ? '&' : '?'}download=1`
 
@@ -86,25 +56,10 @@ export function FilePreview({ open, url, fileName, onClose }: FilePreviewProps) 
   // 以逃离详情态外层 fieldset[disabled] 的 pointer-events-none（否则预览弹窗自身点不动）。
   if (!open || typeof document === 'undefined') return null
 
-  // 本机 Word 打开：ms-word 协议需【绝对 URL】（Word 自带 HTTP 栈、不知道页面 host），
-  // 且文件名段需 URL 编码（协议不会像浏览器那样自动编码，含中文会拉取失败）。ofe=编辑打开。
-  const storedName = decodeURIComponent((url.split('?')[0] || '').split('/').pop() || '')
-  const wordHref = `ms-word:ofe|u|${window.location.origin}/api/files/${encodeURIComponent(storedName)}`
-
   return createPortal(
     <Modal open={open} onClose={onClose} width={960} footer={null} title={name || '附件预览'}>
       <div className="flex flex-col gap-3">
         <div className="flex justify-end gap-2">
-          {isWord && (
-            <a
-              href={wordHref}
-              className="btn btn-ghost btn-sm gap-1.5"
-              title="用本机 Microsoft Word 打开（需 Windows + 桌面版 Word）"
-            >
-              <FileText className="h-4 w-4" />
-              用 Word 打开
-            </a>
-          )}
           <a href={downloadHref} className="btn btn-ghost btn-sm gap-1.5" download>
             <Download className="h-4 w-4" />
             下载
@@ -147,33 +102,6 @@ export function FilePreview({ open, url, fileName, onClose }: FilePreviewProps) 
               className="h-[72vh] w-full rounded-lg border border-base-300"
               onLoad={() => setLoading(false)}
             />
-          ) : isDocx ? (
-            docxHtml != null ? (
-              <div
-                className={[
-                  'max-w-none rounded-lg border border-base-300 bg-base-100 p-5 text-sm leading-relaxed text-base-content',
-                  // 项目未装 @tailwindcss/typography，用子选择器给 mammoth 输出的 HTML 补基础排版
-                  '[&_h1]:mb-3 [&_h1]:mt-4 [&_h1]:text-xl [&_h1]:font-bold',
-                  '[&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-bold',
-                  '[&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-base [&_h3]:font-semibold',
-                  '[&_p]:my-2',
-                  '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6',
-                  '[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6',
-                  '[&_li]:my-1',
-                  '[&_a]:text-primary [&_a]:underline',
-                  '[&_strong]:font-semibold',
-                  '[&_table]:my-3 [&_table]:w-full [&_table]:border-collapse',
-                  '[&_td]:border [&_td]:border-base-300 [&_td]:px-2 [&_td]:py-1',
-                  '[&_th]:border [&_th]:border-base-300 [&_th]:bg-base-200 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left',
-                  '[&_img]:my-2 [&_img]:max-w-full',
-                ].join(' ')}
-                // mammoth 输出的是受信任的 docx 转换 HTML
-                dangerouslySetInnerHTML={{ __html: docxHtml }}
-              />
-            ) : (
-              // 加载中占位（loading 覆盖层已显示 spinner）
-              <div className="min-h-[200px]" />
-            )
           ) : (
             <div className="flex min-h-[200px] flex-col items-center justify-center gap-2 text-center text-base-content/60">
               <FileWarning className="h-8 w-8 text-base-content/30" />

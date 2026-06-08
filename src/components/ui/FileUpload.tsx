@@ -24,6 +24,9 @@ export function FileUpload({ value, onChange, accept }: FileUploadProps) {
 
   const isUploaded = !!value && value.startsWith('/api/files/')
   const fileName = isUploaded ? fileNameFromUrl(value!) : ''
+  // Word 文件点「预览」直接调起本机 Word（ms-word: 协议），不走网页预览
+  const ext = fileName.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] || ''
+  const isWord = ext === 'doc' || ext === 'docx'
 
   const upload = async (file: File) => {
     setUploading(true)
@@ -47,6 +50,13 @@ export function FileUpload({ value, onChange, accept }: FileUploadProps) {
     const openPreview = (e: React.SyntheticEvent) => {
       e.preventDefault()
       e.stopPropagation()
+      if (isWord) {
+        // Word 直接用本机 Word 打开（绝对 URL + 文件名编码；ofe=编辑打开）。
+        // 需 Windows + 桌面版 Office；Mac 版 Word 不拉 http 远程文档。
+        const storedName = decodeURIComponent((value!.split('?')[0] || '').split('/').pop() || '')
+        window.location.href = `ms-word:ofe|u|${window.location.origin}/api/files/${encodeURIComponent(storedName)}`
+        return
+      }
       setPreviewOpen(true)
     }
     return (
@@ -61,7 +71,7 @@ export function FileUpload({ value, onChange, accept }: FileUploadProps) {
               if (e.key === 'Enter' || e.key === ' ') openPreview(e)
             }}
             className="flex-1 cursor-pointer truncate text-sm text-base-content hover:text-primary hover:underline [pointer-events:auto]"
-            title={`预览：${fileName}`}
+            title={isWord ? `用 Word 打开：${fileName}` : `预览：${fileName}`}
           >
             {fileName}
           </a>
@@ -73,10 +83,10 @@ export function FileUpload({ value, onChange, accept }: FileUploadProps) {
               if (e.key === 'Enter' || e.key === ' ') openPreview(e)
             }}
             className="btn btn-ghost btn-xs [pointer-events:auto]"
-            aria-label="预览"
-            title="预览"
+            aria-label={isWord ? '用 Word 打开' : '预览'}
+            title={isWord ? '用 Word 打开' : '预览'}
           >
-            <Eye className="h-3.5 w-3.5" />
+            {isWord ? <FileText className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
           </a>
           <a
             href={`${value}?download=1`}
