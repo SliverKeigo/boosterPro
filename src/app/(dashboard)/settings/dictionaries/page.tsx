@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import {
-  Pencil,
+  Eye,
   Trash2,
   Plus,
   BookMarked,
@@ -52,6 +52,7 @@ export default function DictionariesPage() {
   // 类型弹窗
   const [typeOpen, setTypeOpen] = useState(false)
   const [editingType, setEditingType] = useState<DictType | null>(null)
+  const [modeType, setModeType] = useState<'view' | 'edit'>('edit') // 详情(只读) / 编辑
   const [typeForm, setTypeForm] = useState<TypeForm>(EMPTY_TYPE_FORM)
   const [typeSubmitting, setTypeSubmitting] = useState(false)
   const setTypeField = <K extends keyof TypeForm>(k: K, v: TypeForm[K]) =>
@@ -60,6 +61,7 @@ export default function DictionariesPage() {
   // 字典项弹窗
   const [itemOpen, setItemOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<DictItem | null>(null)
+  const [modeItem, setModeItem] = useState<'view' | 'edit'>('edit') // 详情(只读) / 编辑
   const [itemForm, setItemForm] = useState<ItemForm>(EMPTY_ITEM_FORM)
   const [itemSubmitting, setItemSubmitting] = useState(false)
   const setItemField = <K extends keyof ItemForm>(k: K, v: ItemForm[K]) =>
@@ -127,12 +129,14 @@ export default function DictionariesPage() {
   // ── 字典类型增删改 ──────────────────────────────────────────────
   const openCreateType = () => {
     setEditingType(null)
+    setModeType('edit')
     setTypeForm({ ...EMPTY_TYPE_FORM })
     setTypeOpen(true)
   }
 
-  const openEditType = (t: DictType) => {
+  const openDetailType = (t: DictType) => {
     setEditingType(t)
+    setModeType('view')
     setTypeForm({ code: t.code ?? '', name: t.name ?? '', remark: t.remark ?? '' })
     setTypeOpen(true)
   }
@@ -180,12 +184,14 @@ export default function DictionariesPage() {
   // ── 字典项增删改 ────────────────────────────────────────────────
   const openCreateItem = () => {
     setEditingItem(null)
+    setModeItem('edit')
     setItemForm({ ...EMPTY_ITEM_FORM })
     setItemOpen(true)
   }
 
-  const openEditItem = (it: DictItem) => {
+  const openDetailItem = (it: DictItem) => {
     setEditingItem(it)
+    setModeItem('view')
     setItemForm({
       label: it.label ?? '',
       value: it.value ?? '',
@@ -346,14 +352,14 @@ export default function DictionariesPage() {
                         <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                           <button
                             type="button"
-                            aria-label="编辑类型"
+                            aria-label="查看类型详情"
                             className="btn btn-ghost btn-xs btn-square text-primary"
                             onClick={(e) => {
                               e.stopPropagation()
-                              openEditType(t)
+                              openDetailType(t)
                             }}
                           >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <Eye className="h-3.5 w-3.5" />
                           </button>
                           <span onClick={(e) => e.stopPropagation()}>
                             <Popconfirm
@@ -452,10 +458,10 @@ export default function DictionariesPage() {
                           <div className="flex items-center justify-end gap-1">
                             <button
                               className="btn btn-ghost btn-xs gap-1 text-primary"
-                              onClick={() => openEditItem(it)}
+                              onClick={() => openDetailItem(it)}
                             >
-                              <Pencil className="h-3.5 w-3.5" />
-                              编辑
+                              <Eye className="h-3.5 w-3.5" />
+                              详情
                             </button>
                             <Popconfirm
                               title="确认删除该字典项？"
@@ -481,11 +487,13 @@ export default function DictionariesPage() {
       {/* 新增 / 编辑字典类型 */}
       <Modal
         open={typeOpen}
-        title={editingType ? '编辑字典类型' : '新增字典类型'}
+        title={modeType === 'view' ? '字典类型详情' : editingType ? '编辑字典类型' : '新增字典类型'}
         onClose={() => setTypeOpen(false)}
         onOk={handleSubmitType}
         okText={editingType ? '保存' : '创建'}
         confirmLoading={typeSubmitting}
+        readOnly={modeType === 'view'}
+        onEdit={isAdmin ? () => setModeType('edit') : undefined}
         width={520}
       >
         <div className="flex flex-col gap-4">
@@ -520,11 +528,13 @@ export default function DictionariesPage() {
       {/* 新增 / 编辑字典项 */}
       <Modal
         open={itemOpen}
-        title={editingItem ? '编辑字典项' : '新增字典项'}
+        title={modeItem === 'view' ? '字典项详情' : editingItem ? '编辑字典项' : '新增字典项'}
         onClose={() => setItemOpen(false)}
         onOk={handleSubmitItem}
         okText={editingItem ? '保存' : '创建'}
         confirmLoading={itemSubmitting}
+        readOnly={modeItem === 'view'}
+        onEdit={isAdmin ? () => setModeItem('edit') : undefined}
         width={520}
       >
         <div className="flex flex-col gap-4">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Trash2, Plus, ShieldCheck, ShieldAlert, Users } from 'lucide-react'
+import { Eye, Trash2, Plus, ShieldCheck, ShieldAlert, Users } from 'lucide-react'
 import { Modal, Field, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import {
@@ -57,6 +57,7 @@ export default function PermissionsPage() {
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<PermissionGroup | null>(null)
+  const [mode, setMode] = useState<'view' | 'edit'>('edit') // 详情(只读) / 编辑
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
 
@@ -117,12 +118,14 @@ export default function PermissionsPage() {
 
   const openCreate = () => {
     setEditing(null)
+    setMode('edit')
     setForm({ ...EMPTY_FORM })
     setOpen(true)
   }
 
-  const openEdit = (g: PermissionGroup) => {
+  const openDetail = (g: PermissionGroup) => {
     setEditing(g)
+    setMode('view')
     setForm({
       name: g.name ?? '',
       actions: [...(g.actions ?? [])],
@@ -354,10 +357,10 @@ export default function PermissionsPage() {
                   <div className="flex shrink-0 items-center gap-1">
                     <button
                       className="btn btn-ghost btn-xs gap-1 text-primary"
-                      onClick={() => openEdit(g)}
+                      onClick={() => openDetail(g)}
                     >
-                      <Pencil className="h-3.5 w-3.5" />
-                      编辑
+                      <Eye className="h-3.5 w-3.5" />
+                      详情
                     </button>
                     <button
                       className="btn btn-ghost btn-xs gap-1 text-error"
@@ -377,11 +380,13 @@ export default function PermissionsPage() {
       {/* 新增 / 编辑弹窗 */}
       <Modal
         open={open}
-        title={editing ? '编辑权限组' : '新增权限组'}
+        title={mode === 'view' ? '权限组详情' : editing ? '编辑权限组' : '新增权限组'}
         onClose={() => setOpen(false)}
         onOk={handleSubmit}
         okText={editing ? '保存' : '创建'}
         confirmLoading={submitting}
+        readOnly={mode === 'view'}
+        onEdit={isAdmin ? () => setMode('edit') : undefined}
         width={680}
       >
         <div className="flex flex-col gap-4">

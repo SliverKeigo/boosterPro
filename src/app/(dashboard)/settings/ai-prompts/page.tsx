@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, RotateCcw, ShieldAlert } from 'lucide-react'
+import { Eye, RotateCcw, ShieldAlert } from 'lucide-react'
 import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 
@@ -15,6 +15,7 @@ export default function AiPromptsPage() {
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState<'view' | 'edit'>('edit') // 详情(只读) / 编辑
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState<any>(EMPTY_FORM)
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
@@ -36,8 +37,9 @@ export default function AiPromptsPage() {
     void (async () => { await fetchData() })()
   }, [fetchData])
 
-  const openEdit = (r: any) => {
+  const openDetail = (r: any) => {
     setForm({ key: r.key, name: r.name ?? '', content: r.content ?? '', description: r.description ?? '' })
+    setMode('view')
     setOpen(true)
   }
 
@@ -127,8 +129,8 @@ export default function AiPromptsPage() {
         searchPlaceholder="搜索名称 / key / 说明…"
         actions={(r) => (
           <div className="flex items-center gap-1">
-            <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openEdit(r)}>
-              <Pencil className="h-3.5 w-3.5" />编辑
+            <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openDetail(r)}>
+              <Eye className="h-3.5 w-3.5" />详情
             </button>
             {r.overridden && (
               <Popconfirm title="恢复为代码内置默认提示词？" onConfirm={() => handleReset(r.key)}>
@@ -143,11 +145,13 @@ export default function AiPromptsPage() {
 
       <Modal
         open={open}
-        title={`编辑提示词：${form.name || form.key}`}
+        title={mode === 'view' ? `提示词详情：${form.name || form.key}` : `编辑提示词：${form.name || form.key}`}
         onClose={() => setOpen(false)}
         onOk={handleSubmit}
         okText="保存"
         confirmLoading={submitting}
+        readOnly={mode === 'view'}
+        onEdit={isAdmin ? () => setMode('edit') : undefined}
         width={720}
       >
         <div className="grid grid-cols-1 gap-4">

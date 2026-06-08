@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Pencil, Trash2, Plus, X } from 'lucide-react'
+import { Eye, Trash2, Plus, X } from 'lucide-react'
 import {
   BoostTable,
   type BoostColumn,
@@ -48,6 +48,7 @@ export default function WorkPlansPage() {
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
+  const [mode, setMode] = useState<'view' | 'edit'>('edit') // 详情(只读) / 编辑
   const [submitting, setSubmitting] = useState(false)
 
   // 编辑器表单
@@ -96,6 +97,7 @@ export default function WorkPlansPage() {
 
   const openCreate = () => {
     setEditing(null)
+    setMode('edit')
     resetForm()
     // 组长：默认本组并锁定；管理员：留空待选
     if (!isAdmin && ledGroupId != null) {
@@ -105,8 +107,9 @@ export default function WorkPlansPage() {
     setOpen(true)
   }
 
-  const openEdit = (r: any) => {
+  const openDetail = (r: any) => {
     setEditing(r)
+    setMode('view')
     setGroupId(String(r.groupId))
     setGroupName(r.group?.name ?? '')
     setWeekStart(fmtDate(r.weekStart))
@@ -278,31 +281,31 @@ export default function WorkPlansPage() {
         importEndpoint="/api/work-plans/import"
         onRefresh={() => fetchData(true)}
         searchPlaceholder="搜索组 / 交付策略 / 创建人…"
-        actions={(r) =>
-          canWriteRow(r) ? (
-            <div className="flex items-center gap-1">
-              <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openEdit(r)}>
-                <Pencil className="h-3.5 w-3.5" />编辑
-              </button>
+        actions={(r) => (
+          <div className="flex items-center gap-1">
+            <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openDetail(r)}>
+              <Eye className="h-3.5 w-3.5" />详情
+            </button>
+            {canWriteRow(r) && (
               <Popconfirm title="确认删除该周计划？（含全部明细行）" onConfirm={() => handleDelete(r.id)}>
                 <button className="btn btn-ghost btn-xs gap-1 text-error">
                   <Trash2 className="h-3.5 w-3.5" />删除
                 </button>
               </Popconfirm>
-            </div>
-          ) : (
-            <span className="text-xs text-base-content/30">只读</span>
-          )
-        }
+            )}
+          </div>
+        )}
       />
 
       <Modal
         open={open}
-        title={editing ? '编辑周计划' : '新增周计划'}
+        title={mode === 'view' ? '周计划详情' : editing ? '编辑周计划' : '新增周计划'}
         onClose={() => setOpen(false)}
         onOk={handleSubmit}
         okText={editing ? '保存' : '创建'}
         confirmLoading={submitting}
+        readOnly={mode === 'view'}
+        onEdit={editing && canWriteRow(editing) ? () => setMode('edit') : undefined}
         width={1180}
       >
         <div className="grid grid-cols-4 gap-4">
