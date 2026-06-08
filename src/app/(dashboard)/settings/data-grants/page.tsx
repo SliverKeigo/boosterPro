@@ -33,6 +33,7 @@ const ACCESS_LABEL: Record<Access, string> = { VIEW: '查看', EDIT: '编辑' }
 const EMPTY_FORM = {
   resource: RESOURCES[0].key as ResourceKey,
   sourceType: 'OWNER' as SourceType,
+  sourceUserId: 0,
   sourceDeptId: 0,
   granteeType: 'USER' as GranteeType,
   granteeUserId: 0,
@@ -44,7 +45,7 @@ type FormState = typeof EMPTY_FORM
 
 export default function DataGrantsPage() {
   const toast = useToast()
-  const { isAdmin, userId, loading: permLoading } = useMyPermissions()
+  const { isAdmin, loading: permLoading } = useMyPermissions()
 
   const [grants, setGrants] = useState<DataGrant[]>([])
   const [users, setUsers] = useState<OptionItem[]>([])
@@ -125,6 +126,7 @@ export default function DataGrantsPage() {
     setForm({
       resource: g.resource as ResourceKey,
       sourceType: g.sourceType,
+      sourceUserId: g.sourceUserId ?? 0,
       sourceDeptId: g.sourceDeptId ?? 0,
       granteeType: g.granteeType,
       granteeUserId: g.granteeUserId ?? 0,
@@ -147,7 +149,10 @@ export default function DataGrantsPage() {
   }
 
   const handleSubmit = async () => {
-    // 来源校验：OWNER 锁定本人（无需选）；DEPARTMENT 须选部门
+    // 来源校验：用户(OWNER)须选来源用户；部门(DEPARTMENT)须选来源部门
+    if (form.sourceType === 'OWNER' && !form.sourceUserId) {
+      return toast.error('请选择来源用户')
+    }
     if (form.sourceType === 'DEPARTMENT' && !form.sourceDeptId) {
       return toast.error('请选择来源部门')
     }
@@ -163,8 +168,8 @@ export default function DataGrantsPage() {
         resource: form.resource,
         access: form.access,
         sourceType: form.sourceType,
-        // OWNER 来源固定为当前用户；DEPARTMENT 用所选部门
-        sourceUserId: form.sourceType === 'OWNER' ? userId : null,
+        // 用户来源用所选用户；部门来源用所选部门
+        sourceUserId: form.sourceType === 'OWNER' ? form.sourceUserId : null,
         sourceDeptId: form.sourceType === 'DEPARTMENT' ? form.sourceDeptId : null,
         granteeType: form.granteeType,
         granteeUserId: form.granteeType === 'USER' ? form.granteeUserId : null,
@@ -193,7 +198,7 @@ export default function DataGrantsPage() {
     id == null ? '—' : (deptNames[id] ?? `部门#${id}`)
 
   const sourceText = (g: DataGrant) =>
-    g.sourceType === 'OWNER' ? `本人：${userText(g.sourceUserId)}` : `部门：${deptText(g.sourceDeptId)}`
+    g.sourceType === 'OWNER' ? `用户：${userText(g.sourceUserId)}` : `部门：${deptText(g.sourceDeptId)}`
   const granteeText = (g: DataGrant) =>
     g.granteeType === 'USER' ? `用户：${userText(g.granteeUserId)}` : `部门：${deptText(g.granteeDeptId)}`
 
@@ -212,7 +217,7 @@ export default function DataGrantsPage() {
       <div>
         <div className="mb-4">
           <h1 className="text-xl font-bold text-base-content">数据共享</h1>
-          <p className="mt-0.5 text-sm text-base-content/50">把本人或部门录入的数据共享给他人查看 / 编辑</p>
+          <p className="mt-0.5 text-sm text-base-content/50">把某用户或某部门录入的数据共享给他人查看 / 编辑</p>
         </div>
         <div className="card border border-base-300 bg-base-100 shadow-sm">
           <div className="card-body items-center py-20 text-center">
@@ -346,19 +351,25 @@ export default function DataGrantsPage() {
                 value={form.sourceType}
                 onChange={(e) => setField('sourceType', e.target.value as SourceType)}
               >
-                <option value="OWNER">本人录入</option>
-                <option value="DEPARTMENT">部门录入</option>
+                <option value="OWNER">用户</option>
+                <option value="DEPARTMENT">部门</option>
               </select>
             </Field>
             <Field label="来源对象" required>
               {form.sourceType === 'OWNER' ? (
-                // 本人时来源锁定为当前用户，不可改
-                <input
-                  className="input input-bordered w-full"
-                  value={userId != null ? userText(userId) : '本人'}
-                  disabled
-                  readOnly
-                />
+                // 用户来源：可选任意用户（共享该用户录入的数据）
+                <select
+                  className="select select-bordered w-full"
+                  value={form.sourceUserId || ''}
+                  onChange={(e) => setField('sourceUserId', Number(e.target.value))}
+                >
+                  <option value="">请选择用户</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
               ) : (
                 <select
                   className="select select-bordered w-full"
