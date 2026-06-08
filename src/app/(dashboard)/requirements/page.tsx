@@ -271,7 +271,7 @@ export default function RequirementsPage() {
         />
       ),
     },
-    { key: 'updatedAt', title: '更新时间', defaultVisible: false, render: (v) => fmtDateTime(v) },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
   ]
 
   return (

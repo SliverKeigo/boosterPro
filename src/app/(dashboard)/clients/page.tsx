@@ -192,6 +192,7 @@ export default function ClientsPage() {
           columns={[{ key: 'address', title: '办公地址' }]} />
       ) },
     { key: 'createdAt', title: '创建时间', filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
     // 以下默认隐藏，可在"显示列"开启
     { key: 'formerName', title: '客户曾用名', defaultVisible: false },
     { key: 'detailedAddress', title: '详细地址', defaultVisible: false },

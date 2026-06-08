@@ -1,5 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { prisma } from '@/lib/prisma'
+import { HttpError } from '@/lib/apiError'
+
 // 列表用：含保证期沟通 / 风险事件子表（列表页“显示列”可开启其摘要列）
 export const CANDIDATE_LIST_INCLUDE = {
   createdBy: { select: { id: true, name: true, department: { select: { name: true } } } },
@@ -124,4 +127,36 @@ export function buildCandidateData(body: any, mode: 'create' | 'update') {
   out.riskEvents = mode === 'create' ? { create: re } : { deleteMany: {}, create: re }
 
   return out
+}
+
+/** 手机号规整：去掉所有空白与连字符 */
+export function normalizePhone(phone: unknown): string {
+  return String(phone ?? '').replace(/[\s-]/g, '').trim()
+}
+
+/**
+ * 候选人查重（应用层）：「姓名 name + 手机号 phone（规整后）」组合不得重复。
+ * name 与规整后 phone 都非空时才查；空手机号不参与查重。命中即抛 409。
+ * @param data    含 name / phone 的表单数据
+ * @param excludeId 更新时排除自身 id
+ */
+export async function assertCandidateUnique(
+  data: { name?: string | null; phone?: unknown },
+  excludeId?: number,
+): Promise<void> {
+  const name = typeof data.name === 'string' ? data.name.trim() : ''
+  const phone = normalizePhone(data.phone)
+  if (!name || !phone) return
+
+  const hit = await prisma.candidate.findFirst({
+    where: {
+      id: excludeId != null ? { not: excludeId } : undefined,
+      name,
+      phone,
+    },
+    select: { id: true },
+  })
+  if (hit) {
+    throw new HttpError(409, `候选人「姓名${name}+手机号${phone}」已存在`)
+  }
 }

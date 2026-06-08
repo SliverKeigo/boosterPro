@@ -20,6 +20,7 @@ vi.mock('@/lib/permissions', () => ({
 vi.mock('@/lib/clientData', () => ({
   CUSTOMER_INCLUDE: {},
   buildCustomerData: vi.fn(() => ({})),
+  assertCustomerUnique: vi.fn(),
 }))
 
 import { prisma } from '@/lib/prisma'

@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 各模块的导入配置（服务端）。新增模块即在 CONFIGS 加一项：声明字段/关系/子表。
 import { prisma } from '@/lib/prisma'
-import type { ImportResource } from '@/lib/importServer'
+import type { ImportResource, ImportDedup } from '@/lib/importServer'
+import { normalizePhone } from '@/lib/candidateData'
 import { EDUCATION_LEVEL_LABELS, SCHOOL_TIER_LABELS, RECOMMENDATION_STATUS_LABELS, OPPORTUNITY_NATURE_LABELS } from '@/lib/enums'
 
 // ── 关系按名称唯一反查 id：重名 → 抛错（该行报错）；查无 → 返回 null（buildRow 报「找不到匹配」）──
@@ -47,6 +48,68 @@ const RECSTATUS_IN = mapEnum(reverse(RECOMMENDATION_STATUS_LABELS))
 const GENDER_REQ_IN = mapEnum({ 男: 'MALE', 女: 'FEMALE', 不限: 'ANY', MALE: 'MALE', FEMALE: 'FEMALE', ANY: 'ANY' })
 const OPP_NATURE_IN = mapEnum(reverse(OPPORTUNITY_NATURE_LABELS))
 
+// ── 导入查重配置（复用 assertCustomerUnique / assertCandidateUnique 同款取键逻辑）──
+
+// 客户名称取键：全称 / 简称去空（trim 后非空）
+const customerDedupNames = (s: any): string[] =>
+  [s.fullName, s.shortName]
+    .map((v: any) => (typeof v === 'string' ? v.trim() : ''))
+    .filter((v: string) => v.length > 0)
+
+// 客户：全称 fullName / 简称 shortName 任一与库中任一客户的 fullName/shortName 重复（交叉、大小写不敏感）
+const CUSTOMER_DEDUP: ImportDedup = {
+  label: '客户名称/简称',
+  keys: customerDedupNames,
+  findExisting: async (s, excludeId) => {
+    const names = customerDedupNames(s)
+    if (!names.length) return null
+    const hit = await prisma.customer.findFirst({
+      where: {
+        id: excludeId != null ? { not: excludeId } : undefined,
+        OR: [
+          { fullName: { in: names, mode: 'insensitive' } },
+          { shortName: { in: names, mode: 'insensitive' } },
+        ],
+      },
+      select: { fullName: true, shortName: true },
+    })
+    if (!hit) return null
+    const lowered = names.map((n) => n.toLowerCase())
+    const dup =
+      (hit.fullName && lowered.includes(hit.fullName.trim().toLowerCase()) ? hit.fullName : null) ??
+      (hit.shortName && lowered.includes(hit.shortName.trim().toLowerCase()) ? hit.shortName : null) ??
+      names[0]
+    const existingLabel = hit.fullName || hit.shortName || ''
+    return `客户名称/简称「${dup}」与现有客户「${existingLabel}」重复`
+  },
+}
+
+// 候选人取键：姓名 name 与规整手机号 phone 都非空时返回展示串，否则空（不参与查重）
+const candidateNamePhone = (s: any): { name: string; phone: string } | null => {
+  const name = typeof s.name === 'string' ? s.name.trim() : ''
+  const phone = normalizePhone(s.phone)
+  if (!name || !phone) return null
+  return { name, phone }
+}
+
+// 候选人：姓名 name + 手机号 phone（规整后）组合唯一；空姓名或空手机号不参与
+const CANDIDATE_DEDUP: ImportDedup = {
+  label: '候选人',
+  keys: (s) => {
+    const np = candidateNamePhone(s)
+    return np ? [`姓名${np.name}+手机号${np.phone}`] : []
+  },
+  findExisting: async (s, excludeId) => {
+    const np = candidateNamePhone(s)
+    if (!np) return null
+    const hit = await prisma.candidate.findFirst({
+      where: { id: excludeId != null ? { not: excludeId } : undefined, name: np.name, phone: np.phone },
+      select: { id: true },
+    })
+    return hit ? `候选人「姓名${np.name}+手机号${np.phone}」已存在` : null
+  },
+}
+
 export const CONFIGS: Record<string, ImportResource> = {
   TALENT_POOL: {
     model: 'talentPool',
@@ -67,6 +130,7 @@ export const CONFIGS: Record<string, ImportResource> = {
 
   CANDIDATE: {
     model: 'candidate',
+    dedup: CANDIDATE_DEDUP,
     fields: [
       { header: '姓名', field: 'name', required: true },
       { header: '出生年份', field: 'birthYear', type: 'int' }, // Int 年份
@@ -104,6 +168,7 @@ export const CONFIGS: Record<string, ImportResource> = {
 
   CUSTOMER: {
     model: 'customer',
+    dedup: CUSTOMER_DEDUP,
     fields: [
       { header: '客户全称', field: 'fullName' },
       { header: '客户简称', field: 'shortName', required: true },

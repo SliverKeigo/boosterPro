@@ -397,6 +397,7 @@ export default function CandidatesPage() {
     { key: 'requirementId', title: '需求 ID', defaultVisible: false },
     { key: 'submitDepartmentId', title: '提交人部门 ID', defaultVisible: false },
     { key: 'submitterId', title: '提交人 ID', defaultVisible: false },
+    { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
   ]
 
   return (

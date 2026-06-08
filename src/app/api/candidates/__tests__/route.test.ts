@@ -13,6 +13,8 @@ vi.mock('@/lib/candidateData', () => ({
   CANDIDATE_INCLUDE: {},
   CANDIDATE_LIST_INCLUDE: {},
   buildCandidateData: vi.fn(() => ({})),
+  assertCandidateUnique: vi.fn(),
+  normalizePhone: vi.fn((p: string) => p),
 }))
 
 import { prisma } from '@/lib/prisma'

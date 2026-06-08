@@ -20,10 +20,22 @@ export interface ImportSubtable {
   relationField: string // prisma 嵌套关系字段（如 guaranteeCommunications）
   fields: { key: string; type?: FieldType }[]
 }
+// ── 查重配置（应用层去重，与 POST/PUT 同款取键逻辑）──
+// keys(scalars): 从已构建好的标量数据里取出该行的「去重键」数组（如客户=[全称,简称]去空、
+//   候选人=[姓名+手机号 的展示串]），空数组表示该行不参与去重；键统一小写化用于文件内互撞比较，
+//   也用作命中文案里的名字。
+// findExisting(scalars, excludeId): 查库里是否已有与该行重复的记录，返回命中描述（报错文案）或 null；
+//   直接用 scalars 取值查库（避免从展示串里反解），excludeId 为本行 id（更新场景排除自身）。
+export interface ImportDedup {
+  label: string // 该键的中文名（如「客户名称/简称」「候选人」），用于报错文案
+  keys: (scalars: any) => string[]
+  findExisting: (scalars: any, excludeId?: number) => Promise<string | null>
+}
 export interface ImportResource {
   model: string // prisma 模型 accessor（如 'talentPool'）
   fields: ImportField[]
   subtables?: ImportSubtable[]
+  dedup?: ImportDedup
 }
 export interface ImportResult {
   created: number
@@ -194,6 +206,37 @@ export async function importRows(cfg: ImportResource, rows: Record<string, any>[
       errors.push({ row: row.__row, msg: e instanceof Error ? e.message : String(e) })
     }
   }
+
+  // ── 查重校验（仅当解析阶段全部通过时才做，避免脏行干扰）：
+  //   (a) 同一文件内多行互撞（同一去重键出现在多行）；(b) 与库内已有记录重复。命中均 push 到 errors。
+  if (cfg.dedup && !errors.length) {
+    const dd = cfg.dedup
+    const seen = new Map<string, number>() // 小写键 → 首次出现的行号
+    for (const op of ops) {
+      const keys = dd.keys(op.scalars)
+      if (!keys.length) continue
+      // (a) 文件内互撞
+      let intra = false
+      for (const k of keys) {
+        const lk = k.toLowerCase()
+        const prev = seen.get(lk)
+        if (prev != null) {
+          errors.push({ row: op.row, msg: `${dd.label}「${k}」与本文件第 ${prev} 行重复` })
+          intra = true
+        }
+      }
+      // 本行的键登记（即便互撞也登记，便于后续行继续比对到最早出现行）
+      for (const k of keys) {
+        const lk = k.toLowerCase()
+        if (!seen.has(lk)) seen.set(lk, op.row)
+      }
+      if (intra) continue
+      // (b) 与库内已有重复（更新行排除自身 id）
+      const dup = await dd.findExisting(op.scalars, op.id)
+      if (dup) errors.push({ row: op.row, msg: dup })
+    }
+  }
+
   // 整文件事务：有任一行错 → 全不写
   if (errors.length) return { created: 0, updated: 0, failed: errors.length, errors }
 
