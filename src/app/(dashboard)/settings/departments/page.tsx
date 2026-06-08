@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
-import { Eye, Trash2, ShieldAlert } from 'lucide-react'
+import { Eye, Trash2, ShieldAlert, Users } from 'lucide-react'
 import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 
@@ -18,6 +18,11 @@ export default function DepartmentsPage() {
   const [mode, setMode] = useState<'view' | 'edit'>('edit') // 详情(只读) / 编辑
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState<any>(EMPTY_FORM)
+  // 查看部门用户弹窗
+  const [usersOpen, setUsersOpen] = useState(false)
+  const [usersDept, setUsersDept] = useState<any>(null)
+  const [deptUsers, setDeptUsers] = useState<any[]>([])
+  const [usersLoading, setUsersLoading] = useState(false)
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
@@ -54,6 +59,24 @@ export default function DepartmentsPage() {
     setMode('view')
     setForm({ ...EMPTY_FORM, name: r.name ?? '' })
     setOpen(true)
+  }
+
+  // 查看该部门下的用户（管理员页，/api/users 返回全量，前端按 departmentId 过滤）
+  const openUsers = async (dept: any) => {
+    setUsersDept(dept)
+    setDeptUsers([])
+    setUsersLoading(true)
+    setUsersOpen(true)
+    try {
+      const res = await fetch('/api/users')
+      if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || '')
+      const json = await res.json()
+      setDeptUsers((json.data || []).filter((u: any) => u.departmentId === dept.id))
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : '加载失败')
+    } finally {
+      setUsersLoading(false)
+    }
   }
 
   const handleDelete = async (id: number) => {
@@ -151,6 +174,10 @@ export default function DepartmentsPage() {
         searchPlaceholder="搜索部门名称…"
         actions={(r) => (
           <div className="flex items-center gap-1">
+            <button className="btn btn-ghost btn-xs gap-1" onClick={() => openUsers(r)}>
+              <Users className="h-3.5 w-3.5" />
+              用户
+            </button>
             <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openDetail(r)}>
               <Eye className="h-3.5 w-3.5" />
               详情
@@ -181,6 +208,49 @@ export default function DepartmentsPage() {
             <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="请输入" />
           </Field>
         </div>
+      </Modal>
+
+      {/* 查看部门用户 */}
+      <Modal
+        open={usersOpen}
+        title={`${usersDept?.name ?? '部门'} · 用户（${deptUsers.length}）`}
+        onClose={() => setUsersOpen(false)}
+        footer={null}
+        width={640}
+      >
+        {usersLoading ? (
+          <div className="flex justify-center py-10">
+            <span className="loading loading-spinner loading-lg text-primary" />
+          </div>
+        ) : deptUsers.length === 0 ? (
+          <div className="py-10 text-center text-sm text-base-content/50">该部门暂无用户</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table table-sm">
+              <thead>
+                <tr>
+                  <th>姓名</th>
+                  <th>账号</th>
+                  <th>角色</th>
+                  <th>邮箱</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deptUsers.map((u: any) => (
+                  <tr key={u.id}>
+                    <td className="font-medium">
+                      {u.name}
+                      {u.isAdmin && <span className="badge badge-primary badge-xs ml-1">管理员</span>}
+                    </td>
+                    <td>{u.username}</td>
+                    <td>{u.role?.name ?? '—'}</td>
+                    <td className="text-base-content/60">{u.email ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Modal>
     </div>
   )
