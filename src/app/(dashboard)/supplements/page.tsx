@@ -2,6 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Eye, Trash2, Sparkles } from 'lucide-react'
 import {
   BoostTable,
@@ -34,6 +35,7 @@ const EMPTY_FORM: any = {
 
 export default function SupplementsPage() {
   const toast = useToast()
+  const router = useRouter()
   const { can, isOwner } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -150,7 +152,7 @@ export default function SupplementsPage() {
     { key: 'createdByName', title: '提交人', accessor: (r) => r.createdBy?.name ?? '—', filterType: 'text' },
     { key: 'createdByDept', title: '部门', accessor: (r) => r.createdBy?.department?.name ?? '—', filterType: 'text' },
     { key: 'customerName', title: '客户简称', accessor: (r) => r.customer?.shortName,
-      render: (v) => v ? <span className="font-medium text-primary">{v}</span> : <span className="text-base-content/30">—</span> },
+      render: (v, r) => v ? <span className="font-medium text-primary cursor-pointer hover:underline" onClick={() => r.customer?.id && router.push(`/clients?view=${r.customer.id}`)}>{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'demandCustomer', title: '需求客户', render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'openingSpeech', title: '开聊话术', sortable: false, render: (v) => clip(v) },
     { key: 'companyCultureWelfare', title: '企业文化福利等说明', sortable: false, render: (v) => stripHtml(v) },

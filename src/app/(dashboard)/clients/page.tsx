@@ -44,6 +44,7 @@ export default function ClientsPage() {
   const { items: industryOptions } = useDict('industry')
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [handledView, setHandledView] = useState(false) // ?view=<id> 自动打开详情，仅一次
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [mode, setMode] = useState<'view' | 'edit'>('edit') // 详情(只读) / 编辑
@@ -128,6 +129,20 @@ export default function ClientsPage() {
     setOpen(true)
   }
 
+  // 从别的模块「客户简称」跳来：?view=<客户id> → 列表加载后自动打开该客户详情（仅一次）
+  useEffect(() => {
+    if (handledView || !data.length) return
+    const view = new URLSearchParams(window.location.search).get('view')
+    if (!view) return
+    const c = data.find((x: any) => String(x.id) === view)
+    if (!c) return
+    void (async () => {
+      await Promise.resolve()
+      setHandledView(true)
+      openDetail(c)
+    })()
+  }, [data, handledView])
+
   const handleDelete = async (id: number) => {
     try {
       const res = await fetch(`/api/clients/${id}`, { method: 'DELETE' })
@@ -167,7 +182,7 @@ export default function ClientsPage() {
     { key: 'createdByName', title: '提交人', accessor: (r) => r.createdBy?.name ?? '—', filterType: 'text' },
     { key: 'createdByDept', title: '部门', accessor: (r) => r.createdBy?.department?.name ?? '—', filterType: 'text' },
     { key: 'fullName', title: '客户名称', render: (v) => v ? <span className="font-medium">{v}</span> : <span className="text-base-content/30">—</span> },
-    { key: 'shortName', title: '客户简称', render: (v) => <span className="font-medium text-primary">{v}</span> },
+    { key: 'shortName', title: '客户简称', render: (v, r) => <span className="font-medium text-primary cursor-pointer hover:underline" onClick={() => openDetail(r)}>{v}</span> },
     { key: 'industry', title: '所属行业', filterType: 'select', filterOptions: industryOptions, render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'region', title: '所属区域' },
     { key: 'officeAddresses', title: '办公地址', sortable: false,

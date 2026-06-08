@@ -2,6 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Eye, Trash2 } from 'lucide-react'
 import {
   BoostTable,
@@ -126,6 +127,7 @@ const EMPTY_FORM: any = {
 
 export default function CandidatesPage() {
   const toast = useToast()
+  const router = useRouter()
   const { can, isOwner, userId, departmentId } = useMyPermissions()
   const { items: channelOptions } = useDict('recruitment_channel')
   const [data, setData] = useState<any[]>([])
@@ -288,7 +290,7 @@ export default function CandidatesPage() {
     { key: 'createdByName', title: '提交人', accessor: (r) => r.createdBy?.name ?? '—', filterType: 'text' },
     { key: 'createdByDept', title: '部门', accessor: (r) => r.createdBy?.department?.name ?? '—', filterType: 'text' },
     { key: 'customerName', title: '客户简称', accessor: (r) => r.customer?.shortName,
-      render: (v) => v ? <span className="font-medium text-primary">{v}</span> : <span className="text-base-content/30">—</span> },
+      render: (v, r) => v ? <span className="font-medium text-primary cursor-pointer hover:underline" onClick={() => r.customer?.id && router.push(`/clients?view=${r.customer.id}`)}>{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'positionName', title: '岗位名称', accessor: (r) => r.requirement?.positionName },
     { key: 'name', title: '候选人姓名', render: (v) => <span className="font-medium">{v}</span> },
     { key: 'recommendationTime', title: '推荐时间', accessor: (r) => r.recommendationTime, filterType: 'date',
