@@ -82,7 +82,10 @@ export function Modal({
         {/* Body（只读模式：fieldset disabled 禁用原生控件 + pointer-events-none 拦截自定义控件点击） */}
         <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
           {readOnly ? (
-            <fieldset disabled className="pointer-events-none m-0 min-w-0 border-0 p-0">
+            <fieldset
+              disabled
+              className="pointer-events-none m-0 min-w-0 border-0 p-0 [&_.input]:!border-base-300 [&_.input]:!bg-transparent [&_.input]:!text-base-content [&_.input]:!opacity-100 [&_.select]:!border-base-300 [&_.select]:!bg-transparent [&_.select]:!text-base-content [&_.select]:!opacity-100 [&_.textarea]:!border-base-300 [&_.textarea]:!bg-transparent [&_.textarea]:!text-base-content [&_.textarea]:!opacity-100"
+            >
               {children}
             </fieldset>
           ) : (

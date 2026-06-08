@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react'
 import { Dropdown } from './Dropdown'
+import { Modal } from './Modal'
 import { exportToExcel } from '@/lib/exportExcel'
 import { IMPORT_COLUMNS, markRequired } from '@/lib/importColumns'
 import { ImportModal } from './ImportModal'
@@ -105,6 +106,9 @@ const ICON_BTN =
 // 原始主键 / 外键 ID 列（key 为 'id' 或以 'Id' 结尾，如 customerId/submitterId/requirementId）
 // 对用户无意义（表格展示对应的名称列即可）：统一从 显示列 / 排序 / 筛选 / 实际渲染 中排除。
 const isIdColumnKey = (key: string) => key === 'id' || /Id$/.test(key)
+
+// 每页条数可选档位（下拉白名单）；持久化读取时只接受此集合内的值，防止脏数据。
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const
 
 // ── 筛选相关类型与工具 ──
 type FilterKind = 'text' | 'date' | 'number' | 'select'
@@ -233,8 +237,37 @@ export function BoostTable<T extends Record<string, any>>({
   const [sortDraft, setSortDraft] = useState<SortRule[]>([])
   const sortId = useRef(0)
   const [page, setPage] = useState(1)
-  const [size, setSize] = useState(pageSize)
+  // 每页条数：初始化即读入持久化值（白名单校验），下次进入沿用上次选择；
+  // storageKey 缺省时回退 title 作 key，二者皆空则不持久化、退回 pageSize 默认。
+  const [size, setSize] = useState<number>(() => {
+    const key = storageKey ?? title
+    if (key && typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem('bp:pageSize:' + key)
+        if (raw != null) {
+          const n = Number(raw)
+          if ((PAGE_SIZE_OPTIONS as readonly number[]).includes(n)) return n
+        }
+      } catch {
+        /* ignore corrupt storage */
+      }
+    }
+    return pageSize
+  })
+  // 每页条数变更时写回（与列显示配置同样的「初始即读入 + 变更即写回」策略）
+  useEffect(() => {
+    const key = storageKey ?? title
+    if (!key || typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem('bp:pageSize:' + key, String(size))
+    } catch {
+      /* ignore quota errors */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [size])
   const [fullscreen, setFullscreen] = useState(false)
+  // 「显示列」弹窗开关（内部 state 控制，不改对外 props）
+  const [colModalOpen, setColModalOpen] = useState(false)
   const [visible, setVisible] = useState<Record<string, boolean>>(() => {
     const defaults: Record<string, boolean> = Object.fromEntries(
       columns.map((c) => [c.key, c.defaultVisible !== false]),
@@ -591,6 +624,20 @@ export function BoostTable<T extends Record<string, any>>({
     if (!colByKey.has(c.field)) return false
     return c.op === 'in' ? c.values.length > 0 : c.value.trim() !== ''
   }).length
+
+  // 「显示列」弹窗里可勾选的列（排除对用户无意义的 id / 外键列）
+  const toggleableColumns = useMemo(
+    () => columns.filter((c) => !isIdColumnKey(c.key)),
+    [columns],
+  )
+
+  // 全选 / 全不选：一次性把可勾选列统一设为显示 / 隐藏
+  const setAllVisible = (value: boolean) =>
+    setVisible((v) => {
+      const next = { ...v }
+      for (const c of toggleableColumns) next[c.key] = value
+      return next
+    })
 
   return (
     <div
@@ -952,36 +999,11 @@ export function BoostTable<T extends Record<string, any>>({
           </Dropdown>
         )}
 
-        {/* 显示列 */}
-        <Dropdown
-          width={220}
-          trigger={
-            <span className={ICON_BTN}>
-              <Columns3 className="h-4 w-4" />
-              显示列
-            </span>
-          }
-        >
-          <div className="max-h-72 overflow-y-auto">
-            <div className="px-2 py-1.5 text-xs font-semibold text-base-content/50">
-              勾选要显示的列
-            </div>
-            {columns.filter((c) => !isIdColumnKey(c.key)).map((c) => (
-              <label
-                key={c.key}
-                className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-base-200"
-              >
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-sm checkbox-primary"
-                  checked={visible[c.key]}
-                  onChange={(e) => setVisible((v) => ({ ...v, [c.key]: e.target.checked }))}
-                />
-                <span className="text-sm">{c.title}</span>
-              </label>
-            ))}
-          </div>
-        </Dropdown>
+        {/* 显示列：点按钮弹出 Modal，一次铺开全部列勾选；勾选即时生效，靠 X/遮罩/ESC 关 */}
+        <button type="button" className={ICON_BTN} onClick={() => setColModalOpen(true)}>
+          <Columns3 className="h-4 w-4" />
+          显示列
+        </button>
 
         {/* 排序 */}
         {sortableColumns.length > 0 && (
@@ -1242,7 +1264,7 @@ export function BoostTable<T extends Record<string, any>>({
                   setPage(1)
                 }}
               >
-                {[10, 25, 50, 100].map((n) => (
+                {PAGE_SIZE_OPTIONS.map((n) => (
                   <option key={n} value={n}>
                     {n} 条/页
                   </option>
@@ -1273,6 +1295,51 @@ export function BoostTable<T extends Record<string, any>>({
           </div>
         )}
       </div>
+
+      {/* 显示列设置弹窗：全部列一次铺开（多列网格），勾选即时生效，无底部按钮（footer={null}） */}
+      <Modal
+        open={colModalOpen}
+        onClose={() => setColModalOpen(false)}
+        title="显示列"
+        width={560}
+        footer={null}
+      >
+        <div className="flex items-center justify-between gap-2 pb-3">
+          <div className="text-xs font-semibold text-base-content/50">勾选要显示的列</div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs"
+              onClick={() => setAllVisible(true)}
+            >
+              全选
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs"
+              onClick={() => setAllVisible(false)}
+            >
+              全不选
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
+          {toggleableColumns.map((c) => (
+            <label
+              key={c.key}
+              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-base-200"
+            >
+              <input
+                type="checkbox"
+                className="checkbox checkbox-sm checkbox-primary"
+                checked={visible[c.key]}
+                onChange={(e) => setVisible((v) => ({ ...v, [c.key]: e.target.checked }))}
+              />
+              <span className="text-sm">{c.title}</span>
+            </label>
+          ))}
+        </div>
+      </Modal>
 
       {importResource && (
         <ImportModal

@@ -44,8 +44,12 @@ export function buildTalentPoolData(body: any) {
   // 性别枚举：空串归 null
   if (data.gender === '') data.gender = null
 
-  // 出生年份为 YYYY-MM 字符串：空串 / undefined 归 null（不再转 Number）
-  if (data.birthYear === '' || data.birthYear === undefined) data.birthYear = null
+  // 出生年份为 Int(年)：空串 / undefined / null 归 null，否则转 Number
+  if (data.birthYear === '' || data.birthYear === undefined || data.birthYear === null) {
+    data.birthYear = null
+  } else {
+    data.birthYear = Number(data.birthYear)
+  }
 
   // 人才标签为自由文本(不按逗号分隔)：前端已传单元素数组；若传字符串，整段作为单元素存入 text[]。
   if (!Array.isArray(data.tags)) {

@@ -270,10 +270,8 @@ model Requirement {
   positionName         String                       @map("position_name") @db.VarChar(255)
   headcount            Int
   monthlySalary        String?                      @map("monthly_salary") @db.VarChar(50)
-  annualSalaryMin      Decimal?                     @map("annual_salary_min") @db.Decimal(10, 2)
-  annualSalaryMax      Decimal?                     @map("annual_salary_max") @db.Decimal(10, 2)
-  ageMin               Int?                         @map("age_min")
-  ageMax               Int?                         @map("age_max")
+  annualSalary         String?                      @map("annual_salary") @db.VarChar(50)
+  ageRange             String?                      @map("age_range") @db.VarChar(50)
   genderRequirement    GenderType?                  @default(ANY) @map("gender_requirement")
   educationRequirement String?                      @map("education_requirement") @db.Text
   languageRequirement  String?                      @map("language_requirement") @db.Text
@@ -331,11 +329,11 @@ model RequirementUrgentRecord {
 model Candidate {
   id                       Int                               @id @default(autoincrement())
   name                     String                            @db.VarChar(100)
-  birthYear                String?                           @map("birth_year") @db.VarChar(7) // 出生年月 YYYY-MM
+  birthYear                Int?                              @map("birth_year") // 出生年份（年）
   phone                    String?                           @db.VarChar(50)
   email                    String?                           @db.VarChar(255)
   education                EducationLevel?
-  schoolTier               SchoolTier?                       @map("school_tier")
+  schoolTier               String[]                          @map("school_tier") // 院校层次（多选，存枚举 key）
   customer                 Customer?                         @relation(fields: [customerId], references: [id])
   customerId               Int?                              @map("customer_id")
   customerShortName        String?                           @map("customer_short_name") @db.VarChar(200)
@@ -402,7 +400,7 @@ model CandidateRiskEvent {
 model TalentPool {
   id              Int         @id @default(autoincrement())
   name            String      @db.VarChar(100)
-  birthYear       String?     @map("birth_year") @db.VarChar(7) // 出生年月 YYYY-MM
+  birthYear       Int?        @map("birth_year") // 出生年份（年）
   gender          GenderType?
   education       String?     @db.VarChar(50)
   phone           String?     @db.VarChar(50)
@@ -666,4 +664,27 @@ model AiPrompt {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("ai_prompts")
+}
+
+// 数据共享授权：把「某人/某部门 录入的 某资源数据」开放给「某用户/某部门」查看或编辑
+model DataGrant {
+  id            Int      @id @default(autoincrement())
+  resource      String   @db.VarChar(50) // ∈ RESOURCE_KEYS
+  sourceType    String   @map("source_type") @db.VarChar(20) // OWNER | DEPARTMENT
+  sourceUserId  Int?     @map("source_user_id")
+  sourceDeptId  Int?     @map("source_dept_id")
+  granteeType   String   @map("grantee_type") @db.VarChar(20) // USER | DEPARTMENT
+  granteeUserId Int?     @map("grantee_user_id")
+  granteeDeptId Int?     @map("grantee_dept_id")
+  access        String   @db.VarChar(10) // VIEW | EDIT（EDIT 蕴含 VIEW）
+  grantedById   Int?     @map("granted_by_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([resource])
+  @@index([sourceType, sourceUserId])
+  @@index([sourceType, sourceDeptId])
+  @@index([granteeType, granteeUserId])
+  @@index([granteeType, granteeDeptId])
+  @@map("data_grants")
 }

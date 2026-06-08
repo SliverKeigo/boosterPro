@@ -11,6 +11,8 @@ const MIME: Record<string, string> = {
   '.jpeg': 'image/jpeg',
   '.gif': 'image/gif',
   '.webp': 'image/webp',
+  '.bmp': 'image/bmp',
+  '.svg': 'image/svg+xml',
   '.pdf': 'application/pdf',
   '.doc': 'application/msword',
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -42,8 +44,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
     const ext = path.extname(decoded).toLowerCase()
     const mime = MIME[ext] || 'application/octet-stream'
 
-    // 仅图片/PDF/文本允许 inline 预览，其余强制下载；并禁止浏览器 MIME 嗅探
-    const INLINE_SAFE = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.pdf', '.txt'])
+    // 仅位图图片/PDF/文本允许 inline 预览，其余强制下载；并禁止浏览器 MIME 嗅探。
+    // 注意：.svg 故意不在白名单里——直接访问其 URL 时仍走 attachment 下载，
+    // 避免被当作可执行文档渲染（存储型 XSS）；应用内 <img> 预览不受 disposition 影响仍可正常显示。
+    const INLINE_SAFE = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.pdf', '.txt'])
     const dl = new URL(req.url).searchParams.get('download')
     const disposition = !dl && INLINE_SAFE.has(ext) ? 'inline' : 'attachment'
 

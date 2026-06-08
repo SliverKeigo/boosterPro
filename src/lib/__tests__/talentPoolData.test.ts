@@ -39,8 +39,8 @@ describe('buildTalentPoolData - 字段映射与清洗', () => {
     expect(buildTalentPoolData({ name: 'A', gender: 'MALE' }).gender).toBe('MALE')
   })
 
-  it('出生年份(YYYY-MM 字符串)：原样保留，空串 / 缺失 → null；age 已不是人才库字段', () => {
-    expect(buildTalentPoolData({ name: 'A', birthYear: '1992-05' }).birthYear).toBe('1992-05')
+  it('出生年份(整数年)：数字字符串转 Number，空串 / 缺失 → null；age 已不是人才库字段', () => {
+    expect(buildTalentPoolData({ name: 'A', birthYear: '1992' }).birthYear).toBe(1992)
     expect(buildTalentPoolData({ name: 'A', birthYear: '' }).birthYear).toBeNull()
     expect(buildTalentPoolData({ name: 'A' }).birthYear).toBeNull()
     // 年龄字段已移除(出生年份可推算)：即使前端误传 age 也被白名单过滤掉

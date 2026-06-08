@@ -84,7 +84,7 @@ describe('buildCandidateData - 字段映射与清洗', () => {
         customerId: '12',
         requirementId: '',
         submitterId: 5,
-        birthYear: '1990-05',
+        birthYear: '1990',
         guaranteePeriodMonths: '3',
         // submitDepartmentId 缺失
       },
@@ -93,15 +93,15 @@ describe('buildCandidateData - 字段映射与清洗', () => {
     expect(out.customerId).toBe(12)
     expect(out.requirementId).toBeNull()
     expect(out.submitterId).toBe(5)
-    expect(out.birthYear).toBe('1990-05') // 出生年月为 YYYY-MM 文本，原样保留、不转数字
+    expect(out.birthYear).toBe(1990) // 出生年份为 Int（年），回退为整数年
     expect(out.guaranteePeriodMonths).toBe(3)
     expect(out.submitDepartmentId).toBeNull()
   })
 
   it('枚举字段空串 → null', () => {
-    const out = buildCandidateData({ education: '', schoolTier: 'T985_211' }, 'create')
+    const out = buildCandidateData({ education: '', schoolTier: ['T985_211'] }, 'create')
     expect(out.education).toBeNull()
-    expect(out.schoolTier).toBe('T985_211')
+    expect(out.schoolTier).toEqual(['T985_211']) // 院校层次现为多选数组，原样透传
   })
 
   it('tags：非数组的真值包装为单元素数组，假值为空数组', () => {

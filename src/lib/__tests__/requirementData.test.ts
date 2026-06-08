@@ -60,19 +60,16 @@ describe('buildRequirementData - 字段映射与清洗', () => {
         customerId: '3',
         headcount: '2',
         monthlySalary: '15-20K',
-        annualSalaryMin: 200000,
-        ageMin: '25',
-        // annualSalaryMax / ageMax 缺失
+        annualSalary: '30-50万',
+        ageRange: '25-35岁',
       },
       'create',
     )
     expect(out.customerId).toBe(3)
     expect(out.headcount).toBe(2)
     expect(out.monthlySalary).toBe('15-20K') // 月薪为自由文本，原样保留、不转数字
-    expect(out.annualSalaryMin).toBe(200000)
-    expect(out.ageMin).toBe(25)
-    expect(out.annualSalaryMax).toBeNull()
-    expect(out.ageMax).toBeNull()
+    expect(out.annualSalary).toBe('30-50万') // 年薪为自由文本，原样透传、不转数字
+    expect(out.ageRange).toBe('25-35岁') // 年龄为自由文本，原样透传、不转数字
   })
 
   it('genderRequirement 枚举空串 → null，有值原样保留', () => {

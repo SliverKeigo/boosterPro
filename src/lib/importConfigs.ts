@@ -30,7 +30,19 @@ const GENDER_IN = mapEnum({ 男: 'MALE', 女: 'FEMALE', MALE: 'MALE', FEMALE: 'F
 const reverse = (labels: Record<string, string>) =>
   Object.fromEntries(Object.entries(labels).map(([k, v]) => [v, k]))
 const EDU_IN = mapEnum(reverse(EDUCATION_LEVEL_LABELS))
-const TIER_IN = mapEnum(reverse(SCHOOL_TIER_LABELS))
+// 院校层次现为 String[]：单元格按「、,，/」分隔多个中文标签，逐个反查成枚举 key 数组。
+// 任一标签无法识别 → 返回 undefined（buildRow 视为「无法识别的值」→ 该行报错）。
+const TIER_LABEL_TO_KEY = reverse(SCHOOL_TIER_LABELS)
+const TIER_ARR_IN = (raw: any): string[] | undefined => {
+  const parts = String(raw).split(/[、,，/]+/).map((s) => s.trim()).filter(Boolean)
+  const keys: string[] = []
+  for (const p of parts) {
+    const k = TIER_LABEL_TO_KEY[p]
+    if (k === undefined) return undefined
+    keys.push(k)
+  }
+  return keys
+}
 const RECSTATUS_IN = mapEnum(reverse(RECOMMENDATION_STATUS_LABELS))
 const GENDER_REQ_IN = mapEnum({ 男: 'MALE', 女: 'FEMALE', 不限: 'ANY', MALE: 'MALE', FEMALE: 'FEMALE', ANY: 'ANY' })
 const OPP_NATURE_IN = mapEnum(reverse(OPPORTUNITY_NATURE_LABELS))
@@ -57,11 +69,11 @@ export const CONFIGS: Record<string, ImportResource> = {
     model: 'candidate',
     fields: [
       { header: '姓名', field: 'name', required: true },
-      { header: '出生年份', field: 'birthYear' },
+      { header: '出生年份', field: 'birthYear', type: 'int' }, // Int 年份
       { header: '联系电话', field: 'phone' },
       { header: '邮箱', field: 'email' },
       { header: '教育经历', field: 'education', transform: EDU_IN },
-      { header: '院校', field: 'schoolTier', transform: TIER_IN },
+      { header: '院校', field: 'schoolTier', transform: TIER_ARR_IN }, // String[]：中文标签→key 数组
       { header: '客户名称', field: 'customerId', relation: { idField: 'customerId', resolve: resolveCustomer } },
       { header: '客户简称', field: 'customerShortName' },
       { header: '招聘需求方', field: 'recruitmentParty' },
@@ -117,10 +129,8 @@ export const CONFIGS: Record<string, ImportResource> = {
       { header: '岗位名称', field: 'positionName', required: true },
       { header: '招聘人数', field: 'headcount', type: 'int', required: true },
       { header: '月薪范围', field: 'monthlySalary' },
-      { header: '年薪下限', field: 'annualSalaryMin', type: 'number' },
-      { header: '年薪上限', field: 'annualSalaryMax', type: 'number' },
-      { header: '年龄下限', field: 'ageMin', type: 'int' },
-      { header: '年龄上限', field: 'ageMax', type: 'int' },
+      { header: '年薪范围', field: 'annualSalary' }, // 纯文本
+      { header: '年龄范围', field: 'ageRange' }, // 纯文本
       { header: '性别要求', field: 'genderRequirement', transform: GENDER_REQ_IN },
       { header: '学历要求', field: 'educationRequirement' },
       { header: '语言要求', field: 'languageRequirement' },

@@ -14,6 +14,8 @@ import {
   Field,
   FileUpload,
   SearchSelect,
+  YearSelect,
+  yearOptions,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -100,6 +102,20 @@ const STATUS_FIELDS: Record<string, string[]> = {
 // 所有受状态驱动的流程字段全集（提交前用于清除当前状态不显示的字段，避免脏数据）
 const ALL_FLOW_FIELDS = Array.from(new Set(Object.values(STATUS_FIELDS).flat()))
 
+// 流程字段中文标签（用于"当前状态下显示的流程字段必填"的校验提示，与表单 Field label 同口径）
+const FLOW_FIELD_LABELS: Record<string, string> = {
+  interviewProgress: '面试进展',
+  salaryPlan: '薪酬方案',
+  offerDate: 'Offer 日期',
+  offerOnboardDate: 'Offer 到岗日期',
+  offerFileUrl: 'Offer（上传文件）',
+  backgroundCheckReportUrl: '背景调查报告',
+  actualOnboardDate: '实际到岗日期',
+  guaranteePeriodEnd: '保证期结束日期',
+  guaranteePeriodMonths: '保证期时长(月)',
+  failureReason: '推荐失败原因描述',
+}
+
 const opts = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }))
 const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
 const fmtDateTime = (s?: string | null) => (s ? String(s).slice(0, 16) : '')
@@ -114,7 +130,7 @@ const isRecruitingReq = (r: any): boolean => {
 
 const EMPTY_FORM: any = {
   name: '', birthYear: '', phone: '', email: '',
-  education: '', schoolTier: '', customerId: '', customerShortName: '', requirementId: '',
+  education: '', schoolTier: [], customerId: '', customerShortName: '', requirementId: '',
   recruitmentParty: '', recruitmentChannel: '', recommendationTime: '',
   recommendationStatus: 'PENDING',
   recommendationReportUrl: '', recommendationReason: '', interviewProgress: '',
@@ -185,9 +201,14 @@ export default function CandidatesPage() {
     void loadFormRefs()
     setEditing(null)
     setMode('edit')
+    // 推荐时间默认当前本地时间（datetime-local 需本地时区：先抵消时区偏移再取 ISO 前 16 位）
+    const now = new Date()
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
+    const localNow = now.toISOString().slice(0, 16)
     // 提交人 / 提交人部门默认填当前登录用户（仍可在下拉中改）
     setForm({
       ...EMPTY_FORM,
+      recommendationTime: localNow,
       submitterId: userId != null ? String(userId) : '',
       submitDepartmentId: departmentId != null ? String(departmentId) : '',
     })
@@ -202,6 +223,7 @@ export default function CandidatesPage() {
       ...EMPTY_FORM,
       ...r,
       birthYear: r.birthYear ?? '',
+      schoolTier: Array.isArray(r.schoolTier) ? r.schoolTier : r.schoolTier ? [r.schoolTier] : [],
       customerId: r.customerId ?? '',
       customerShortName: r.customerShortName ?? '',
       requirementId: r.requirementId ?? '',
@@ -253,6 +275,18 @@ export default function CandidatesPage() {
     if (!form.recruitmentChannel?.trim()) return toast.error('请选择招聘渠道')
     if (!form.recommendationReportUrl) return toast.error('请上传推荐报告')
     if (!form.recommendationReason?.trim()) return toast.error('请填写推荐理由')
+    // 流程字段：当前推荐状态下「显示」的流程字段均为必填
+    const flowFields = STATUS_FIELDS[form.recommendationStatus] ?? []
+    for (const f of flowFields) {
+      if (f === 'guaranteeCommunications') {
+        const rows: any[] = Array.isArray(form.guaranteeCommunications) ? form.guaranteeCommunications : []
+        const hasValid = rows.some((r) => (r?.date && String(r.date).trim()) || (r?.content && String(r.content).trim()))
+        if (!hasValid) return toast.error('请填写至少一条保证期内沟通记录')
+        continue
+      }
+      const v = form[f]
+      if (v == null || String(v).trim() === '') return toast.error(`请填写${FLOW_FIELD_LABELS[f] ?? f}`)
+    }
     setSubmitting(true)
     try {
       const visibleFlow = new Set(STATUS_FIELDS[form.recommendationStatus] ?? [])
@@ -304,11 +338,21 @@ export default function CandidatesPage() {
     { key: 'recruitmentChannel', title: '招聘渠道', defaultVisible: false, filterType: 'select', filterOptions: channelOptions },
     { key: 'phone', title: '联系电话', defaultVisible: false },
     { key: 'email', title: '邮箱', defaultVisible: false },
-    { key: 'birthYear', title: '出生年份', defaultVisible: false, filterType: 'text' },
+    { key: 'birthYear', title: '出生年份', defaultVisible: false, filterType: 'select', filterOptions: yearOptions(1950, 0) },
     { key: 'education', title: '教育经历', defaultVisible: false, accessor: (r) => EDUCATION_LABELS[r.education] ?? '',
       filterType: 'select', filterOptions: Object.values(EDUCATION_LABELS).map((l) => ({ label: l, value: l })) },
-    { key: 'schoolTier', title: '院校', defaultVisible: false, accessor: (r) => SCHOOL_TIER_LABELS[r.schoolTier] ?? '',
-      filterType: 'select', filterOptions: Object.values(SCHOOL_TIER_LABELS).map((l) => ({ label: l, value: l })) },
+    { key: 'schoolTier', title: '院校', defaultVisible: false, sortable: false, filterable: false,
+      accessor: (r) => (Array.isArray(r.schoolTier) ? r.schoolTier : r.schoolTier ? [r.schoolTier] : []).map((k: string) => SCHOOL_TIER_LABELS[k] ?? k).join('、'),
+      render: (_v, r) => {
+        const tiers: string[] = Array.isArray(r.schoolTier) ? r.schoolTier : r.schoolTier ? [r.schoolTier] : []
+        return tiers.length ? (
+          <div className="flex flex-wrap gap-1">
+            {tiers.map((k, i) => (
+              <span key={i} className="badge badge-ghost badge-sm">{SCHOOL_TIER_LABELS[k] ?? k}</span>
+            ))}
+          </div>
+        ) : <span className="text-base-content/30">—</span>
+      } },
     { key: 'recommendationReason', title: '推荐理由', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[200px]">{v}</span> : '—' },
     { key: 'offerDate', title: 'Offer日期', defaultVisible: false, filterType: 'date', render: (v) => fmtDate(v) || '—' },
     { key: 'offerOnboardDate', title: 'Offer到岗日期', defaultVisible: false, filterType: 'date', render: (v) => fmtDate(v) || '—' },
@@ -410,7 +454,7 @@ export default function CandidatesPage() {
             <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="出生年份" required>
-            <input type="month" className="input input-bordered w-full" value={form.birthYear} onChange={(e) => setField('birthYear', e.target.value)} />
+            <YearSelect value={form.birthYear} onChange={(v) => setField('birthYear', v)} minYear={1950} />
           </Field>
           <Field label="联系电话" required>
             <input className="input input-bordered w-full" value={form.phone} onChange={(e) => setField('phone', e.target.value)} placeholder="请输入" />
@@ -422,7 +466,28 @@ export default function CandidatesPage() {
             <SearchSelect value={form.education} onChange={(v) => setField('education', v)} options={opts(EDUCATION_LABELS)} placeholder="请选择" />
           </Field>
           <Field label="院校">
-            <SearchSelect value={form.schoolTier} onChange={(v) => setField('schoolTier', v)} options={opts(SCHOOL_TIER_LABELS)} placeholder="请选择" />
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-2">
+              {Object.entries(SCHOOL_TIER_LABELS).map(([key, label]) => {
+                const selected: string[] = Array.isArray(form.schoolTier) ? form.schoolTier : []
+                const checked = selected.includes(key)
+                return (
+                  <label key={key} className="flex cursor-pointer items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      className="checkbox checkbox-sm"
+                      checked={checked}
+                      onChange={(e) =>
+                        setField(
+                          'schoolTier',
+                          e.target.checked ? [...selected, key] : selected.filter((k) => k !== key),
+                        )
+                      }
+                    />
+                    <span className="text-sm">{label}</span>
+                  </label>
+                )
+              })}
+            </div>
           </Field>
           <Field label="客户名称" required>
             <SearchSelect

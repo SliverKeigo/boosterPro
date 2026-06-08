@@ -39,12 +39,11 @@ const STATUS_BADGE: Record<string, string> = {
 const opts = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }))
 const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
 const fmtDateTime = (s?: string | null) => (s ? `${s.slice(0, 10)} ${s.slice(11, 16)}` : '—')
-const num = (v: any) => (v === null || v === undefined || v === '' ? '—' : String(v))
 
 const EMPTY_FORM: any = {
   customerId: '', recruiter: '', positionName: '', headcount: '',
-  monthlySalary: '', annualSalaryMin: '', annualSalaryMax: '',
-  ageMin: '', ageMax: '', genderRequirement: '', educationRequirement: '',
+  monthlySalary: '', annualSalary: '', ageRange: '',
+  genderRequirement: '', educationRequirement: '',
   languageRequirement: '', status: [], deadline: '', baseCity: '',
   jobDescription: '', talentProfile: '', projectExperience: '',
   closeReason: '', notes: '', industry: '',
@@ -135,10 +134,8 @@ export default function RequirementsPage() {
       recruiter: r.customer?.shortName ?? r.recruiter ?? '',
       headcount: r.headcount ?? '',
       monthlySalary: r.monthlySalary ?? '',
-      annualSalaryMin: r.annualSalaryMin ?? '',
-      annualSalaryMax: r.annualSalaryMax ?? '',
-      ageMin: r.ageMin ?? '',
-      ageMax: r.ageMax ?? '',
+      annualSalary: r.annualSalary ?? '',
+      ageRange: r.ageRange ?? '',
       genderRequirement: r.genderRequirement ?? '',
       deadline: fmtDate(r.deadline),
       followDate: fmtDate(r.followDate),
@@ -220,10 +217,8 @@ export default function RequirementsPage() {
     // 以下默认隐藏，可在“显示列”开启
     { key: 'customerId', title: '客户 ID', defaultVisible: false },
     { key: 'monthlySalary', title: '月薪范围', defaultVisible: false, filterType: 'text', render: (v) => v || <span className="text-base-content/30">—</span> },
-    { key: 'annualSalaryMin', title: '年薪下限', defaultVisible: false, filterType: 'number', render: (v) => num(v) },
-    { key: 'annualSalaryMax', title: '年薪上限', defaultVisible: false, filterType: 'number', render: (v) => num(v) },
-    { key: 'ageMin', title: '年龄下限', defaultVisible: false, filterType: 'number', render: (v) => num(v) },
-    { key: 'ageMax', title: '年龄上限', defaultVisible: false, filterType: 'number', render: (v) => num(v) },
+    { key: 'annualSalary', title: '年薪范围', defaultVisible: false, filterType: 'text', render: (v) => v || <span className="text-base-content/30">—</span> },
+    { key: 'ageRange', title: '年龄范围', defaultVisible: false, filterType: 'text', render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'genderRequirement', title: '性别要求', defaultVisible: false, accessor: (r) => GENDER_LABELS[r.genderRequirement] ?? '',
       filterType: 'select', filterOptions: Object.values(GENDER_LABELS).map((l) => ({ label: l, value: l })) },
     { key: 'educationRequirement', title: '学历要求', defaultVisible: false },
@@ -351,24 +346,16 @@ export default function RequirementsPage() {
           <Field label="需求人数" required>
             <input type="number" className="input input-bordered w-full" value={form.headcount} onChange={(e) => setField('headcount', e.target.value)} placeholder="请输入数字" />
           </Field>
-          {/* 月薪范围 / 年薪范围(万) */}
+          {/* 月薪范围 / 年薪范围 */}
           <Field label="月薪范围" required>
             <input className="input input-bordered w-full" value={form.monthlySalary} onChange={(e) => setField('monthlySalary', e.target.value)} placeholder="如 15-20K / 面议 / 15K·13薪" />
           </Field>
-          <Field label="年薪范围（万）">
-            <div className="flex items-center gap-2">
-              <input type="number" className="input input-bordered w-full" value={form.annualSalaryMin} onChange={(e) => setField('annualSalaryMin', e.target.value)} placeholder="最低" />
-              <span className="text-base-content/40">-</span>
-              <input type="number" className="input input-bordered w-full" value={form.annualSalaryMax} onChange={(e) => setField('annualSalaryMax', e.target.value)} placeholder="最高" />
-            </div>
+          <Field label="年薪范围">
+            <input className="input input-bordered w-full" value={form.annualSalary} onChange={(e) => setField('annualSalary', e.target.value)} placeholder="如 30-50万 / 面议 / 25万·15薪" />
           </Field>
           {/* 年龄范围 / 性别要求 */}
           <Field label="年龄范围">
-            <div className="flex items-center gap-2">
-              <input type="number" className="input input-bordered w-full" value={form.ageMin} onChange={(e) => setField('ageMin', e.target.value)} placeholder="最小" />
-              <span className="text-base-content/40">-</span>
-              <input type="number" className="input input-bordered w-full" value={form.ageMax} onChange={(e) => setField('ageMax', e.target.value)} placeholder="最大" />
-            </div>
+            <input className="input input-bordered w-full" value={form.ageRange} onChange={(e) => setField('ageRange', e.target.value)} placeholder="如 25-35岁 / 30岁以下 / 不限" />
           </Field>
           <Field label="性别要求" required>
             <SearchSelect
@@ -437,8 +424,8 @@ export default function RequirementsPage() {
           <Field label="Base 城市" required>
             <input className="input input-bordered w-full" value={form.baseCity} onChange={(e) => setField('baseCity', e.target.value)} placeholder="请输入" />
           </Field>
-          <Field label="岗位 JD">
-            <textarea className="textarea textarea-bordered w-full" rows={3} value={form.jobDescription} onChange={(e) => setField('jobDescription', e.target.value)} placeholder="请输入" />
+          <Field label="岗位 JD" className="col-span-2">
+            <textarea className="textarea textarea-bordered w-full" rows={5} value={form.jobDescription} onChange={(e) => setField('jobDescription', e.target.value)} placeholder="请输入" />
             <button
               type="button"
               className="btn btn-primary btn-sm mt-1 w-fit gap-1"

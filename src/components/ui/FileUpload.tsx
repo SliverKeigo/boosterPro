@@ -1,7 +1,8 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Upload, FileText, Download, X, Loader2 } from 'lucide-react'
+import { Upload, FileText, Download, X, Loader2, Eye } from 'lucide-react'
+import { FilePreview } from './FilePreview'
 
 interface FileUploadProps {
   /** 已上传文件的 URL（/api/files/xxx），或旧的文本内容 */
@@ -19,6 +20,7 @@ export function FileUpload({ value, onChange, accept }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   const isUploaded = !!value && value.startsWith('/api/files/')
   const fileName = isUploaded ? fileNameFromUrl(value!) : ''
@@ -39,30 +41,70 @@ export function FileUpload({ value, onChange, accept }: FileUploadProps) {
   }
 
   if (isUploaded) {
+    // 注意：只读(详情)态下，外层 Modal 会把内容包进 fieldset[disabled] + pointer-events-none，
+    // 会让 <button> 失效、并拦截点击。预览触发器故意用 <a>/role=button 的可点击元素，
+    // 并显式加 pointer-events-auto + stopPropagation 以豁免外层禁用，确保详情态附件可点开预览。
+    const openPreview = (e: React.SyntheticEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setPreviewOpen(true)
+    }
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-base-300 bg-base-100 px-3 py-2">
-        <FileText className="h-4 w-4 shrink-0 text-primary" />
-        <span className="flex-1 truncate text-sm" title={fileName}>
-          {fileName}
-        </span>
-        <a
-          href={`${value}?download=1`}
-          className="btn btn-ghost btn-xs"
-          aria-label="下载"
-          title="下载"
-        >
-          <Download className="h-3.5 w-3.5" />
-        </a>
-        <button
-          type="button"
-          onClick={() => onChange('')}
-          className="btn btn-ghost btn-xs text-error"
-          aria-label="移除"
-          title="移除"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      </div>
+      <>
+        <div className="flex items-center gap-2 rounded-lg border border-base-300 bg-base-100 px-3 py-2">
+          <FileText className="h-4 w-4 shrink-0 text-primary" />
+          <a
+            role="button"
+            tabIndex={0}
+            onClick={openPreview}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') openPreview(e)
+            }}
+            className="flex-1 cursor-pointer truncate text-sm text-base-content hover:text-primary hover:underline [pointer-events:auto]"
+            title={`预览：${fileName}`}
+          >
+            {fileName}
+          </a>
+          <a
+            role="button"
+            tabIndex={0}
+            onClick={openPreview}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') openPreview(e)
+            }}
+            className="btn btn-ghost btn-xs [pointer-events:auto]"
+            aria-label="预览"
+            title="预览"
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </a>
+          <a
+            href={`${value}?download=1`}
+            download
+            onClick={(e) => e.stopPropagation()}
+            className="btn btn-ghost btn-xs [pointer-events:auto]"
+            aria-label="下载"
+            title="下载"
+          >
+            <Download className="h-3.5 w-3.5" />
+          </a>
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="btn btn-ghost btn-xs text-error"
+            aria-label="移除"
+            title="移除"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        <FilePreview
+          open={previewOpen}
+          url={value!}
+          fileName={fileName}
+          onClose={() => setPreviewOpen(false)}
+        />
+      </>
     )
   }
 

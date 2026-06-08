@@ -93,16 +93,23 @@ export function buildCandidateData(body: any, mode: 'create' | 'update') {
   }
   if (!Array.isArray(data.tags)) data.tags = data.tags ? [data.tags] : []
 
-  // 数字外键 / 数值字段：空串归 null，否则转 Number
-  for (const f of ['customerId', 'requirementId', 'submitterId', 'submitDepartmentId', 'guaranteePeriodMonths']) {
+  // 数字外键 / 数值字段：空串归 null，否则转 Number（birthYear 现为 Int 年份）
+  for (const f of ['customerId', 'requirementId', 'submitterId', 'submitDepartmentId', 'guaranteePeriodMonths', 'birthYear']) {
     if (data[f] === '' || data[f] === undefined) data[f] = null
     else if (data[f] !== null) data[f] = Number(data[f])
   }
 
   // 枚举字段：空串归 null（否则 Prisma 枚举校验会报错导致 500）
-  for (const f of ['education', 'schoolTier']) {
+  for (const f of ['education']) {
     if (data[f] === '' || data[f] === undefined) data[f] = null
   }
+
+  // schoolTier 现为 String[]（存枚举 key）：作为数组透传，空/非数组归 []
+  data.schoolTier = Array.isArray(data.schoolTier)
+    ? data.schoolTier
+    : data.schoolTier
+      ? [data.schoolTier]
+      : []
 
   const gc = (guaranteeCommunications as any[])
     .filter((r) => r.date || r.content)

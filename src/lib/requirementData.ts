@@ -14,10 +14,8 @@ const REQUIREMENT_SCALAR_FIELDS = [
   'positionName',
   'headcount',
   'monthlySalary',
-  'annualSalaryMin',
-  'annualSalaryMax',
-  'ageMin',
-  'ageMax',
+  'annualSalary',
+  'ageRange',
   'genderRequirement',
   'educationRequirement',
   'languageRequirement',
@@ -76,10 +74,6 @@ export function buildRequirementData(body: any, mode: 'create' | 'update') {
   for (const f of [
     'customerId',
     'headcount',
-    'annualSalaryMin',
-    'annualSalaryMax',
-    'ageMin',
-    'ageMax',
   ]) {
     if (data[f] === '' || data[f] === undefined) data[f] = null
     else if (data[f] !== null) data[f] = Number(data[f])
