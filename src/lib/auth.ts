@@ -42,3 +42,23 @@ export function isSecureRequest(req: Request): boolean {
     return false // 取不到协议（如测试 mock / 异常）时按非 HTTPS 处理，不加 Secure
   }
 }
+
+// ── 文件临时访问 token ──────────────────────────────────────────────
+// 用途：让本地 Office 程序（ms-word: 协议，自带 HTTP 栈、不带浏览器登录 cookie）
+// 能拉取指定文件。token 短时效（10 分钟）且绑定具体文件名，即便泄露影响也可控。
+export async function signFileToken(fileName: string): Promise<string> {
+  return new SignJWT({ file: fileName, scope: 'file' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('10m')
+    .sign(SECRET)
+}
+
+export async function verifyFileToken(token: string, fileName: string): Promise<boolean> {
+  try {
+    const { payload } = await jwtVerify(token, SECRET)
+    return payload.scope === 'file' && payload.file === fileName
+  } catch {
+    return false
+  }
+}

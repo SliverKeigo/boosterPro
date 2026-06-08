@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { readFile, stat } from 'fs/promises'
 import path from 'path'
 import { getSessionPayload } from '@/lib/permissions'
+import { verifyFileToken } from '@/lib/auth'
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads'
 
@@ -23,15 +24,19 @@ const MIME: Record<string, string> = {
 
 export async function GET(req: Request, { params }: { params: Promise<{ name: string }> }) {
   try {
-    // 接口级登录校验（不只依赖 middleware）：未登录禁止下载任何文件
-    if (!(await getSessionPayload())) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
     const { name } = await params
     const decoded = decodeURIComponent(name)
     // 防目录穿越
     if (decoded.includes('..') || decoded.includes('/') || decoded.includes('\\')) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
+    }
+    // 接口级鉴权（不只依赖 middleware）：浏览器登录 cookie，或本地 Office 程序
+    // （ms-word: 协议，自带 HTTP 栈、不带浏览器 cookie）携带的临时文件 token（?t=）。
+    const fileToken = new URL(req.url).searchParams.get('t')
+    const authorized =
+      (await getSessionPayload()) || (fileToken ? await verifyFileToken(fileToken, decoded) : false)
+    if (!authorized) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const dir = path.resolve(process.cwd(), UPLOAD_DIR)
