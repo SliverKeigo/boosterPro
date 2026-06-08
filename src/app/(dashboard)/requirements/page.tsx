@@ -119,7 +119,10 @@ export default function RequirementsPage() {
   const openCreate = () => {
     setEditing(null)
     setMode('edit')
-    setForm({ ...EMPTY_FORM })
+    // 招聘重启日期默认今天（本地时区 YYYY-MM-DD；仍可手动修改）
+    const now = new Date()
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
+    setForm({ ...EMPTY_FORM, deadline: now.toISOString().slice(0, 10) })
     setOpen(true)
   }
 
