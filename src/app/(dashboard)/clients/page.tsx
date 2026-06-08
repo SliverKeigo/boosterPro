@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Trash2, Sparkles } from 'lucide-react'
+import { Eye, Trash2, Sparkles } from 'lucide-react'
 import {
   BoostTable,
   type BoostColumn,
@@ -46,6 +46,7 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
+  const [mode, setMode] = useState<'view' | 'edit'>('edit') // 详情(只读) / 编辑
   const [submitting, setSubmitting] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [form, setForm] = useState<any>(EMPTY_FORM)
@@ -103,12 +104,14 @@ export default function ClientsPage() {
 
   const openCreate = () => {
     setEditing(null)
+    setMode('edit')
     setForm({ ...EMPTY_FORM })
     setOpen(true)
   }
 
-  const openEdit = (r: any) => {
+  const openDetail = (r: any) => {
     setEditing(r)
+    setMode('view')
     setForm({
       ...EMPTY_FORM,
       ...r,
@@ -206,12 +209,10 @@ export default function ClientsPage() {
         searchPlaceholder="搜索简称 / 行业 / 区域 / 地址…"
         actions={(r) => (
           <div className="flex items-center gap-1">
-            {can(RES, 'EDIT') && isOwner(r) && (
-              <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openEdit(r)}>
-                <Pencil className="h-3.5 w-3.5" />
-                编辑
-              </button>
-            )}
+            <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openDetail(r)}>
+              <Eye className="h-3.5 w-3.5" />
+              详情
+            </button>
             {can(RES, 'DELETE') && isOwner(r) && (
               <Popconfirm title="确认删除该客户？" onConfirm={() => handleDelete(r.id)}>
                 <button className="btn btn-ghost btn-xs gap-1 text-error">
@@ -227,11 +228,13 @@ export default function ClientsPage() {
       {/* ── 新建 / 编辑 ── */}
       <Modal
         open={open}
-        title={editing ? '编辑客户' : '新增客户'}
+        title={mode === 'view' ? '客户详情' : editing ? '编辑客户' : '新增客户'}
         onClose={() => setOpen(false)}
         onOk={handleSubmit}
         okText={editing ? '保存' : '创建'}
         confirmLoading={submitting}
+        readOnly={mode === 'view'}
+        onEdit={can(RES, 'EDIT') && isOwner(editing) ? () => setMode('edit') : undefined}
         width={760}
       >
         <div className="grid grid-cols-2 gap-4">

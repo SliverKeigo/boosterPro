@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Eye, Trash2 } from 'lucide-react'
 import {
   BoostTable,
   type BoostColumn,
@@ -36,6 +36,7 @@ export default function CustomerContactsPage() {
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
+  const [mode, setMode] = useState<'view' | 'edit'>('edit') // 详情(只读) / 编辑
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState<any>(EMPTY_FORM)
 
@@ -77,6 +78,7 @@ export default function CustomerContactsPage() {
   const openCreate = () => {
     void loadFormRefs()
     setEditing(null)
+    setMode('edit')
     // 提交人 / 提交人组织默认填当前登录用户（仍可在下拉中改）
     setForm({
       ...EMPTY_FORM,
@@ -86,9 +88,10 @@ export default function CustomerContactsPage() {
     setOpen(true)
   }
 
-  const openEdit = (r: any) => {
+  const openDetail = (r: any) => {
     void loadFormRefs()
     setEditing(r)
+    setMode('view')
     setForm({
       ...EMPTY_FORM,
       ...r,
@@ -196,12 +199,10 @@ export default function CustomerContactsPage() {
         searchPlaceholder="搜索标题 / 客户 / 提交人 / 联系人…"
         actions={(r) => (
           <div className="flex items-center gap-1">
-            {can(RES, 'EDIT') && isOwner(r) && (
-              <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openEdit(r)}>
-                <Pencil className="h-3.5 w-3.5" />
-                编辑
-              </button>
-            )}
+            <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openDetail(r)}>
+              <Eye className="h-3.5 w-3.5" />
+              详情
+            </button>
             {can(RES, 'DELETE') && isOwner(r) && (
               <Popconfirm title="确认删除该客户联系人信息？" onConfirm={() => handleDelete(r.id)}>
                 <button className="btn btn-ghost btn-xs gap-1 text-error">
@@ -217,11 +218,13 @@ export default function CustomerContactsPage() {
       {/* ── 新建 / 编辑 ── */}
       <Modal
         open={open}
-        title={editing ? '编辑客户联系人信息' : '新增客户联系人信息'}
+        title={mode === 'view' ? '客户联系人信息详情' : editing ? '编辑客户联系人信息' : '新增客户联系人信息'}
         onClose={() => setOpen(false)}
         onOk={handleSubmit}
         okText={editing ? '保存' : '创建'}
         confirmLoading={submitting}
+        readOnly={mode === 'view'}
+        onEdit={can(RES, 'EDIT') && isOwner(editing) ? () => setMode('edit') : undefined}
         width={840}
       >
         <div className="grid grid-cols-2 gap-4">

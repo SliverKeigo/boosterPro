@@ -15,6 +15,10 @@ interface ModalProps {
   width?: number
   /** 传 null 隐藏底部操作栏 */
   footer?: ReactNode | null
+  /** 只读(详情)模式：禁用内部所有表单控件；底部默认显示「关闭 + 编辑」 */
+  readOnly?: boolean
+  /** 只读模式下点「编辑」的回调；不传则不显示编辑按钮 */
+  onEdit?: () => void
   children: ReactNode
 }
 
@@ -28,6 +32,8 @@ export function Modal({
   confirmLoading = false,
   width = 720,
   footer,
+  readOnly = false,
+  onEdit,
   children,
 }: ModalProps) {
   // ESC 关闭 + 滚动锁定
@@ -73,13 +79,32 @@ export function Modal({
           </button>
         </div>
 
-        {/* Body */}
-        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">{children}</div>
+        {/* Body（只读模式：fieldset disabled 禁用原生控件 + pointer-events-none 拦截自定义控件点击） */}
+        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+          {readOnly ? (
+            <fieldset disabled className="pointer-events-none m-0 min-w-0 border-0 p-0">
+              {children}
+            </fieldset>
+          ) : (
+            children
+          )}
+        </div>
 
         {/* Footer */}
         {footer !== null && (
           <div className="flex justify-end gap-3 border-t border-base-300 px-6 py-4">
-            {footer ?? (
+            {footer ?? (readOnly ? (
+              <>
+                <button type="button" className="btn btn-ghost" onClick={onClose}>
+                  关闭
+                </button>
+                {onEdit && (
+                  <button type="button" className="btn btn-primary" onClick={onEdit}>
+                    编辑
+                  </button>
+                )}
+              </>
+            ) : (
               <>
                 <button type="button" className="btn btn-ghost" onClick={onClose}>
                   {cancelText}
@@ -94,7 +119,7 @@ export function Modal({
                   {okText}
                 </button>
               </>
-            )}
+            ))}
           </div>
         )}
       </div>
