@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
-import { Eye, Trash2, ShieldAlert, Users } from 'lucide-react'
+import { Eye, Trash2, ShieldAlert } from 'lucide-react'
 import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 
@@ -151,7 +151,7 @@ export default function RolesPage() {
     { key: 'description', title: '描述',
       render: (v) => v ? <span className="line-clamp-1 max-w-[280px]">{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'userCount', title: '用户数', accessor: (r) => r._count?.users ?? 0, filterType: 'number',
-      render: (v) => <span className="badge badge-ghost badge-sm">{v}</span> },
+      render: (v, r) => <button type="button" onClick={() => openUsers(r)} className="cursor-pointer font-medium text-primary hover:underline" title="点击查看拥有该角色的用户">{v}</button> },
     { key: 'createdAt', title: '创建时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
   ]
@@ -176,10 +176,6 @@ export default function RolesPage() {
         searchPlaceholder="搜索角色名称 / 描述…"
         actions={(r) => (
           <div className="flex items-center gap-1">
-            <button className="btn btn-ghost btn-xs gap-1" onClick={() => openUsers(r)}>
-              <Users className="h-3.5 w-3.5" />
-              用户
-            </button>
             <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openDetail(r)}>
               <Eye className="h-3.5 w-3.5" />
               详情
