@@ -49,9 +49,9 @@ describe('GET /api/files/[name]', () => {
     expect(res.headers.get('Content-Disposition')).toContain('inline')
   })
 
-  it('非 inline 类型（xlsx）→ attachment', async () => {
-    const res = await get('1700000000-abc123-报表.xlsx')
-    expect(res.headers.get('Content-Type')).toContain('spreadsheetml')
+  it('非 inline 类型（svg，防 XSS 强制下载）→ attachment', async () => {
+    const res = await get('1700000000-abc123-logo.svg')
+    expect(res.headers.get('Content-Type')).toContain('svg')
     expect(res.headers.get('Content-Disposition')).toContain('attachment')
   })
 

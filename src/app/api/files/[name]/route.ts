@@ -17,6 +17,8 @@ const MIME: Record<string, string> = {
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   '.xls': 'application/vnd.ms-excel',
   '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.ppt': 'application/vnd.ms-powerpoint',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   '.txt': 'text/plain; charset=utf-8',
 }
 
@@ -44,7 +46,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
     // 位图图片/PDF/文本/Word 允许 inline；其余强制下载；并禁止浏览器 MIME 嗅探。
     // 注意：.svg 故意不在白名单里——直接访问其 URL 时仍走 attachment 下载，
     // 避免被当作可执行文档渲染（存储型 XSS）；应用内 <img> 预览不受 disposition 影响仍可正常显示。
-    const INLINE_SAFE = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.pdf', '.txt', '.doc', '.docx'])
+    const INLINE_SAFE = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.pdf', '.txt', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'])
     const dl = new URL(req.url).searchParams.get('download')
     const disposition = !dl && INLINE_SAFE.has(ext) ? 'inline' : 'attachment'
 

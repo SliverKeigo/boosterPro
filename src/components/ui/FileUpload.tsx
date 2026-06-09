@@ -16,6 +16,16 @@ function fileNameFromUrl(url: string): string {
   return raw.replace(/^\d+-[a-z0-9]+-/, '')
 }
 
+// Office 文档类型 → 对应的本机 Office 协议与显示名（点击直接调起本机程序打开）
+const OFFICE: Record<string, { scheme: string; label: string }> = {
+  doc: { scheme: 'ms-word', label: 'Word' },
+  docx: { scheme: 'ms-word', label: 'Word' },
+  xls: { scheme: 'ms-excel', label: 'Excel' },
+  xlsx: { scheme: 'ms-excel', label: 'Excel' },
+  ppt: { scheme: 'ms-powerpoint', label: 'PowerPoint' },
+  pptx: { scheme: 'ms-powerpoint', label: 'PowerPoint' },
+}
+
 export function FileUpload({ value, onChange, accept }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -24,9 +34,9 @@ export function FileUpload({ value, onChange, accept }: FileUploadProps) {
 
   const isUploaded = !!value && value.startsWith('/api/files/')
   const fileName = isUploaded ? fileNameFromUrl(value!) : ''
-  // Word 文件点「预览」直接调起本机 Word（ms-word: 协议），不走网页预览
+  // Office 文件点「预览」直接调起本机 Office（Word/Excel/PowerPoint），不走网页预览
   const ext = fileName.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] || ''
-  const isWord = ext === 'doc' || ext === 'docx'
+  const office = OFFICE[ext]
 
   const upload = async (file: File) => {
     setUploading(true)
@@ -50,11 +60,11 @@ export function FileUpload({ value, onChange, accept }: FileUploadProps) {
     const openPreview = (e: React.SyntheticEvent) => {
       e.preventDefault()
       e.stopPropagation()
-      if (isWord) {
-        // Word 直接用本机 Word 打开（绝对 URL + 文件名编码；ofe=编辑打开）。
-        // 需 Windows + 桌面版 Office；Mac 版 Word 不拉 http 远程文档。
+      if (office) {
+        // Office 文档直接用本机 Office 打开（绝对 URL + 文件名编码；ofe=编辑打开）。
+        // 需 Windows + 桌面版 Office；Mac 版 Office 不拉 http 远程文档。
         const storedName = decodeURIComponent((value!.split('?')[0] || '').split('/').pop() || '')
-        window.location.href = `ms-word:ofe|u|${window.location.origin}/api/files/${encodeURIComponent(storedName)}`
+        window.location.href = `${office.scheme}:ofe|u|${window.location.origin}/api/files/${encodeURIComponent(storedName)}`
         return
       }
       setPreviewOpen(true)
@@ -71,7 +81,7 @@ export function FileUpload({ value, onChange, accept }: FileUploadProps) {
               if (e.key === 'Enter' || e.key === ' ') openPreview(e)
             }}
             className="flex-1 cursor-pointer truncate text-sm text-base-content hover:text-primary hover:underline [pointer-events:auto]"
-            title={isWord ? `用 Word 打开：${fileName}` : `预览：${fileName}`}
+            title={office ? `用 ${office.label} 打开：${fileName}` : `预览：${fileName}`}
           >
             {fileName}
           </a>
@@ -83,10 +93,10 @@ export function FileUpload({ value, onChange, accept }: FileUploadProps) {
               if (e.key === 'Enter' || e.key === ' ') openPreview(e)
             }}
             className="btn btn-ghost btn-xs [pointer-events:auto]"
-            aria-label={isWord ? '用 Word 打开' : '预览'}
-            title={isWord ? '用 Word 打开' : '预览'}
+            aria-label={office ? `用 ${office.label} 打开` : '预览'}
+            title={office ? `用 ${office.label} 打开` : '预览'}
           >
-            {isWord ? <FileText className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {office ? <FileText className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
           </a>
           <a
             href={`${value}?download=1`}
