@@ -32,7 +32,7 @@ describe('GET /api/departments', () => {
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({ data: [{ id: 1 }, { id: 2 }], total: 2 })
     const args = mock(prisma.department.findMany).mock.calls[0][0]
-    expect(args.include).toEqual({ _count: { select: { users: true } } })
+    expect(args.include).toEqual({ _count: { select: { users: true } }, hiddenResources: { select: { resource: true } } })
   })
 
   it('未登录 → 401，不查库', async () => {

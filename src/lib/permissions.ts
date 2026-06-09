@@ -133,10 +133,35 @@ export const getGrantsForUser = cache(async (user: CurrentUser): Promise<Record<
   return map
 })
 
-// 列表/读 的 Prisma where 过滤：本人创建 + 被授(view/write) + 管理员看全部。塞进 findMany({ where })。
+// ════════════════ 部门-模块「对外可见性」黑名单 ════════════════
+// 某资源「关闭了对外可见」的部门 id 集合。无记录 = 默认对外可见。请求级 cache 去重。
+const getHiddenDeptIds = cache(async (resource: ResourceKey): Promise<number[]> => {
+  const rows = await prisma.departmentHiddenResource.findMany({
+    where: { resource },
+    select: { departmentId: true },
+  })
+  return rows.map((r) => r.departmentId)
+})
+
+// 列表/读 的 Prisma where 过滤（塞进 findMany({ where })）。管理员看全部。
+// 读(view)：有 VIEW 功能权限(route 已校验)即可看该模块各部门数据；录入方部门若在「部门详情」
+//           关闭了该模块对外可见，则其数据仅本部门 + 管理员可见。写(write)：本人 + 数据共享(编辑授权)。
 export async function buildRowFilter(user: CurrentUser, resource: ResourceKey, mode: 'view' | 'write'): Promise<any> {
   if (user.isAdmin) return {}
-  const scope = (await getGrantsForUser(user))[resource]?.[mode === 'write' ? 'edit' : 'view']
+  if (mode === 'view') {
+    const hidden = await getHiddenDeptIds(resource)
+    if (hidden.length === 0) return {} // 无任何部门关闭对外 → 全部可见
+    const or: any[] = [
+      { createdById: user.id }, // 本人录入
+      { createdById: null }, // 无归属的历史数据
+      { createdBy: { departmentId: { notIn: hidden } } }, // 录入方部门未关闭对外
+    ]
+    if (user.departmentId != null) {
+      or.push({ createdBy: { departmentId: user.departmentId } }) // 本部门内始终可见
+    }
+    return { OR: or }
+  }
+  const scope = (await getGrantsForUser(user))[resource]?.edit
   const or: any[] = [{ createdById: user.id }]
   if (scope?.userIds.length) or.push({ createdById: { in: scope.userIds } })
   if (scope?.deptIds.length) or.push({ createdBy: { departmentId: { in: scope.deptIds } } })
@@ -145,14 +170,24 @@ export async function buildRowFilter(user: CurrentUser, resource: ResourceKey, m
 
 type RowOwner = { createdById?: number | null; createdBy?: { departmentId?: number | null } | null } | null
 
-// 行级读/写鉴权（详情 GET / PUT / DELETE）：本人 / 管理员 / 被授(对应 mode) 放行，否则抛错。
-// row 需含 createdById；按部门授权判定时需含 createdBy.departmentId（取 existing 时一并 select）。
+// 行级读/写鉴权（详情 GET / PUT / DELETE）。row 需含 createdById（+ createdBy.departmentId）。
+// 读：本人 / 管理员 / 无归属 / 同部门 / 录入方部门未关闭对外 → 放行。
+// 写：本人 / 管理员 / 数据共享(编辑授权) → 放行。
 export async function assertRowAccess(user: CurrentUser, row: RowOwner, resource: ResourceKey, mode: 'view' | 'write'): Promise<void> {
   if (!row) throw new HttpError(404, '记录不存在或已被删除')
   if (user.isAdmin || row.createdById === user.id) return
-  const scope = (await getGrantsForUser(user))[resource]?.[mode === 'write' ? 'edit' : 'view']
+  if (mode === 'view') {
+    if (row.createdById == null) return // 无归属历史数据
+    const dept = row.createdBy?.departmentId ?? null
+    if (dept == null) return // 录入者无部门
+    if (user.departmentId != null && dept === user.departmentId) return // 同部门
+    const hidden = await getHiddenDeptIds(resource)
+    if (!hidden.includes(dept)) return // 录入方部门未关闭对外
+    throw new HttpError(404, '记录不存在或您无权查看')
+  }
+  const scope = (await getGrantsForUser(user))[resource]?.edit
   const okUser = row.createdById != null && !!scope?.userIds.includes(row.createdById)
   const okDept = row.createdBy?.departmentId != null && !!scope?.deptIds.includes(row.createdBy.departmentId)
   if (okUser || okDept) return
-  throw new HttpError(mode === 'write' ? 403 : 404, mode === 'write' ? '该数据未授权给您编辑' : '记录不存在或您无权查看')
+  throw new HttpError(403, '该数据未授权给您编辑')
 }

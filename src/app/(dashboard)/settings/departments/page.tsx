@@ -5,8 +5,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { Eye, Trash2, ShieldAlert } from 'lucide-react'
 import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
+import { RESOURCES } from '@/lib/resources'
 
-const EMPTY_FORM: any = { name: '' }
+// 部门「数据可见范围」按模块配置（报表无行数据，不参与）
+const VISIBILITY_RESOURCES = RESOURCES.filter((r) => r.key !== 'REPORT')
+const EMPTY_FORM: any = { name: '', hiddenResources: [] }
 
 export default function DepartmentsPage() {
   const toast = useToast()
@@ -57,7 +60,11 @@ export default function DepartmentsPage() {
   const openDetail = (r: any) => {
     setEditing(r)
     setMode('view')
-    setForm({ ...EMPTY_FORM, name: r.name ?? '' })
+    setForm({
+      ...EMPTY_FORM,
+      name: r.name ?? '',
+      hiddenResources: (r.hiddenResources ?? []).map((h: any) => h.resource),
+    })
     setOpen(true)
   }
 
@@ -102,7 +109,7 @@ export default function DepartmentsPage() {
       const res = await fetch(url, {
         method: editing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name }),
+        body: JSON.stringify({ name: form.name, hiddenResources: form.hiddenResources }),
       })
       if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
       toast.success(editing ? '更新成功' : '创建成功')
@@ -197,11 +204,34 @@ export default function DepartmentsPage() {
         confirmLoading={submitting}
         readOnly={mode === 'view'}
         onEdit={isAdmin ? () => setMode('edit') : undefined}
-        width={480}
+        width={560}
       >
         <div className="grid grid-cols-1 gap-4">
           <Field label="部门名称" required>
             <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="请输入" />
+          </Field>
+          <Field label="数据可见范围（勾选 = 本部门该模块数据对其他部门可见；取消 = 仅本部门 + 管理员可见）">
+            <div className="grid grid-cols-2 gap-2 rounded-lg border border-base-300 p-3">
+              {VISIBILITY_RESOURCES.map((r) => {
+                const visible = !form.hiddenResources.includes(r.key)
+                return (
+                  <label key={r.key} className="flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="checkbox checkbox-sm"
+                      checked={visible}
+                      onChange={(e) => {
+                        const hidden = new Set<string>(form.hiddenResources)
+                        if (e.target.checked) hidden.delete(r.key)
+                        else hidden.add(r.key)
+                        setField('hiddenResources', [...hidden])
+                      }}
+                    />
+                    <span className="text-sm">{r.label}</span>
+                  </label>
+                )
+              })}
+            </div>
           </Field>
         </div>
       </Modal>

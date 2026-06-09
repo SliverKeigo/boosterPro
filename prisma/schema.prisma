@@ -67,10 +67,25 @@ model Department {
   name      String   @db.VarChar(100)
   users     User[]
   groups    Group[]
+  hiddenResources DepartmentHiddenResource[]
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("departments")
+}
+
+// 部门-模块「对外可见性」黑名单：存在一条 = 该部门该模块数据【不对其他部门可见】（仅本部门+管理员可见）。
+// 无记录 = 默认对外可见。配置入口：系统管理 → 部门管理 → 部门详情按模块勾选（默认全勾=对外可见）。
+model DepartmentHiddenResource {
+  id           Int        @id @default(autoincrement())
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  departmentId Int        @map("department_id")
+  resource     String     @db.VarChar(50)
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@unique([departmentId, resource])
+  @@index([resource])
+  @@map("department_hidden_resources")
 }
 
 // 组：挂在部门之下（部门 → 多个组）。组有组长(leaderId)与成员(User.groupId)。支撑工作计划「仅组长可新增」。

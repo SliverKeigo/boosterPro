@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { HttpError } from '@/lib/apiError'
 
-vi.mock('@/lib/prisma', () => ({
-  prisma: {
+vi.mock('@/lib/prisma', () => {
+  const prisma: any = {
     department: { findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    departmentHiddenResource: { deleteMany: vi.fn(), createMany: vi.fn() },
     user: { count: vi.fn() },
-  },
-}))
+  }
+  // $transaction(cb) 执行回调并把 prisma 本身当作事务客户端 tx
+  prisma.$transaction = vi.fn(async (cb: (tx: typeof prisma) => unknown) => cb(prisma))
+  return { prisma }
+})
 vi.mock('@/lib/permissions', () => ({
   requireAdmin: vi.fn(),
   getSessionPayload: vi.fn(async () => ({ userId: 1 })),
@@ -51,14 +55,25 @@ describe('PUT /api/departments/[id]', () => {
   const makeReq = (body: unknown) =>
     new Request('http://t', { method: 'PUT', body: JSON.stringify(body) })
 
-  it('管理员更新：调用 prisma.department.update，返回 200', async () => {
+  it('管理员更新：事务内 update name，返回 200', async () => {
     mock(prisma.department.update).mockResolvedValue({ id: 1, name: '改' })
+    mock(prisma.department.findUnique).mockResolvedValue({ id: 1, name: '改', hiddenResources: [] })
     const res = await PUT(makeReq({ name: '改' }), ctx('1'))
     expect(requireAdmin).toHaveBeenCalled()
     const args = mock(prisma.department.update).mock.calls[0][0]
     expect(args.where).toEqual({ id: 1 })
     expect(args.data).toEqual({ name: '改' })
     expect(res.status).toBe(200)
+  })
+
+  it('传 hiddenResources：事务内重写黑名单，非法 key 被过滤', async () => {
+    mock(prisma.department.update).mockResolvedValue({ id: 1, name: '改' })
+    mock(prisma.department.findUnique).mockResolvedValue({ id: 1, name: '改', hiddenResources: [{ resource: 'CANDIDATE' }] })
+    const res = await PUT(makeReq({ name: '改', hiddenResources: ['CANDIDATE', 'BAD_KEY'] }), ctx('1'))
+    expect(res.status).toBe(200)
+    expect(prisma.departmentHiddenResource.deleteMany).toHaveBeenCalledWith({ where: { departmentId: 1 } })
+    const createArgs = mock(prisma.departmentHiddenResource.createMany).mock.calls[0][0]
+    expect(createArgs.data).toEqual([{ departmentId: 1, resource: 'CANDIDATE' }])
   })
 
   it('非管理员 → 403（关键安全断言），不写库', async () => {

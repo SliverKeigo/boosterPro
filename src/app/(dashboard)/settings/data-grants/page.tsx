@@ -238,7 +238,7 @@ export default function DataGrantsPage() {
         <div>
           <h1 className="text-xl font-bold text-base-content">数据共享</h1>
           <p className="mt-0.5 text-sm text-base-content/50">
-            把「某人 / 某部门 录入的某类数据」开放给指定用户或部门查看 / 编辑
+            把「某人 / 某部门 录入的某类数据」开放给指定用户或部门查看 / 编辑（注：查看默认全公司可见、可在「部门管理」按模块关闭；此处主要用于授予编辑权限）
           </p>
         </div>
         <button className="btn btn-primary btn-sm gap-1.5" onClick={openCreate}>

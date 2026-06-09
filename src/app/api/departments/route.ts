@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     const data = await prisma.department.findMany({
       where: q ? { name: { contains: q, mode: 'insensitive' } } : undefined,
       orderBy: { createdAt: 'asc' },
-      include: { _count: { select: { users: true } } },
+      include: { _count: { select: { users: true } }, hiddenResources: { select: { resource: true } } },
     })
     return NextResponse.json({ data, total: data.length })
   } catch (e) {
