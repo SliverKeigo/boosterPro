@@ -39,6 +39,12 @@ const STATUS_BADGE: Record<string, string> = {
 const opts = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }))
 const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
 const fmtDateTime = (s?: string | null) => (s ? `${s.slice(0, 10)} ${s.slice(11, 16)}` : '—')
+// 今天（本地时区 YYYY-MM-DD），用于「登记日期」默认值
+const todayLocal = () => {
+  const now = new Date()
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
+  return now.toISOString().slice(0, 10)
+}
 
 const EMPTY_FORM: any = {
   customerId: '', recruiter: '', positionName: '', headcount: '',
@@ -120,9 +126,7 @@ export default function RequirementsPage() {
     setEditing(null)
     setMode('edit')
     // 登记日期默认今天（本地时区 YYYY-MM-DD；仍可手动修改）
-    const now = new Date()
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
-    setForm({ ...EMPTY_FORM, followDate: now.toISOString().slice(0, 10) })
+    setForm({ ...EMPTY_FORM, followDate: todayLocal() })
     setOpen(true)
   }
 
@@ -325,7 +329,11 @@ export default function RequirementsPage() {
         okText={editing ? '保存' : '创建'}
         confirmLoading={submitting}
         readOnly={mode === 'view'}
-        onEdit={can(RES, 'EDIT') && canEditRow(RES, editing) ? () => setMode('edit') : undefined}
+        onEdit={can(RES, 'EDIT') && canEditRow(RES, editing) ? () => {
+          // 进入编辑：登记日期自动同步为今天（仍可手动改）
+          setForm((f: any) => ({ ...f, followDate: todayLocal() }))
+          setMode('edit')
+        } : undefined}
         width={780}
       >
         <div className="grid grid-cols-2 gap-4">
