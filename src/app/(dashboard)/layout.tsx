@@ -203,7 +203,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <button
                   type="button"
                   onClick={() => toggleGroup(group.key)}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 transition-colors hover:text-slate-300"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold uppercase tracking-wider text-slate-400 transition-colors hover:text-slate-200"
                 >
                   <group.icon className="h-3.5 w-3.5" />
                   <span className="flex-1 text-left">{group.label}</span>
@@ -219,10 +219,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <li key={item.href}>
                           <Link
                             href={item.href}
-                            className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+                            className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors ${
                               active
                                 ? 'bg-primary text-white shadow-sm'
-                                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                                : 'text-slate-300 hover:bg-white/5 hover:text-white'
                             }`}
                           >
                             <item.icon className="h-4 w-4 shrink-0" />

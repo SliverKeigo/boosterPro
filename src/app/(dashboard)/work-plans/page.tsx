@@ -77,16 +77,37 @@ export default function WorkPlansPage() {
     void (async () => { await fetchData() })()
   }, [fetchData])
 
-  // 拉某组的成员（作为矩阵列）+ 组名
-  const loadGroup = useCallback(async (gid: string | number) => {
+  // 选组初始化：拉组员(矩阵列)+组名；regenItems 时按「组员录入的在招需求」每岗位生成一行明细，
+  // 并对同客户同岗位带入该组上一份周计划的交付进展简述。
+  const applyGroupSetup = useCallback(async (gid: string | number, regenItems: boolean) => {
     try {
-      const res = await fetch(`/api/groups/${gid}`)
+      const res = await fetch(`/api/work-plans/group-setup?groupId=${gid}`)
       if (!res.ok) return
-      const g = await res.json()
-      setGroupName(g.name ?? '')
-      setMembers(Array.isArray(g.members) ? g.members.map((m: any) => ({ id: m.id, name: m.name })) : [])
+      const setup = await res.json()
+      setGroupName(setup.groupName ?? '')
+      setMembers(Array.isArray(setup.members) ? setup.members.map((m: any) => ({ id: m.id, name: m.name })) : [])
+      if (regenItems) {
+        const reqs: any[] = Array.isArray(setup.requirements) ? setup.requirements : []
+        const last: Record<string, string> = setup.lastProgress ?? {}
+        setItems(
+          reqs.length
+            ? reqs.map((r): ItemRow => ({
+                _key: newKey(),
+                customerId: r.customerId != null ? String(r.customerId) : '',
+                customerName: r.customerShortName ?? '',
+                requirementId: String(r.requirementId),
+                requirementName: r.positionName ?? '',
+                progressNote: last[`${r.customerId}:${r.requirementId}`] ?? '',
+                positionOpenDate: fmtDate(r.positionOpenDate),
+                routineHunting: '',
+                participation: '',
+                assignments: {},
+              }))
+            : [emptyItem()],
+        )
+      }
     } catch {
-      /* 忽略：矩阵列为空时仍可保存主表/明细，不阻断 */
+      /* 忽略：矩阵列为空时仍可手动维护明细，不阻断 */
     }
   }, [])
 
@@ -102,7 +123,7 @@ export default function WorkPlansPage() {
     // 组长：默认本组并锁定；管理员：留空待选
     if (!isAdmin && ledGroupId != null) {
       setGroupId(String(ledGroupId))
-      void loadGroup(ledGroupId)
+      void applyGroupSetup(ledGroupId, true)
     }
     setOpen(true)
   }
@@ -115,7 +136,7 @@ export default function WorkPlansPage() {
     setWeekStart(fmtDate(r.weekStart))
     setWeekEnd(fmtDate(r.weekEnd))
     setStrategy(r.deliveryStrategy ?? '')
-    void loadGroup(r.groupId)
+    void applyGroupSetup(r.groupId, false)
     setItems(
       (r.items ?? []).map((it: any): ItemRow => ({
         _key: newKey(),
@@ -135,8 +156,19 @@ export default function WorkPlansPage() {
 
   const onPickGroup = (v: string) => {
     setGroupId(v)
-    if (v) void loadGroup(v)
+    if (v) void applyGroupSetup(v, true)
     else { setMembers([]); setGroupName('') }
+  }
+
+  // 选「本周开始」后自动算「本周结束」= 开始 + 6 天（一周，如 6.1 → 6.7）
+  const onWeekStart = (v: string) => {
+    setWeekStart(v)
+    if (!v) return
+    const d = new Date(`${v}T00:00:00`)
+    d.setDate(d.getDate() + 6)
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    setWeekEnd(`${d.getFullYear()}-${mm}-${dd}`)
   }
 
   // 明细行操作
@@ -323,7 +355,7 @@ export default function WorkPlansPage() {
             )}
           </Field>
           <Field label="本周开始" required>
-            <input type="date" className="input input-bordered w-full" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} />
+            <input type="date" className="input input-bordered w-full" value={weekStart} onChange={(e) => onWeekStart(e.target.value)} />
           </Field>
           <Field label="本周结束" required>
             <input type="date" className="input input-bordered w-full" value={weekEnd} onChange={(e) => setWeekEnd(e.target.value)} />

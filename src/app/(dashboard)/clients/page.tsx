@@ -255,7 +255,7 @@ export default function ClientsPage() {
         width={760}
       >
         <div className="grid grid-cols-2 gap-4">
-          <Field label="客户名称" required>
+          <Field label="客户名称" required className="col-span-2">
             <div className="flex items-center gap-2">
               <input className="input input-bordered w-full" value={form.fullName} onChange={(e) => setField('fullName', e.target.value)} placeholder="请输入" />
               <button
@@ -278,7 +278,7 @@ export default function ClientsPage() {
               </button>
             </div>
           </Field>
-          <Field label="客户简称" required>
+          <Field label="客户简称" required className="col-span-2">
             <input className="input input-bordered w-full" value={form.shortName} onChange={(e) => setField('shortName', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="客户曾用名">

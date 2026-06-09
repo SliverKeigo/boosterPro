@@ -84,7 +84,7 @@ export function Modal({
           {readOnly ? (
             <fieldset
               disabled
-              className="pointer-events-none m-0 min-w-0 border-0 p-0 [&_.input]:!border-base-300 [&_.input]:!bg-transparent [&_.input]:!text-base-content [&_.input]:!opacity-100 [&_.select]:!border-base-300 [&_.select]:!bg-transparent [&_.select]:!text-base-content [&_.select]:!opacity-100 [&_.textarea]:!border-base-300 [&_.textarea]:!bg-transparent [&_.textarea]:!text-base-content [&_.textarea]:!opacity-100"
+              className="m-0 min-w-0 select-text border-0 p-0 [&_.input]:!border-base-300 [&_.input]:!bg-transparent [&_.input]:!text-base-content [&_.input]:!opacity-100 [&_.select]:!border-base-300 [&_.select]:!bg-transparent [&_.select]:!text-base-content [&_.select]:!opacity-100 [&_.textarea]:!border-base-300 [&_.textarea]:!bg-transparent [&_.textarea]:!text-base-content [&_.textarea]:!opacity-100"
             >
               {children}
             </fieldset>
