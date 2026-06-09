@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
-import { Eye, Trash2, ShieldAlert } from 'lucide-react'
+import { Eye, Trash2, ShieldAlert, Users } from 'lucide-react'
 import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 
@@ -18,6 +18,11 @@ export default function RolesPage() {
   const [mode, setMode] = useState<'view' | 'edit'>('edit') // 详情(只读) / 编辑
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState<any>(EMPTY_FORM)
+  // 查看角色用户弹窗
+  const [usersOpen, setUsersOpen] = useState(false)
+  const [usersRole, setUsersRole] = useState<any>(null)
+  const [roleUsers, setRoleUsers] = useState<any[]>([])
+  const [usersLoading, setUsersLoading] = useState(false)
 
   const setField = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }))
 
@@ -54,6 +59,24 @@ export default function RolesPage() {
     setMode('view')
     setForm({ ...EMPTY_FORM, name: r.name ?? '', description: r.description ?? '' })
     setOpen(true)
+  }
+
+  // 查看拥有该角色的用户（管理员页，/api/users 返回全量，前端按 roleId 过滤）
+  const openUsers = async (role: any) => {
+    setUsersRole(role)
+    setRoleUsers([])
+    setUsersLoading(true)
+    setUsersOpen(true)
+    try {
+      const res = await fetch('/api/users')
+      if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || '')
+      const json = await res.json()
+      setRoleUsers((json.data || []).filter((u: any) => u.roleId === role.id))
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : '加载失败')
+    } finally {
+      setUsersLoading(false)
+    }
   }
 
   const handleDelete = async (id: number) => {
@@ -153,6 +176,10 @@ export default function RolesPage() {
         searchPlaceholder="搜索角色名称 / 描述…"
         actions={(r) => (
           <div className="flex items-center gap-1">
+            <button className="btn btn-ghost btn-xs gap-1" onClick={() => openUsers(r)}>
+              <Users className="h-3.5 w-3.5" />
+              用户
+            </button>
             <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openDetail(r)}>
               <Eye className="h-3.5 w-3.5" />
               详情
@@ -186,6 +213,49 @@ export default function RolesPage() {
             <textarea className="textarea textarea-bordered w-full" rows={4} value={form.description} onChange={(e) => setField('description', e.target.value)} placeholder="角色职责说明" />
           </Field>
         </div>
+      </Modal>
+
+      {/* 查看角色用户 */}
+      <Modal
+        open={usersOpen}
+        title={`${usersRole?.name ?? '角色'} · 用户（${roleUsers.length}）`}
+        onClose={() => setUsersOpen(false)}
+        footer={null}
+        width={640}
+      >
+        {usersLoading ? (
+          <div className="flex justify-center py-10">
+            <span className="loading loading-spinner loading-lg text-primary" />
+          </div>
+        ) : roleUsers.length === 0 ? (
+          <div className="py-10 text-center text-sm text-base-content/50">该角色暂无用户</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table table-sm">
+              <thead>
+                <tr>
+                  <th>姓名</th>
+                  <th>账号</th>
+                  <th>部门</th>
+                  <th>邮箱</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roleUsers.map((u: any) => (
+                  <tr key={u.id}>
+                    <td className="font-medium">
+                      {u.name}
+                      {u.isAdmin && <span className="badge badge-primary badge-xs ml-1">管理员</span>}
+                    </td>
+                    <td>{u.username}</td>
+                    <td>{u.department?.name ?? '—'}</td>
+                    <td className="text-base-content/60">{u.email ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Modal>
     </div>
   )
