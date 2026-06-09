@@ -9,7 +9,9 @@ import { RESOURCES } from '@/lib/resources'
 
 // 部门「数据可见范围」按模块配置（报表无行数据，不参与）
 const VISIBILITY_RESOURCES = RESOURCES.filter((r) => r.key !== 'REPORT')
-const EMPTY_FORM: any = { name: '', hiddenResources: [] }
+// blocks：本部门(源)对各目标部门「定向隐藏」的组合（即被取消勾选的）
+type Block = { resource: string; hiddenFromDeptId: number }
+const EMPTY_FORM: any = { name: '', blocks: [] as Block[] }
 
 export default function DepartmentsPage() {
   const toast = useToast()
@@ -63,7 +65,7 @@ export default function DepartmentsPage() {
     setForm({
       ...EMPTY_FORM,
       name: r.name ?? '',
-      hiddenResources: (r.hiddenResources ?? []).map((h: any) => h.resource),
+      blocks: (r.hiddenRulesAsSource ?? []).map((h: any) => ({ resource: h.resource, hiddenFromDeptId: h.hiddenFromDeptId })),
     })
     setOpen(true)
   }
@@ -109,7 +111,7 @@ export default function DepartmentsPage() {
       const res = await fetch(url, {
         method: editing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name, hiddenResources: form.hiddenResources }),
+        body: JSON.stringify(editing ? { name: form.name, blocks: form.blocks } : { name: form.name }),
       })
       if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || "")
       toast.success(editing ? '更新成功' : '创建成功')
@@ -151,6 +153,9 @@ export default function DepartmentsPage() {
       </div>
     )
   }
+
+  // 矩阵里的「其他部门」：排除当前正在编辑的本部门（新建时 editing 为 null，列出全部）
+  const otherDepts = data.filter((d: any) => d.id !== editing?.id)
 
   const columns: BoostColumn<any>[] = [
     { key: 'id', title: 'ID', width: 70, filterType: 'number' },
@@ -210,28 +215,47 @@ export default function DepartmentsPage() {
           <Field label="部门名称" required>
             <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="请输入" />
           </Field>
-          <Field label="数据可见范围（勾选 = 本部门该模块数据对其他部门可见；取消 = 仅本部门 + 管理员可见）">
-            <div className="grid grid-cols-2 gap-2 rounded-lg border border-base-300 p-3">
-              {VISIBILITY_RESOURCES.map((r) => {
-                const visible = !form.hiddenResources.includes(r.key)
-                return (
-                  <label key={r.key} className="flex cursor-pointer items-center gap-2">
-                    <input
-                      type="checkbox"
-                      className="checkbox checkbox-sm"
-                      checked={visible}
-                      onChange={(e) => {
-                        const hidden = new Set<string>(form.hiddenResources)
-                        if (e.target.checked) hidden.delete(r.key)
-                        else hidden.add(r.key)
-                        setField('hiddenResources', [...hidden])
-                      }}
-                    />
-                    <span className="text-sm">{r.label}</span>
-                  </label>
-                )
-              })}
-            </div>
+          <Field label="数据可见范围（勾选 = 本部门该模块数据对该部门可见；取消勾选 = 对该部门隐藏，仅本部门 + 管理员可见）">
+            {otherDepts.length === 0 ? (
+              <div className="rounded-lg border border-base-300 p-3 text-sm text-base-content/50">暂无其他部门</div>
+            ) : (
+              <div className="space-y-4">
+                {VISIBILITY_RESOURCES.map((r) => (
+                  <div key={r.key} className="rounded-lg border border-base-300 p-3">
+                    <div className="mb-2 text-sm font-medium text-base-content">{r.label}</div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {otherDepts.map((d: any) => {
+                        const checked = !form.blocks.some(
+                          (b: Block) => b.resource === r.key && b.hiddenFromDeptId === d.id,
+                        )
+                        return (
+                          <label key={d.id} className="flex cursor-pointer items-center gap-2">
+                            <input
+                              type="checkbox"
+                              className="checkbox checkbox-sm"
+                              checked={checked}
+                              onChange={(e) => {
+                                setForm((f: any) => {
+                                  const rest = f.blocks.filter(
+                                    (b: Block) => !(b.resource === r.key && b.hiddenFromDeptId === d.id),
+                                  )
+                                  // 取消勾选 → 加入隐藏；勾选 → 移除隐藏
+                                  return {
+                                    ...f,
+                                    blocks: e.target.checked ? rest : [...rest, { resource: r.key, hiddenFromDeptId: d.id }],
+                                  }
+                                })
+                              }}
+                            />
+                            <span className="truncate text-sm" title={d.name}>{d.name}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Field>
         </div>
       </Modal>

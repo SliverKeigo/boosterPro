@@ -133,33 +133,35 @@ export const getGrantsForUser = cache(async (user: CurrentUser): Promise<Record<
   return map
 })
 
-// ════════════════ 部门-模块「对外可见性」黑名单 ════════════════
-// 某资源「关闭了对外可见」的部门 id 集合。无记录 = 默认对外可见。请求级 cache 去重。
-const getHiddenDeptIds = cache(async (resource: ResourceKey): Promise<number[]> => {
+// ════════════════ 部门-模块「定向可见性」黑名单 ════════════════
+// 「对某目标部门隐藏了该模块」的源部门 id 集合：查 (resource, hiddenFromDeptId=目标部门) 的全部记录，
+// 返回其 departmentId（源部门）。无记录 = 该模块对该目标部门默认全可见。请求级 cache 去重。
+const getHiddenSourceDeptIds = cache(async (resource: ResourceKey, targetDeptId: number): Promise<number[]> => {
   const rows = await prisma.departmentHiddenResource.findMany({
-    where: { resource },
+    where: { resource, hiddenFromDeptId: targetDeptId },
     select: { departmentId: true },
   })
   return rows.map((r) => r.departmentId)
 })
 
 // 列表/读 的 Prisma where 过滤（塞进 findMany({ where })）。管理员看全部。
-// 读(view)：有 VIEW 功能权限(route 已校验)即可看该模块各部门数据；录入方部门若在「部门详情」
-//           关闭了该模块对外可见，则其数据仅本部门 + 管理员可见。写(write)：本人 + 数据共享(编辑授权)。
+// 读(view)：有 VIEW 功能权限(route 已校验)即可看该模块各部门数据；某源部门若在「部门详情」对当前用户
+//           所在部门定向隐藏了该模块，则其数据对该用户不可见（本人录入 / 无归属 / 同部门 仍可见）。
+//           写(write)：本人 + 数据共享(编辑授权)。
 export async function buildRowFilter(user: CurrentUser, resource: ResourceKey, mode: 'view' | 'write'): Promise<any> {
   if (user.isAdmin) return {}
   if (mode === 'view') {
-    const hidden = await getHiddenDeptIds(resource)
-    if (hidden.length === 0) return {} // 无任何部门关闭对外 → 全部可见
-    const or: any[] = [
-      { createdById: user.id }, // 本人录入
-      { createdById: null }, // 无归属的历史数据
-      { createdBy: { departmentId: { notIn: hidden } } }, // 录入方部门未关闭对外
-    ]
-    if (user.departmentId != null) {
-      or.push({ createdBy: { departmentId: user.departmentId } }) // 本部门内始终可见
+    if (user.departmentId == null) return {} // 无部门 → 不受定向隐藏影响、全可见
+    const hidden = await getHiddenSourceDeptIds(resource, user.departmentId)
+    if (hidden.length === 0) return {} // 无源部门对本部门隐藏该模块 → 全部可见
+    return {
+      OR: [
+        { createdById: user.id }, // 本人录入
+        { createdById: null }, // 无归属的历史数据
+        { createdBy: { departmentId: user.departmentId } }, // 本部门内始终可见
+        { createdBy: { departmentId: { notIn: hidden } } }, // 录入方部门未对本部门隐藏
+      ],
     }
-    return { OR: or }
   }
   const scope = (await getGrantsForUser(user))[resource]?.edit
   const or: any[] = [{ createdById: user.id }]
@@ -171,7 +173,7 @@ export async function buildRowFilter(user: CurrentUser, resource: ResourceKey, m
 type RowOwner = { createdById?: number | null; createdBy?: { departmentId?: number | null } | null } | null
 
 // 行级读/写鉴权（详情 GET / PUT / DELETE）。row 需含 createdById（+ createdBy.departmentId）。
-// 读：本人 / 管理员 / 无归属 / 同部门 / 录入方部门未关闭对外 → 放行。
+// 读：本人 / 管理员 / 无归属 / 同部门 / 录入方部门未对本部门定向隐藏 → 放行。
 // 写：本人 / 管理员 / 数据共享(编辑授权) → 放行。
 export async function assertRowAccess(user: CurrentUser, row: RowOwner, resource: ResourceKey, mode: 'view' | 'write'): Promise<void> {
   if (!row) throw new HttpError(404, '记录不存在或已被删除')
@@ -181,8 +183,9 @@ export async function assertRowAccess(user: CurrentUser, row: RowOwner, resource
     const dept = row.createdBy?.departmentId ?? null
     if (dept == null) return // 录入者无部门
     if (user.departmentId != null && dept === user.departmentId) return // 同部门
-    const hidden = await getHiddenDeptIds(resource)
-    if (!hidden.includes(dept)) return // 录入方部门未关闭对外
+    if (user.departmentId == null) return // 当前用户无部门 → 不受定向隐藏影响
+    const hidden = await getHiddenSourceDeptIds(resource, user.departmentId)
+    if (!hidden.includes(dept)) return // 录入方部门未对本部门隐藏该模块
     throw new HttpError(404, '记录不存在或您无权查看')
   }
   const scope = (await getGrantsForUser(user))[resource]?.edit

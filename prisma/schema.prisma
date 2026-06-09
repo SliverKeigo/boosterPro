@@ -67,24 +67,28 @@ model Department {
   name      String   @db.VarChar(100)
   users     User[]
   groups    Group[]
-  hiddenResources DepartmentHiddenResource[]
+  hiddenRulesAsSource DepartmentHiddenResource[] @relation("DeptHideSource")
+  hiddenRulesAsTarget DepartmentHiddenResource[] @relation("DeptHideTarget")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("departments")
 }
 
-// 部门-模块「对外可见性」黑名单：存在一条 = 该部门该模块数据【不对其他部门可见】（仅本部门+管理员可见）。
-// 无记录 = 默认对外可见。配置入口：系统管理 → 部门管理 → 部门详情按模块勾选（默认全勾=对外可见）。
+// 部门-模块「定向可见性」黑名单：一条 (departmentId 源, resource, hiddenFromDeptId 目标)
+// = 源部门该模块数据【不给 目标部门 看】。无记录 = 默认对所有部门可见。
+// 配置入口：系统管理 → 部门管理 → 部门详情，每个模块列出所有部门、默认全勾，取消某部门即对其隐藏本模块数据。
 model DepartmentHiddenResource {
-  id           Int        @id @default(autoincrement())
-  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  departmentId Int        @map("department_id")
-  resource     String     @db.VarChar(50)
-  createdAt    DateTime   @default(now()) @map("created_at")
+  id               Int        @id @default(autoincrement())
+  department       Department @relation("DeptHideSource", fields: [departmentId], references: [id], onDelete: Cascade)
+  departmentId     Int        @map("department_id") // 数据所属(源)部门
+  resource         String     @db.VarChar(50)
+  hiddenFromDept   Department @relation("DeptHideTarget", fields: [hiddenFromDeptId], references: [id], onDelete: Cascade)
+  hiddenFromDeptId Int        @map("hidden_from_dept_id") // 对此(目标)部门隐藏
+  createdAt        DateTime   @default(now()) @map("created_at")
 
-  @@unique([departmentId, resource])
-  @@index([resource])
+  @@unique([departmentId, resource, hiddenFromDeptId])
+  @@index([resource, hiddenFromDeptId])
   @@map("department_hidden_resources")
 }
 

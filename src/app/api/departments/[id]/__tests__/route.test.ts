@@ -57,7 +57,7 @@ describe('PUT /api/departments/[id]', () => {
 
   it('管理员更新：事务内 update name，返回 200', async () => {
     mock(prisma.department.update).mockResolvedValue({ id: 1, name: '改' })
-    mock(prisma.department.findUnique).mockResolvedValue({ id: 1, name: '改', hiddenResources: [] })
+    mock(prisma.department.findUnique).mockResolvedValue({ id: 1, name: '改', hiddenRulesAsSource: [] })
     const res = await PUT(makeReq({ name: '改' }), ctx('1'))
     expect(requireAdmin).toHaveBeenCalled()
     const args = mock(prisma.department.update).mock.calls[0][0]
@@ -66,14 +66,17 @@ describe('PUT /api/departments/[id]', () => {
     expect(res.status).toBe(200)
   })
 
-  it('传 hiddenResources：事务内重写黑名单，非法 key 被过滤', async () => {
+  it('传 blocks：事务内重写定向黑名单，非法 resource 被过滤', async () => {
     mock(prisma.department.update).mockResolvedValue({ id: 1, name: '改' })
-    mock(prisma.department.findUnique).mockResolvedValue({ id: 1, name: '改', hiddenResources: [{ resource: 'CANDIDATE' }] })
-    const res = await PUT(makeReq({ name: '改', hiddenResources: ['CANDIDATE', 'BAD_KEY'] }), ctx('1'))
+    mock(prisma.department.findUnique).mockResolvedValue({ id: 1, name: '改', hiddenRulesAsSource: [] })
+    const res = await PUT(
+      makeReq({ name: '改', blocks: [{ resource: 'CANDIDATE', hiddenFromDeptId: 2 }, { resource: 'BAD', hiddenFromDeptId: 3 }] }),
+      ctx('1'),
+    )
     expect(res.status).toBe(200)
     expect(prisma.departmentHiddenResource.deleteMany).toHaveBeenCalledWith({ where: { departmentId: 1 } })
     const createArgs = mock(prisma.departmentHiddenResource.createMany).mock.calls[0][0]
-    expect(createArgs.data).toEqual([{ departmentId: 1, resource: 'CANDIDATE' }])
+    expect(createArgs.data).toEqual([{ departmentId: 1, resource: 'CANDIDATE', hiddenFromDeptId: 2 }])
   })
 
   it('非管理员 → 403（关键安全断言），不写库', async () => {

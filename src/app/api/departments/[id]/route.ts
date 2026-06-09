@@ -14,7 +14,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!Number.isInteger(pid) || pid <= 0) throw new HttpError(400, '非法的 ID')
     const department = await prisma.department.findUnique({
       where: { id: pid },
-      include: { _count: { select: { users: true } }, hiddenResources: { select: { resource: true } } },
+      include: { _count: { select: { users: true } }, hiddenRulesAsSource: { select: { resource: true, hiddenFromDeptId: true } } },
     })
     if (!department) return NextResponse.json({ error: '未找到' }, { status: 404 })
     return NextResponse.json(department)
@@ -30,26 +30,41 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const pid = parseInt(id)
     if (!Number.isInteger(pid) || pid <= 0) throw new HttpError(400, '非法的 ID')
     const body = await req.json()
-    const { name, hiddenResources } = body
+    const { name, blocks } = body
     if (!name) return NextResponse.json({ error: '部门名称不能为空' }, { status: 400 })
     const department = await prisma.$transaction(async (tx) => {
       await tx.department.update({ where: { id: pid }, data: { name } })
-      // hiddenResources：该部门「关闭对外可见」的模块 keys；传了数组就整体重写其黑名单
-      if (Array.isArray(hiddenResources)) {
+      // blocks：本部门(源)对各目标部门「定向隐藏」的 (模块, 目标部门) 组合；传了数组就整体重写本部门的黑名单
+      if (Array.isArray(blocks)) {
         await tx.departmentHiddenResource.deleteMany({ where: { departmentId: pid } })
-        const valid = [...new Set(hiddenResources)].filter(
-          (r): r is ResourceKey => typeof r === 'string' && RESOURCE_KEYS.includes(r as ResourceKey),
-        )
+        // 过滤：resource 必须合法；hiddenFromDeptId 必须是正整数且不等于本部门
+        const seen = new Set<string>()
+        const valid = blocks
+          .filter(
+            (b): b is { resource: ResourceKey; hiddenFromDeptId: number } =>
+              !!b &&
+              typeof b.resource === 'string' &&
+              RESOURCE_KEYS.includes(b.resource as ResourceKey) &&
+              Number.isInteger(b.hiddenFromDeptId) &&
+              b.hiddenFromDeptId > 0 &&
+              b.hiddenFromDeptId !== pid,
+          )
+          .filter((b) => {
+            const k = `${b.resource}:${b.hiddenFromDeptId}`
+            if (seen.has(k)) return false
+            seen.add(k)
+            return true
+          })
         if (valid.length) {
           await tx.departmentHiddenResource.createMany({
-            data: valid.map((resource) => ({ departmentId: pid, resource })),
+            data: valid.map((b) => ({ departmentId: pid, resource: b.resource, hiddenFromDeptId: b.hiddenFromDeptId })),
             skipDuplicates: true,
           })
         }
       }
       return tx.department.findUnique({
         where: { id: pid },
-        include: { _count: { select: { users: true } }, hiddenResources: { select: { resource: true } } },
+        include: { _count: { select: { users: true } }, hiddenRulesAsSource: { select: { resource: true, hiddenFromDeptId: true } } },
       })
     })
     return NextResponse.json(department)

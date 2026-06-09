@@ -119,10 +119,10 @@ export default function RequirementsPage() {
   const openCreate = () => {
     setEditing(null)
     setMode('edit')
-    // 招聘重启日期默认今天（本地时区 YYYY-MM-DD；仍可手动修改）
+    // 登记日期默认今天（本地时区 YYYY-MM-DD；仍可手动修改）
     const now = new Date()
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
-    setForm({ ...EMPTY_FORM, deadline: now.toISOString().slice(0, 10) })
+    setForm({ ...EMPTY_FORM, followDate: now.toISOString().slice(0, 10) })
     setOpen(true)
   }
 
@@ -174,6 +174,7 @@ export default function RequirementsPage() {
     if (!form.genderRequirement) return toast.error('请选择性别要求')
     if (!form.educationRequirement?.trim()) return toast.error('请填写学历要求')
     if (statusList.length === 0) return toast.error('请选择岗位状态')
+    if (!form.followDate) return toast.error('请选择登记日期')
     if (statusList.includes('重启') && !form.deadline) return toast.error('请选择招聘重启日期')
     if (!form.baseCity?.trim()) return toast.error('请填写 Base 城市')
     if ((statusList.includes('关闭') || statusList.includes('暂停')) && !form.closeReason?.trim())
@@ -421,9 +422,11 @@ export default function RequirementsPage() {
               )
             })()}
           </Field>
-          <Field label="招聘重启日期" required={Array.isArray(form.status) && form.status.includes('重启')}>
-            <input type="date" className="input input-bordered w-full" value={form.deadline} onChange={(e) => setField('deadline', e.target.value)} />
-          </Field>
+          {Array.isArray(form.status) && form.status.includes('重启') && (
+            <Field label="招聘重启日期" required>
+              <input type="date" className="input input-bordered w-full" value={form.deadline} onChange={(e) => setField('deadline', e.target.value)} />
+            </Field>
+          )}
           {/* Base城市 / 岗位JD */}
           <Field label="Base 城市" required>
             <input className="input input-bordered w-full" value={form.baseCity} onChange={(e) => setField('baseCity', e.target.value)} placeholder="请输入" />
@@ -504,7 +507,7 @@ export default function RequirementsPage() {
           <Field label="所属行业">
             <input className="input input-bordered w-full" value={form.industry} onChange={(e) => setField('industry', e.target.value)} placeholder="请选择" />
           </Field>
-          <Field label="登记日期">
+          <Field label="登记日期" required>
             <input type="date" className="input input-bordered w-full" value={form.followDate} onChange={(e) => setField('followDate', e.target.value)} />
           </Field>
         </div>
