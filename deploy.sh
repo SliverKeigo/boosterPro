@@ -165,9 +165,11 @@ if [ "$OS" = "mac" ]; then
   PG_PREFIX="$(brew --prefix postgresql@16 2>/dev/null || brew --prefix postgresql@15 2>/dev/null || brew --prefix postgresql 2>/dev/null || true)"
   [ -n "$PG_PREFIX" ] && export PATH="$PG_PREFIX/bin:$PATH"
 fi
-psql_super() { if [ "$OS" = "mac" ]; then psql -d postgres -v ON_ERROR_STOP=1 "$@"; else $SUDO -u postgres psql -v ON_ERROR_STOP=1 "$@"; fi; }
+# 以 postgres 系统用户执行命令：root 直跑用 runuser（"$SUDO -u postgres" 在 SUDO 为空时会散架成 "-u ..."）
+pg_su() { if [ "$(id -u)" -eq 0 ]; then runuser -u postgres -- "$@"; else sudo -u postgres "$@"; fi; }
+psql_super() { if [ "$OS" = "mac" ]; then psql -d postgres -v ON_ERROR_STOP=1 "$@"; else pg_su psql -v ON_ERROR_STOP=1 "$@"; fi; }
 
-if have psql && { pg_isready -q 2>/dev/null || $SUDO -u postgres pg_isready -q 2>/dev/null; }; then
+if have psql && { pg_isready -q 2>/dev/null || pg_su pg_isready -q 2>/dev/null; }; then
   ok "PostgreSQL 已安装并运行"
 else
   log "安装 PostgreSQL ..."
@@ -242,14 +244,14 @@ elif [ "$DB_HOST" = "127.0.0.1" ] || [ "$DB_HOST" = "localhost" ]; then
 
   # 确保应用角色能用「密码」走 TCP 登录（RHEL 默认 ident 会拒绝）——把规则插到 pg_hba 最前
   if [ "$OS" != "mac" ]; then
-    HBA="$($SUDO -u postgres psql -tAc 'SHOW hba_file' 2>/dev/null | tr -d '[:space:]' || true)"
+    HBA="$(pg_su psql -tAc 'SHOW hba_file' 2>/dev/null | tr -d '[:space:]' || true)"
     if [ -n "$HBA" ] && ! $SUDO grep -Eq "^[[:space:]]*host[[:space:]]+${DB_NAME}[[:space:]]+${DB_USER}[[:space:]]+127.0.0.1/32" "$HBA"; then
       tmp="$(mktemp)"
       { printf 'host %s %s 127.0.0.1/32 scram-sha-256\n' "$DB_NAME" "$DB_USER"
         printf 'host %s %s ::1/128 scram-sha-256\n' "$DB_NAME" "$DB_USER"
         $SUDO cat "$HBA"; } > "$tmp"
       $SUDO cp "$tmp" "$HBA"; rm -f "$tmp"
-      $SUDO systemctl reload postgresql 2>/dev/null || $SUDO -u postgres pg_ctl reload 2>/dev/null || true
+      $SUDO systemctl reload postgresql 2>/dev/null || pg_su pg_ctl reload 2>/dev/null || true
     fi
   fi
   ok "数据库就绪"
