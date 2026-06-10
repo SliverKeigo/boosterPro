@@ -186,4 +186,75 @@ describe('BoostTable', () => {
     expect(connectors()[0].value).toBe('or')
     expect(connectors()[1].value).toBe('or')
   })
+
+  it('multiValue select 列：默认「等于任意」，勾选某状态命中多状态行（status 多值筛选）', async () => {
+    const user = userEvent.setup()
+    interface R {
+      id: number
+      status: string[]
+    }
+    const cols: BoostColumn<R>[] = [
+      {
+        key: 'status',
+        title: '岗位状态',
+        filterType: 'select',
+        multiValue: true,
+        filterOptions: [
+          { label: '正常', value: '正常' },
+          { label: '重启', value: '重启' },
+          { label: '新增', value: '新增' },
+        ],
+        accessor: (r) => r.status.join(' '),
+        render: (_v, r) => <span>{r.status.join('/')}</span>,
+      },
+    ]
+    const rows: R[] = [
+      { id: 1, status: ['正常', '重启'] },
+      { id: 2, status: ['新增'] },
+    ]
+    const { container } = render(<BoostTable columns={cols} data={rows} />)
+    expect(bodyRows(container)).toHaveLength(2)
+
+    // 打开筛选面板：默认带一条 status 条件，运算符应为「等于任意」(in) → 直接出现勾选区
+    await user.click(screen.getByText('筛选'))
+    // 勾选「正常」（label 内 span 文本恰为「正常」；单元格渲染为「正常/重启」不冲突）
+    const normalLabel = screen.getByText('正常', { selector: 'span' }).closest('label') as HTMLElement
+    await user.click(within(normalLabel).getByRole('checkbox'))
+    // 点面板主按钮应用筛选
+    await user.click(container.querySelector('.btn-primary') as HTMLElement)
+
+    // 「正常 重启」行命中、「新增」行被过滤
+    expect(bodyRows(container)).toHaveLength(1)
+    expect(screen.getByText('正常/重启')).toBeInTheDocument()
+  })
+
+  it('筛选条件持久化：重新挂载（如再次进入页面）后沿用上次筛选，无需重新添加', async () => {
+    const user = userEvent.setup()
+    const KEY = 'bp:filters:测试持久化'
+    window.localStorage.removeItem(KEY)
+
+    // 第一次进入：设置「姓名 包含 李」并应用
+    const first = render(<BoostTable columns={columns} data={data} storageKey="测试持久化" />)
+    await user.click(screen.getByText('筛选'))
+    await user.type(screen.getByPlaceholderText('输入值'), '李')
+    await user.click(first.container.querySelector('.btn-primary') as HTMLElement)
+    expect(bodyRows(first.container)).toHaveLength(1)
+    expect(cellText(first.container, 0, 0)).toBe('李四')
+    // 已写入 localStorage
+    expect(JSON.parse(window.localStorage.getItem(KEY) ?? '[]')).toHaveLength(1)
+    first.unmount()
+
+    // 第二次进入（重新挂载）：无需任何操作，上次筛选直接生效
+    const second = render(<BoostTable columns={columns} data={data} storageKey="测试持久化" />)
+    expect(bodyRows(second.container)).toHaveLength(1)
+    expect(cellText(second.container, 0, 0)).toBe('李四')
+
+    // 面板里能看到回显的条件值；清空值后应用 → 全量恢复且存储被清
+    await user.click(screen.getByText('筛选'))
+    expect(screen.getByDisplayValue('李')).toBeInTheDocument()
+    await user.click(screen.getByText('清空值'))
+    await user.click(second.container.querySelector('.btn-primary') as HTMLElement)
+    expect(bodyRows(second.container)).toHaveLength(3)
+    window.localStorage.removeItem(KEY)
+  })
 })

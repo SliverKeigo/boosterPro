@@ -46,6 +46,8 @@ export interface BoostColumn<T> {
   filterType?: 'text' | 'date' | 'select' | 'number'
   /** 当 filterType 为 select 时的候选项；不传则取该列在当前 data 中出现过的去重值 */
   filterOptions?: { label: string; value: string }[]
+  /** 该列为多值（accessor 输出空格分隔的多个值，如 status text[]）；select 的「在…中」按拆词后任一命中匹配 */
+  multiValue?: boolean
   /** 导出 Excel 时的取值；不传则用 accessor（适合 render 与原始值不同的列，如状态码 → 中文） */
   exportValue?: (record: T) => unknown
 }
@@ -300,11 +302,60 @@ export function BoostTable<T extends Record<string, any>>({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible])
-  /** 已生效的筛选条件（驱动管线） */
-  const [conditions, setConditions] = useState<FilterCondition[]>([])
+  /** 已生效的筛选条件（驱动管线）；初始化即读入持久化值——下次进入沿用上次筛选，无需重新添加 */
+  const [conditions, setConditions] = useState<FilterCondition[]>(() => {
+    const key = storageKey ?? title
+    if (key && typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem('bp:filters:' + key)
+        if (raw) {
+          const saved: unknown = JSON.parse(raw)
+          if (Array.isArray(saved)) {
+            const OPS: readonly FilterOp[] = ['contains', 'eq', 'neq', 'before', 'after', 'gt', 'lt', 'in']
+            return saved
+              // 字段需仍存在于当前列、运算符/值形状合法（列改名或脏数据则丢弃该条）
+              .filter(
+                (c: any) =>
+                  c &&
+                  typeof c.field === 'string' &&
+                  columns.some((col) => col.key === c.field) &&
+                  OPS.includes(c.op) &&
+                  typeof c.value === 'string' &&
+                  Array.isArray(c.values) &&
+                  c.values.every((v: any) => typeof v === 'string'),
+              )
+              .map((c: any, i: number): FilterCondition => ({
+                id: i,
+                logic: c.logic === 'or' ? 'or' : 'and',
+                field: c.field,
+                op: c.op,
+                value: c.value,
+                values: c.values,
+              }))
+          }
+        }
+      } catch {
+        /* ignore corrupt storage */
+      }
+    }
+    return []
+  })
   /** 面板内正在编辑的草稿条件 */
   const [draft, setDraft] = useState<FilterCondition[]>([])
-  const condId = useRef(0)
+  // 计数器从已恢复条数起步，避免与恢复条件的 id（0..n-1）冲突
+  const condId = useRef(conditions.length)
+
+  // 筛选条件变更时写回（与列显示 / 每页条数同一「初始即读入 + 变更即写回」策略）
+  useEffect(() => {
+    const key = storageKey ?? title
+    if (!key || typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem('bp:filters:' + key, JSON.stringify(conditions))
+    } catch {
+      /* ignore quota errors */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conditions])
 
   const accessorOf = (col: BoostColumn<T>) =>
     col.accessor ?? ((r: T) => (r as any)[col.key])
@@ -370,6 +421,9 @@ export function BoostTable<T extends Record<string, any>>({
   }, [columns, data])
 
   const kindOf = (col: BoostColumn<T>): FilterKind => kindByKey.get(col.key) ?? 'text'
+  // 多值列（如 status）默认用「等于任意」(in)——单值「等于」精确匹配整串、匹配不到多状态行
+  const defaultOpFor = (col: BoostColumn<T>): FilterOp =>
+    col.multiValue ? 'in' : OP_LABELS[kindOf(col)][0].value
 
   // select 候选项只来自列显式 filterOptions（对齐表单），不从列表数据现取
   const optionsOf = (col: BoostColumn<T>): { label: string; value: string }[] =>
@@ -378,7 +432,7 @@ export function BoostTable<T extends Record<string, any>>({
   const newCondition = (logic: LogicOp): FilterCondition => {
     const col = filterableColumns[0]
     const field = col?.key ?? ''
-    const op = col ? OP_LABELS[kindOf(col)][0].value : 'contains'
+    const op = col ? defaultOpFor(col) : 'contains'
     return { id: condId.current++, logic, field, op, value: '', values: [] }
   }
 
@@ -404,6 +458,14 @@ export function BoostTable<T extends Record<string, any>>({
       const raw = (col.accessor ?? ((r: T) => (r as any)[cond.field]))(row)
       const kind = kindOf(col)
       const cell = toStr(raw)
+
+      // 多值列（accessor 输出空格分隔，如 status text[]）：等于/不等于/等于任意 均按拆词命中
+      if (col.multiValue && (cond.op === 'in' || cond.op === 'eq' || cond.op === 'neq')) {
+        const tokens = cell.split(/\s+/).filter(Boolean)
+        if (cond.op === 'in') return cond.values.some((v) => tokens.includes(v))
+        if (cond.op === 'eq') return tokens.includes(cond.value)
+        return !tokens.includes(cond.value) // neq：不含该值
+      }
 
       switch (cond.op) {
         case 'in': // select：值 ∈ 选中集合
@@ -535,8 +597,7 @@ export function BoostTable<T extends Record<string, any>>({
   // 切换字段时重置运算符与值（保持类型合法）
   const changeField = (id: number, field: string) => {
     const col = colByKey.get(field)
-    const ops = col ? OP_LABELS[kindOf(col)] : OP_LABELS.text
-    patchRow(id, { field, op: ops[0].value, value: '', values: [] })
+    patchRow(id, { field, op: col ? defaultOpFor(col) : 'contains', value: '', values: [] })
   }
 
   const changeOp = (id: number, op: FilterOp) =>

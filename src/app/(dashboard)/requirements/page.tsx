@@ -209,7 +209,8 @@ export default function RequirementsPage() {
       render: (v, r) => v ? <span className="font-medium text-primary cursor-pointer hover:underline" onClick={() => r.customer?.id && router.push(`/clients?view=${r.customer.id}`)}>{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'positionName', title: '岗位名称', render: (v) => <span className="font-medium">{v}</span> },
     { key: 'headcount', title: '需求人数', filterType: 'number' },
-    { key: 'status', title: '岗位状态', sortable: false, filterable: false,
+    { key: 'status', title: '岗位状态', sortable: false,
+      filterType: 'select', filterOptions: statusOptions.map((o) => ({ label: o.label, value: o.value })), multiValue: true,
       accessor: (r) => (Array.isArray(r.status) ? r.status.join(' ') : (r.status ?? '')),
       render: (_v, r) => (
         <div className="flex flex-wrap gap-1">

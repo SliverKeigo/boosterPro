@@ -341,8 +341,9 @@ export default function CandidatesPage() {
     { key: 'birthYear', title: '出生年份', defaultVisible: false, filterType: 'select', filterOptions: yearOptions(1950, 0) },
     { key: 'education', title: '教育经历', defaultVisible: false, accessor: (r) => EDUCATION_LABELS[r.education] ?? '',
       filterType: 'select', filterOptions: Object.values(EDUCATION_LABELS).map((l) => ({ label: l, value: l })) },
-    { key: 'schoolTier', title: '院校', defaultVisible: false, sortable: false, filterable: false,
-      accessor: (r) => (Array.isArray(r.schoolTier) ? r.schoolTier : r.schoolTier ? [r.schoolTier] : []).map((k: string) => SCHOOL_TIER_LABELS[k] ?? k).join('、'),
+    { key: 'schoolTier', title: '院校', defaultVisible: false, sortable: false,
+      filterType: 'select', filterOptions: Object.values(SCHOOL_TIER_LABELS).map((l) => ({ label: l, value: l })), multiValue: true,
+      accessor: (r) => (Array.isArray(r.schoolTier) ? r.schoolTier : r.schoolTier ? [r.schoolTier] : []).map((k: string) => SCHOOL_TIER_LABELS[k] ?? k).join(' '),
       render: (_v, r) => {
         const tiers: string[] = Array.isArray(r.schoolTier) ? r.schoolTier : r.schoolTier ? [r.schoolTier] : []
         return tiers.length ? (
