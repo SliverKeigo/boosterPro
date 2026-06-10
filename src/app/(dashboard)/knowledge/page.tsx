@@ -20,6 +20,7 @@ import {
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
+import { refGet } from '@/lib/refCache'
 
 const RES = 'KNOWLEDGE'
 
@@ -119,9 +120,16 @@ export default function KnowledgePage() {
     })()
   }, [fetchData])
 
+  // 管理细则「提交人」下拉的用户列表（打开弹窗时按需加载，refGet 缓存 60s + 在途去重）
+  const [users, setUsers] = useState<any[]>([])
+  const loadUsers = () => {
+    void refGet('/api/users').then(setUsers)
+  }
+
   const openCreate = () => {
     setEditing(null)
     setMode('edit')
+    loadUsers()
     setForm({ ...EMPTY_FORM })
     setOpen(true)
   }
@@ -129,6 +137,7 @@ export default function KnowledgePage() {
   const openDetail = (r: any) => {
     setEditing(r)
     setMode('view')
+    loadUsers()
     setForm({
       ...EMPTY_FORM,
       ...r,
@@ -139,7 +148,8 @@ export default function KnowledgePage() {
       externalLecturer: r.externalLecturer ?? '',
       managementRecords: (r.managementRecords ?? []).map((x: any) => ({
         date: fmtDate(x.date),
-        submitterId: x.submitterId ?? '',
+        // select 的 option value 是字符串，须 String 化才能回显
+        submitterId: x.submitterId != null ? String(x.submitterId) : '',
         details: x.details ?? '',
       })),
     })
@@ -235,7 +245,7 @@ export default function KnowledgePage() {
           unit="条"
           columns={[
             { key: 'date', title: '日期', render: (v) => fmtDate(v) },
-            { key: 'submitterId', title: '提交人 ID' },
+            { key: 'submitter', title: '提交人', render: (v: any) => v?.name ?? '—' },
             { key: 'details', title: '细则内容' },
           ]}
         />
@@ -413,7 +423,8 @@ export default function KnowledgePage() {
               onChange={(rows) => setField('managementRecords', rows)}
               columns={[
                 { key: 'date', title: '日期', type: 'date', width: 160 },
-                { key: 'submitterId', title: '提交人 ID', type: 'number', width: 120 },
+                { key: 'submitterId', title: '提交人', type: 'select', width: 160,
+                  options: users.map((u) => ({ label: u.name, value: String(u.id) })) },
                 { key: 'details', title: '细则内容', type: 'textarea', width: 320 },
               ]}
             />

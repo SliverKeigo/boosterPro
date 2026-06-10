@@ -5,7 +5,8 @@ export const REQUIREMENT_INCLUDE = {
   updatedBy: { select: { id: true, name: true } },
   customer: { select: { id: true, shortName: true } },
   positionProfiles: true,
-  urgentRecords: true,
+  // member 供前端「加急记录」子表展示成员姓名（buildRequirementData 重建子表时只取 memberId/date，多余键安全）
+  urgentRecords: { include: { member: { select: { id: true, name: true } } } },
 }
 
 // Requirement model 的已知标量字段白名单（不含 relation / 子表 / id / createdAt / updatedAt / createdById）

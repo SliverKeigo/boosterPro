@@ -6,7 +6,10 @@ describe('requirementData - INCLUDE 常量', () => {
     expect(typeof REQUIREMENT_INCLUDE).toBe('object')
     expect(REQUIREMENT_INCLUDE.customer).toBeDefined()
     expect(REQUIREMENT_INCLUDE.positionProfiles).toBe(true)
-    expect(REQUIREMENT_INCLUDE.urgentRecords).toBe(true)
+    // 加急记录带 member（前端子表展示成员姓名）
+    expect(REQUIREMENT_INCLUDE.urgentRecords).toEqual({
+      include: { member: { select: { id: true, name: true } } },
+    })
   })
 })
 

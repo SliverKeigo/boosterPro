@@ -1,6 +1,13 @@
 import type { NextConfig } from 'next'
+import pkg from './package.json'
 
 const nextConfig: NextConfig = {
+  // 构建期注入版本信息（侧边栏 Logo 下的小字）：版本号来自 package.json；
+  // 短 commit hash 来自 CI 的 GITHUB_SHA（本地 dev/build 无此变量则只显示版本号）。
+  env: {
+    NEXT_PUBLIC_APP_VERSION: pkg.version,
+    NEXT_PUBLIC_BUILD_SHA: (process.env.GITHUB_SHA ?? '').slice(0, 7),
+  },
   // 允许局域网其它设备访问 dev server 的 HMR 等内部资源（仅开发期生效，不影响生产构建）。
   // 精确 IP + 同网段通配（末段 *），机器 IP 在 192.168.31.x 内变动也无需再改；
   // 换了网段（如 192.168.1.x）就把对应 IP / 通配加到下面。

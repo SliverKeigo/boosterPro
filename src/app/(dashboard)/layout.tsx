@@ -180,7 +180,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
             <Zap className="h-5 w-5 text-white" />
           </div>
-          <span className="text-lg font-bold tracking-wide text-white">BoosterPro</span>
+          <div className="flex min-w-0 flex-col">
+            <span className="text-lg font-bold leading-tight tracking-wide text-white">BoosterPro</span>
+            {/* 版本小字：低调灰、不抢视觉；CI 构建带短 commit hash，本地构建只有版本号 */}
+            <span className="truncate text-[10px] leading-none text-slate-500">
+              v{process.env.NEXT_PUBLIC_APP_VERSION}
+              {process.env.NEXT_PUBLIC_BUILD_SHA ? ` · ${process.env.NEXT_PUBLIC_BUILD_SHA}` : ''}
+            </span>
+          </div>
         </div>
 
         {/* 菜单 */}

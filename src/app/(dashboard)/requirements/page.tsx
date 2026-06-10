@@ -20,6 +20,7 @@ import {
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
+import { refGet } from '@/lib/refCache'
 
 const RES = 'REQUIREMENT'
 
@@ -122,9 +123,16 @@ export default function RequirementsPage() {
     })()
   }, [fetchData])
 
+  // 加急记录「成员」下拉的用户列表（打开弹窗时按需加载，refGet 缓存 60s + 在途去重）
+  const [users, setUsers] = useState<any[]>([])
+  const loadUsers = () => {
+    void refGet('/api/users').then(setUsers)
+  }
+
   const openCreate = () => {
     setEditing(null)
     setMode('edit')
+    loadUsers()
     // 登记日期默认今天（本地时区 YYYY-MM-DD；仍可手动修改）
     setForm({ ...EMPTY_FORM, followDate: todayLocal() })
     setOpen(true)
@@ -133,6 +141,7 @@ export default function RequirementsPage() {
   const openDetail = (r: any) => {
     setEditing(r)
     setMode('view')
+    loadUsers()
     setForm({
       ...EMPTY_FORM,
       ...r,
@@ -151,7 +160,8 @@ export default function RequirementsPage() {
         knowledgeAmount: x.knowledgeAmount ?? '',
       })),
       urgentRecords: (r.urgentRecords ?? []).map((x: any) => ({
-        memberId: x.memberId ?? '',
+        // select 的 option value 是字符串，须 String 化才能回显
+        memberId: x.memberId != null ? String(x.memberId) : '',
         date: fmtDate(x.date),
       })),
     })
@@ -274,7 +284,7 @@ export default function RequirementsPage() {
           title="加急记录"
           unit="次"
           columns={[
-            { key: 'memberId', title: '成员 ID' },
+            { key: 'member', title: '成员', render: (v: any) => v?.name ?? '—' },
             { key: 'date', title: '日期', render: (v) => fmtDate(v) },
           ]}
         />
@@ -503,7 +513,8 @@ export default function RequirementsPage() {
             value={form.urgentRecords}
             onChange={(rows) => setField('urgentRecords', rows)}
             columns={[
-              { key: 'memberId', title: '成员 ID', type: 'number', width: 160 },
+              { key: 'memberId', title: '成员', type: 'select', width: 200,
+                options: users.map((u) => ({ label: u.name, value: String(u.id) })) },
               { key: 'date', title: '日期', type: 'date', width: 160 },
             ]}
           />
