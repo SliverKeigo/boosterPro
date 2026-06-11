@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 导出引擎：把模块数据导成「封存包」zip（与导入对称，可再导回）。
 // 结构：外层 zip 含 <tag>_excel.zip（数据 xlsx）+ <tag>_resources_1.zip（附件）。
-// xlsx：双行表头(第1=2行，用简道云列名让导入引擎认) + 第3行起数据；
+// xlsx：双行表头(第1=2行，用列名让导入引擎认) + 第3行起数据；
 //   主表列＝字段反向(枚举→中文/数组→拼接/日期→串/关系→名称/提交人→姓名)；
 //   子表＝一个 JSON 列(jsonHeader，值为记录数组，导入端 fromJson 解回)；
 //   附件＝FINST 引用(FINST-EXP<记录id>N<序号>/<文件名>)，文件放进 resources.zip。

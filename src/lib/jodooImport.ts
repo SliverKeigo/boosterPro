@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// 简道云「封存包」导入引擎（服务端）。
+// 「封存包」导入引擎（服务端）。
 // 输入：外层 zip（FormData "file"）→ 解出内层 zip：名字含 `_excel` 的=数据(xlsx)、含 `resources` 的=附件(可多卷)。
 // 解析：xlsx「数据」sheet 前两行为表头、第 3 行起为数据。**按表头名定位列**（不依赖列序）。
-// 子表：简道云把一对多子表导成「第 1 行横向合并的组 + 第 2 行组内字段名 + 同主键多行展开」。
+// 子表：把一对多子表导成「第 1 行横向合并的组 + 第 2 行组内字段名 + 同主键多行展开」。
 //   引擎读合并区间(ws.model.merges)圈出每个子表组，区间内按第 2 行字段名取值，组内每行 build 一条记录；
 //   另支持「单列单元格内多值」子表(splitSubtables，如客户多个办公地址)。
 // 归属：第 1 行表头须含 signature → 否则整包失败。提交人：匹配同名用户、无则建(拼音账号+bcrypt(123456))。
@@ -54,7 +54,7 @@ export interface JodooModule {
   signature: string[]
   submitterHeader: string
   createdAtHeader?: string
-  updatedAtHeader?: string // 简道云「修改时间」列；导入时绕过 @updatedAt 直写 updated_at
+  updatedAtHeader?: string // 「修改时间」列；导入时绕过 @updatedAt 直写 updated_at
   tableName?: string       // 物理表名（raw UPDATE updated_at 用）
   fields: JodooField[]
   attachments?: JodooAttachment[]
@@ -135,7 +135,7 @@ async function parseSheet(buf: ArrayBuffer, jsonHeaders: string[] = []): Promise
   const header: string[] = []
   for (let c = 1; c <= colCount; c++) header[c - 1] = cellText(ws.getRow(1).getCell(c).value).trim()
   // 表头行数检测：本系统导出包含 JSON 子表列(如「办公地址JSON」)→单行表头、数据第 2 行起；
-  // 简道云原生封存包无此列→双行表头(第 2 行为子表字段名)、数据第 3 行起。
+  // 原生封存包无此列→双行表头(第 2 行为子表字段名)、数据第 3 行起。
   const singleRow = jsonHeaders.length > 0 && header.some((h) => jsonHeaders.includes(h))
   const header2: string[] = []
   if (!singleRow) for (let c = 1; c <= colCount; c++) header2[c - 1] = cellText(ws.getRow(2).getCell(c).value).trim()
@@ -255,7 +255,7 @@ export async function runFengcunImport(cfg: JodooModule, buf: ArrayBuffer, user:
 
   const resolveAttachment = buildAttachmentResolver(attachZips)
 
-  // 分组：简道云封存包对一条主记录的主表单元格做纵向合并、子表展开成多行；exceljs 读出时把合并值
+  // 分组：封存包对一条主记录的主表单元格做纵向合并、子表展开成多行；exceljs 读出时把合并值
   // 填充进每个子表行，故同一记录各行的 groupKeyHeaders 取值都相同 → 拼 key 归并。
   // ⚠️ key 必须含「创建时间」：否则同客户同岗位名的多条独立记录(业务键相同、创建时间不同)会被误并成一条。
   const groups: { lead: string[]; rows: string[][]; __row: number }[] = []

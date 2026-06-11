@@ -72,7 +72,7 @@ export function ImportModal({
     >
       <div className="space-y-3">
         <div className="rounded-lg bg-base-200/60 p-3 text-xs text-base-content/70">
-          上传<b>简道云封存包（.zip）</b>——内含数据(_excel)与附件(resources)两个子压缩包，系统自动识别。
+          上传<b>封存包（.zip）</b>——内含数据(_excel)与附件(resources)两个子压缩包，系统自动识别。
           按<b>当前模块</b>的字段解析（解析不出则提示该包不属于本模块）；<b>提交人</b>自动匹配同名用户、无则新建；
           已存在的记录<b>按业务键更新覆盖</b>、否则新增。<b>任一行校验失败将整批不写入</b>，请按提示改对后重试。
         </div>

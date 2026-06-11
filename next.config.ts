@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
   experimental: {
     // 中间件 matcher 为 catch-all，上传/导入都走代理；
     // Next 16 默认只缓冲代理请求体的前 10MB，会截断大文件上传。
-    // 简道云「封存包」含附件资源，单包可达上百 MB（如客户包 ~128MB），故放宽到 300MB；
+    // 「封存包」含附件资源，单包可达上百 MB（如客户包 ~128MB），故放宽到 300MB；
     // 表单附件单文件仍由上传路由自身限制（50MB）。
     proxyClientMaxBodySize: '300mb',
     // 中间件是 catch-all → 所有请求走 Next 代理层，其默认超时仅 30s，大封存包(上百 MB)上传会被掐断；

@@ -5,7 +5,7 @@ import { JODOO_MODULES } from '@/lib/jodooConfigs'
 import { runFengcunImport } from '@/lib/jodooImport'
 import type { ResourceKey } from '@/lib/resources'
 
-// 通用导入端点：/api/import/<RESOURCE_KEY>，上传简道云「封存包」(.zip，FormData "file")。
+// 通用导入端点：/api/import/<RESOURCE_KEY>，上传「封存包」(.zip，FormData "file")。
 // 外层 zip 内含 _excel(数据) 与 resources(附件) 两个内层 zip；按当前模块字段解析、整批事务 upsert。
 // 附件大包解压 + 落盘较慢，放宽超时。
 export const maxDuration = 300

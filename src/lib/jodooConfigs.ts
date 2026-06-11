@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// 四模块的简道云封存包列映射（客户/需求/候选人/知识库）。**按第 1 行表头列名定位**（不依赖列序：
+// 四模块的封存包列映射（客户/需求/候选人/知识库）。**按第 1 行表头列名定位**（不依赖列序：
 // 列挪位 / 中间多出无关列都不影响，未知列忽略）。值转换/枚举口径与一次性迁移脚本 etl-fresh.py 一致。
 // 子表：第 1 行横向合并的组 + 第 2 行字段名（引擎按合并区间圈定），客户办公地址为单列多值。
 import { prisma } from '@/lib/prisma'
@@ -27,7 +27,7 @@ const addrSplit = (raw: string): [string, string] => {
   return [region, detail]
 }
 
-// ── 枚举：简道云中文 → schema 枚举 key。未命中 undefined → 该行报错 ──
+// ── 枚举：中文 → schema 枚举 key。未命中 undefined → 该行报错 ──
 const mapEnum = (m: Record<string, string>) => (raw: string) => m[String(raw).trim()]
 const GENDER = mapEnum({ 男: 'MALE', 女: 'FEMALE', 不限: 'ANY' })
 const EDU = mapEnum({ 本科: 'BACHELOR', 硕士: 'MASTER', 博士: 'DOCTOR', 大专: 'ASSOCIATE', 其他: 'OTHER' })
@@ -70,7 +70,7 @@ const CUSTOMER: JodooModule = {
     { header: '客户曾用名', field: 'formerName' },
   ],
   attachments: [{ header: '客户附件资料', field: 'attachmentUrl' }],
-  // 「定位」列暂不导：简道云定位组件经纬度顺序未知、且本批数据为空，待样例确认后再补 locationLat/Lng。
+  // 「定位」列暂不导：定位组件经纬度顺序未知、且本批数据为空，待样例确认后再补 locationLat/Lng。
   splitSubtables: [{
     header: '多个办公地址', relationField: 'officeAddresses', field: 'address',
     jsonHeader: '办公地址JSON', fromJson: async (o: any) => (o?.address ? { address: o.address } : null),
