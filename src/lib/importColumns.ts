@@ -120,8 +120,10 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '附件', getValue: (r) => r.attachmentUrl ?? '' },
     { header: '最新进展', getValue: (r) => r.latestUpdate ?? '' },
     { header: '所属行业', getValue: (r) => r.industry ?? '' },
+    { header: '加分项', getValue: (r) => r.bonusPoints ?? '' },
+    { header: '行业与资源', getValue: (r) => r.industryResources ?? '' },
     { header: '跟进日期', getValue: (r) => fmtDate(r.followDate) },
-    { header: '职位知识画像（知识类别 | 知识要求）', getValue: (r) => subRows(r.positionProfiles, (x) => [x.knowledgeCategory, x.knowledgeAmount]) },
+    { header: '职位知识画像（知识类别 | 知识要求 | 共识要求）', getValue: (r) => subRows(r.positionProfiles, (x) => [x.knowledgeCategory, x.knowledgeAmount, x.consensusRequirement]) },
   ],
 
   CLIENT_SUPPLEMENT: [
@@ -133,7 +135,7 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '备注', getValue: (r) => r.notes ?? '' },
     { header: '附件', getValue: (r) => r.attachmentUrl ?? '' },
     { header: '需求更新（日期 | 内容）', getValue: (r) => subRows(r.demandUpdates, (x) => [fmtDate(x.date), x.content]) },
-    { header: '客户特长画像（专长 | 描述）', getValue: (r) => subRows(r.customerProfiles, (x) => [x.specialty, x.description]) },
+    { header: '客户特长画像（专长 | 描述 | 附件）', getValue: (r) => subRows(r.customerProfiles, (x) => [x.specialty, x.description, x.attachmentUrl]) },
   ],
 
   CUSTOMER_CONTACT: [
@@ -179,7 +181,7 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '开票信息', getValue: (r) => r.invoiceInfoText ?? '' },
     { header: '开票信息文件', getValue: (r) => r.invoiceInfoFileUrl ?? '' },
     { header: '备注', getValue: (r) => r.notes ?? '' },
-    { header: '发票（类型 | 核销结果）', getValue: (r) => subRows(r.invoices, (x) => [x.invoiceType, x.verificationResult]) },
+    { header: '发票（类型 | 核销结果 | 金额 | 号码 | 代码 | 开票日期 | 源文件 | 图片）', getValue: (r) => subRows(r.invoices, (x) => [x.invoiceType, x.verificationResult, x.amount, x.number, x.code, fmtDate(x.issueDate), x.sourceFileUrl, x.imageUrl]) },
   ],
 
   KNOWLEDGE: [
