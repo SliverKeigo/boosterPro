@@ -164,7 +164,7 @@ function buildAttachmentResolver(attachZips: any[]) {
     }
   }
   const cache = new Map<string, string>()
-  const counter = new Map<string, number>()
+  const used = new Set<string>()
   return async (cell: string): Promise<string | null> => {
     const v = (cell || '').trim()
     if (!v.startsWith('FINST-') || !attachZips.length) return null
@@ -176,14 +176,19 @@ function buildAttachmentResolver(attachZips: any[]) {
     const hit = (last.includes('.') && entries.find((e) => e.entry.endsWith(last))) || entries[0]
     const ckey = `${finst}/${hit.entry}`
     if (cache.has(ckey)) return cache.get(ckey)!
-    const first10 = finst.replace(/[^A-Za-z0-9]/g, '').slice(0, 10)
-    const n = counter.get(first10) ?? 0
-    counter.set(first10, n + 1)
-    const ext = path.extname(hit.entry).toLowerCase()
-    const safe = `imp_${first10}_${n}${ext}`
+    // 物理落盘名＝附件真实文件名(去掉路径分隔/控制符)；同名冲突追加 (序号) 保证唯一。
+    // /api/files 下载即以此真实名呈现；URL 编码以容纳中文/空格等字符。
+    const base = (path.basename(hit.entry).replace(/[/\\\x00-\x1f]/g, '_').trim()) || 'file'
+    let safe = base
+    if (used.has(safe)) {
+      const e = path.extname(base); const stem = base.slice(0, base.length - e.length)
+      let i = 1; while (used.has(`${stem}(${i})${e}`)) i++
+      safe = `${stem}(${i})${e}`
+    }
+    used.add(safe)
     await fs.mkdir(UPLOAD_DIR, { recursive: true })
     await fs.writeFile(path.join(UPLOAD_DIR, safe), Buffer.from(await hit.zip.files[hit.entry].async('arraybuffer')))
-    const url = `/api/files/${safe}`
+    const url = `/api/files/${encodeURIComponent(safe)}`
     cache.set(ckey, url)
     return url
   }

@@ -167,13 +167,13 @@ export async function runExport(resource: string): Promise<{ buffer: Buffer; fil
     for (const a of def.attachments) {
       const url = a.get(r)
       if (!url) { row.push(''); continue }
-      const fp = path.join(UPLOAD_DIR, path.basename(url))
+      const fname = decodeURIComponent(path.basename(url)) // 真实文件名(URL 里是编码态)
+      const fp = path.join(UPLOAD_DIR, fname)
       try {
         const buf = await fs.readFile(fp)
         const finst = `FINST-EXP${r.id}N${seq++}`
-        const name = path.basename(url)
-        resZip.file(`${finst}/${name}`, buf)
-        row.push(`${finst}/${name}`)
+        resZip.file(`${finst}/${fname}`, buf)
+        row.push(`${finst}/${fname}`)
       } catch {
         row.push('') // 附件文件缺失 → 列空
       }
