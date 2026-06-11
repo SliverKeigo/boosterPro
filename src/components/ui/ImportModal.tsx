@@ -38,7 +38,7 @@ export function ImportModal({
 
   const submit = async () => {
     if (result) return close() // 已出结果 → 「完成」即关闭
-    if (!file) return toast.error('请选择要导入的 .xlsx 文件')
+    if (!file) return toast.error('请选择封存包（.zip）')
     setLoading(true)
     try {
       const fd = new FormData()
@@ -72,8 +72,9 @@ export function ImportModal({
     >
       <div className="space-y-3">
         <div className="rounded-lg bg-base-200/60 p-3 text-xs text-base-content/70">
-          先「导出」当前列表得到 .xlsx，改完再从这里导入。<b>含 id 的行=更新、id 留空的行=新增</b>；
-          <b>表头带 * 的列为必填</b>；关系列（如客户/岗位）按名称匹配；子表列<b>每行一条、字段用 | 分隔</b>（表头已标字段顺序）。<b>任一行校验失败将整批不写入</b>，请按提示改对后重试。
+          上传<b>简道云封存包（.zip）</b>——内含数据(_excel)与附件(resources)两个子压缩包，系统自动识别。
+          按<b>当前模块</b>的字段解析（解析不出则提示该包不属于本模块）；<b>提交人</b>自动匹配同名用户、无则新建；
+          已存在的记录<b>按业务键更新覆盖</b>、否则新增。<b>任一行校验失败将整批不写入</b>，请按提示改对后重试。
         </div>
 
         {!result && (
@@ -89,10 +90,10 @@ export function ImportModal({
             className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed p-6 ${dragOver ? 'border-primary bg-primary/5' : 'border-base-300 hover:border-primary'}`}
           >
             <UploadCloud className={`h-8 w-8 ${dragOver ? 'text-primary' : 'text-base-content/40'}`} />
-            <span className="text-sm">{file ? file.name : '点击选择，或将 .xlsx 文件拖拽到此处'}</span>
+            <span className="text-sm">{file ? file.name : '点击选择，或将封存包 .zip 拖拽到此处'}</span>
             <input
               type="file"
-              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              accept=".zip,application/zip"
               className="hidden"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />

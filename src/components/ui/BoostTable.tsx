@@ -732,7 +732,13 @@ export function BoostTable<T extends Record<string, any>>({
           </button>
         ) : null}
         {showExport &&
-          (onExport ? (
+          (importResource ? (
+            // 可导回模块：导出为「封存包」zip（后端生成，含数据 + 附件），与导入同格式
+            <button type="button" className={ICON_BTN} onClick={() => { window.location.href = `/api/export/${importResource}` }}>
+              <Download className="h-4 w-4" />
+              导出
+            </button>
+          ) : onExport ? (
             <button type="button" className={ICON_BTN} onClick={onExport}>
               <Download className="h-4 w-4" />
               导出

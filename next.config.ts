@@ -14,10 +14,11 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.31.208', '192.168.31.*'],
   transpilePackages: ['echarts', 'echarts-for-react'],
   experimental: {
-    // 中间件 matcher 为 catch-all，/api/upload 也走代理；
+    // 中间件 matcher 为 catch-all，上传/导入都走代理；
     // Next 16 默认只缓冲代理请求体的前 10MB，会截断大文件上传。
-    // 上传路由自身限制为 50MB，这里设 60MB 留出 multipart 编码余量。
-    proxyClientMaxBodySize: '60mb',
+    // 简道云「封存包」含附件资源，单包可达上百 MB（如客户包 ~128MB），故放宽到 300MB；
+    // 表单附件单文件仍由上传路由自身限制（50MB）。
+    proxyClientMaxBodySize: '300mb',
   },
 }
 
