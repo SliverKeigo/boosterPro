@@ -19,6 +19,10 @@ const nextConfig: NextConfig = {
     // 简道云「封存包」含附件资源，单包可达上百 MB（如客户包 ~128MB），故放宽到 300MB；
     // 表单附件单文件仍由上传路由自身限制（50MB）。
     proxyClientMaxBodySize: '300mb',
+    // 中间件是 catch-all → 所有请求走 Next 代理层，其默认超时仅 30s，大封存包(上百 MB)上传会被掐断；
+    // 放宽到 10min。注：实际上限还受 Node http server requestTimeout(默认 ~300s)约束——
+    // 上行过慢导致 128MB 传输 >300s 时仍会撞，那种情况需改自定义 server 放开 requestTimeout。
+    proxyTimeout: 600000,
   },
 }
 

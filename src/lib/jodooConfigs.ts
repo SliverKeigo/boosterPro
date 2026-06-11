@@ -44,8 +44,11 @@ const RSTATUS: Record<string, string> = {
 
 async function findCustomerId(name: string): Promise<number | null> {
   if (!name) return null
+  // 先按 客户名称(全称)/简称 匹配；找不到再按 客户曾用名(formerName) 兜底（客户改过名时仍能挂上）
   const c = await prisma.customer.findFirst({ where: { OR: [{ fullName: name }, { shortName: name }] }, select: { id: true } })
-  return c?.id ?? null
+  if (c) return c.id
+  const byFormer = await prisma.customer.findFirst({ where: { formerName: name }, select: { id: true } })
+  return byFormer?.id ?? null
 }
 const subDate = (s: string): Date | null => dateVal(s) ?? null
 
