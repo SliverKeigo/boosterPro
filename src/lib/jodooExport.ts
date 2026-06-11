@@ -25,8 +25,11 @@ const RSTATUS_OUT: Record<string, string> = {
   ONBOARDING: '入职中', GUARANTEE: '保证期', POST_GUARANTEE_CLOSED: '过保关闭',
 }
 const joinArr = (a: any) => (Array.isArray(a) ? a.join('、') : (a ?? ''))
-const fmtDate = (d: any) => (d ? new Date(d).toISOString().slice(0, 10) : '')
-const fmtDateTime = (d: any) => (d ? new Date(d).toISOString().slice(0, 19).replace('T', ' ') : '')
+// 输出北京时间(+08:00)字符串：与导入端 bjDate(按 +08:00 解析)对称，保证创建时间等往返一致
+// （否则去重键 createdAt 对不上 → 导出包导回会重复新增、不幂等）。
+const bjStr = (d: any, len: number) => new Date(new Date(d).getTime() + 8 * 3600 * 1000).toISOString().slice(0, len)
+const fmtDate = (d: any) => (d ? bjStr(d, 10) : '')
+const fmtDateTime = (d: any) => (d ? bjStr(d, 19).replace('T', ' ') : '')
 const tiersOut = (a: any) => (Array.isArray(a) ? a.map((k: string) => TIER_OUT[k] ?? k).join('、') : '')
 
 interface ExportCol { header: string; get: (r: any) => any }
@@ -151,8 +154,7 @@ export async function runExport(resource: string): Promise<{ buffer: Buffer; fil
   const wb = new ExcelJS.Workbook()
   const ws = wb.addWorksheet('数据')
   const headers = [...def.columns.map((c) => c.header), ...def.subs.map((s) => s.jsonHeader), ...def.attachments.map((a) => a.header)]
-  ws.addRow(headers)
-  ws.addRow(headers) // 双行表头：与简道云一致、让导入引擎按第 1 行列名定位、第 3 行起读数据
+  ws.addRow(headers) // 单行表头：数据从第 2 行起。导入引擎据「表头含 JSON 子表列」识别本系统导出包、按单行解析
 
   const jz: any = await import('jszip')
   const JSZip = jz.default ?? jz
