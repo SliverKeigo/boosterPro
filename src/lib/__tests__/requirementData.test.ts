@@ -91,7 +91,7 @@ describe('buildRequirementData - 字段映射与清洗', () => {
       {
         positionName: 'A',
         positionProfiles: [
-          { knowledgeCategory: '技术', knowledgeAmount: '5' },
+          { knowledgeCategory: '技术', knowledgeAmount: '5', consensusRequirement: '管理要求X' },
           { knowledgeCategory: '', knowledgeAmount: '' }, // 过滤
         ],
         urgentRecords: [
@@ -103,7 +103,7 @@ describe('buildRequirementData - 字段映射与清洗', () => {
       'create',
     )
     expect(out.positionProfiles.create).toEqual([
-      { knowledgeCategory: '技术', knowledgeAmount: '5' },
+      { knowledgeCategory: '技术', knowledgeAmount: '5', consensusRequirement: '管理要求X' },
     ])
     expect(out.urgentRecords.create).toHaveLength(2)
     expect(out.urgentRecords.create[0].memberId).toBe(9)

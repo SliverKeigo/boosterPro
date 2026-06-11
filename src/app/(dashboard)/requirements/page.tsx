@@ -55,6 +55,7 @@ const EMPTY_FORM: any = {
   jobDescription: '', talentProfile: '', projectExperience: '',
   closeReason: '', notes: '', industry: '',
   followDate: '', latestUpdate: '', attachmentUrl: '',
+  bonusPoints: '', industryResources: '',
   positionProfiles: [], urgentRecords: [],
 }
 
@@ -158,6 +159,7 @@ export default function RequirementsPage() {
       positionProfiles: (r.positionProfiles ?? []).map((x: any) => ({
         knowledgeCategory: x.knowledgeCategory ?? '',
         knowledgeAmount: x.knowledgeAmount ?? '',
+        consensusRequirement: x.consensusRequirement ?? '',
       })),
       urgentRecords: (r.urgentRecords ?? []).map((x: any) => ({
         // select 的 option value 是字符串，须 String 化才能回显
@@ -245,6 +247,8 @@ export default function RequirementsPage() {
     { key: 'industry', title: '所属行业', defaultVisible: false },
     { key: 'followDate', title: '登记日期', defaultVisible: false, filterType: 'date', render: (v) => fmtDate(v) || '—' },
     { key: 'jobDescription', title: '岗位 JD', defaultVisible: false },
+    { key: 'bonusPoints', title: '加分项', defaultVisible: false },
+    { key: 'industryResources', title: '行业与资源', defaultVisible: false },
     { key: 'closeReason', title: '关闭/暂停原因', defaultVisible: false },
     { key: 'latestUpdate', title: '最新动态', defaultVisible: false },
     { key: 'notes', title: '其他备注', defaultVisible: false },
@@ -258,7 +262,7 @@ export default function RequirementsPage() {
       sortable: false,
       accessor: (r) =>
         (r.positionProfiles ?? [])
-          .map((p: any) => [p.knowledgeCategory, p.knowledgeAmount].filter(Boolean).join(' '))
+          .map((p: any) => [p.knowledgeCategory, p.knowledgeAmount, p.consensusRequirement].filter(Boolean).join(' '))
           .filter(Boolean)
           .join(' '),
       render: (_v, r) => (
@@ -268,6 +272,7 @@ export default function RequirementsPage() {
           columns={[
             { key: 'knowledgeCategory', title: '知识分类' },
             { key: 'knowledgeAmount', title: '知识要求' },
+            { key: 'consensusRequirement', title: '共识要求' },
           ]}
         />
       ),
@@ -493,6 +498,13 @@ export default function RequirementsPage() {
           <Field label="其他备注" className="col-span-2">
             <textarea className="textarea textarea-bordered w-full" rows={2} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="请输入" />
           </Field>
+          {/* 加分项 / 行业与资源 */}
+          <Field label="加分项" className="col-span-2">
+            <textarea className="textarea textarea-bordered w-full" rows={3} value={form.bonusPoints} onChange={(e) => setField('bonusPoints', e.target.value)} placeholder="请输入" />
+          </Field>
+          <Field label="行业与资源" className="col-span-2">
+            <textarea className="textarea textarea-bordered w-full" rows={3} value={form.industryResources} onChange={(e) => setField('industryResources', e.target.value)} placeholder="请输入" />
+          </Field>
         </div>
 
         <div className="divider my-3" />
@@ -506,6 +518,7 @@ export default function RequirementsPage() {
             columns={[
               { key: 'knowledgeCategory', title: '知识分类', type: 'text', width: 180 },
               { key: 'knowledgeAmount', title: '知识解释', type: 'textarea', width: 460 },
+              { key: 'consensusRequirement', title: '共识要求', type: 'textarea', width: 460 },
             ]}
           />
           <SubTable

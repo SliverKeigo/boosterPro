@@ -33,6 +33,8 @@ const REQUIREMENT_SCALAR_FIELDS = [
   'latestUpdate',
   'industry',
   'followDate',
+  'bonusPoints',
+  'industryResources',
 ] as const
 
 /** 仅保留白名单标量字段，过滤掉前端多传的脏字段 */
@@ -92,10 +94,11 @@ export function buildRequirementData(body: any, mode: 'create' | 'update') {
   else data.status = []
 
   const profiles = (positionProfiles as any[])
-    .filter((r) => r.knowledgeCategory || r.knowledgeAmount)
+    .filter((r) => r.knowledgeCategory || r.knowledgeAmount || r.consensusRequirement)
     .map((r) => ({
       knowledgeCategory: r.knowledgeCategory || null,
       knowledgeAmount: r.knowledgeAmount || null,
+      consensusRequirement: r.consensusRequirement || null,
     }))
   const urgent = (urgentRecords as any[])
     .filter((r) => r.memberId || r.date)

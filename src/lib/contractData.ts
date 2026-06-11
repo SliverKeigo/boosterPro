@@ -82,10 +82,26 @@ export function buildContractData(body: any, mode: 'create' | 'update') {
   }
 
   const inv = (invoices as any[])
-    .filter((r) => r.invoiceType || r.verificationResult)
+    .filter(
+      (r) =>
+        r.invoiceType ||
+        r.verificationResult ||
+        r.amount ||
+        r.number ||
+        r.code ||
+        r.issueDate ||
+        r.sourceFileUrl ||
+        r.imageUrl,
+    )
     .map((r) => ({
       invoiceType: r.invoiceType || null,
       verificationResult: r.verificationResult || null,
+      amount: r.amount || null,
+      number: r.number || null,
+      code: r.code || null,
+      issueDate: r.issueDate ? new Date(r.issueDate) : null,
+      sourceFileUrl: r.sourceFileUrl || null,
+      imageUrl: r.imageUrl || null,
     }))
 
   // 白名单过滤掉多余键后，再附加子表嵌套写

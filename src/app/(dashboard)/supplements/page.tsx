@@ -26,6 +26,9 @@ const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
 const fmtDateTime = (s?: string | null) => (s ? `${s.slice(0, 10)} ${s.slice(11, 16)}` : '—')
 const clip = (v?: string | null) => (v ? (v.length > 40 ? `${v.slice(0, 40)}…` : v) : '—')
 const stripHtml = (v?: string | null) => (v ? v.replace(/<[^>]+>/g, '').slice(0, 40) : '—')
+// 附件 URL（/api/files/xxx）→ 还原原始文件名（去掉「时间戳-随机-」前缀）
+const fileNameFromUrl = (url?: string | null) =>
+  url ? decodeURIComponent((url.split('?')[0] || '').split('/').pop() || '').replace(/^\d+-[a-z0-9]+-/, '') : ''
 
 const EMPTY_FORM: any = {
   customerId: '', demandCustomer: '', openingSpeech: '',
@@ -111,6 +114,7 @@ export default function SupplementsPage() {
       customerProfiles: (r.customerProfiles ?? []).map((x: any) => ({
         specialty: x.specialty ?? '',
         description: x.description ?? '',
+        attachmentUrl: x.attachmentUrl ?? '',
       })),
     })
     setOpen(true)
@@ -190,6 +194,9 @@ export default function SupplementsPage() {
           columns={[
             { key: 'specialty', title: '专长' },
             { key: 'description', title: '描述' },
+            { key: 'attachmentUrl', title: '附件', render: (v) => v
+              ? <a href={v} target="_blank" rel="noreferrer" className="text-primary hover:underline">{fileNameFromUrl(v)}</a>
+              : null },
           ]}
         />
       ) },
@@ -303,6 +310,7 @@ export default function SupplementsPage() {
             columns={[
               { key: 'specialty', title: '特长', type: 'text', width: 200 },
               { key: 'description', title: '描述', type: 'textarea', width: 360 },
+              { key: 'attachmentUrl', title: '附件', type: 'file', width: 240 },
             ]}
           />
         </div>

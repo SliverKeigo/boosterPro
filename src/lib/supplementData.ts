@@ -56,8 +56,8 @@ export function buildSupplementData(body: any, mode: 'create' | 'update') {
     .filter((r) => r.date || r.content)
     .map((r) => ({ date: r.date ? new Date(r.date) : null, content: r.content || null }))
   const profiles = (customerProfiles as any[])
-    .filter((r) => r.specialty || r.description)
-    .map((r) => ({ specialty: r.specialty || null, description: r.description || null }))
+    .filter((r) => r.specialty || r.description || r.attachmentUrl)
+    .map((r) => ({ specialty: r.specialty || null, description: r.description || null, attachmentUrl: r.attachmentUrl || null }))
 
   // 白名单过滤掉多余键后，再附加子表嵌套写
   const out = pickScalars(data, SUPPLEMENT_SCALAR_FIELDS)

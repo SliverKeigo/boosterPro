@@ -55,7 +55,7 @@ describe('buildSupplementData - 字段映射与清洗', () => {
           { date: '', content: '' }, // 过滤
         ],
         customerProfiles: [
-          { specialty: '技术', description: '描述' },
+          { specialty: '技术', description: '描述', attachmentUrl: '/api/files/p.pdf' },
           { specialty: '', description: '' }, // 过滤
           { specialty: '只有专长' }, // description → null
         ],
@@ -66,7 +66,8 @@ describe('buildSupplementData - 字段映射与清洗', () => {
     expect(out.demandUpdates.create[0].date).toBeInstanceOf(Date)
     expect(out.demandUpdates.create[0].content).toBe('更新1')
     expect(out.customerProfiles.create).toHaveLength(2)
-    expect(out.customerProfiles.create[1]).toEqual({ specialty: '只有专长', description: null })
+    expect(out.customerProfiles.create[0].attachmentUrl).toBe('/api/files/p.pdf')
+    expect(out.customerProfiles.create[1]).toEqual({ specialty: '只有专长', description: null, attachmentUrl: null })
   })
 
   it('update：两个子表均先 deleteMany 再 create', () => {

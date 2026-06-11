@@ -109,6 +109,12 @@ export default function ContractsPage() {
       invoices: (r.invoices ?? []).map((x: any) => ({
         invoiceType: x.invoiceType ?? '',
         verificationResult: x.verificationResult ?? '',
+        amount: x.amount ?? '',
+        number: x.number ?? '',
+        code: x.code ?? '',
+        issueDate: x.issueDate ? String(x.issueDate).slice(0, 10) : '',
+        sourceFileUrl: x.sourceFileUrl ?? '',
+        imageUrl: x.imageUrl ?? '',
       })),
     })
     setOpen(true)
@@ -200,6 +206,30 @@ export default function ContractsPage() {
           columns={[
             { key: 'invoiceType', title: '发票类型' },
             { key: 'verificationResult', title: '查验结果' },
+            { key: 'amount', title: '发票金额' },
+            { key: 'number', title: '发票号码' },
+            { key: 'code', title: '发票代码' },
+            { key: 'issueDate', title: '开票日期', render: (v) => fmtDate(v) },
+            {
+              key: 'sourceFileUrl',
+              title: '发票源文件',
+              render: (v) =>
+                v ? (
+                  <a href={v} className="link link-primary break-all" target="_blank" rel="noreferrer">
+                    {decodeURIComponent(String(v).split('/').pop() || '')}
+                  </a>
+                ) : null,
+            },
+            {
+              key: 'imageUrl',
+              title: '发票图片',
+              render: (v) =>
+                v ? (
+                  <a href={v} className="link link-primary break-all" target="_blank" rel="noreferrer">
+                    {decodeURIComponent(String(v).split('/').pop() || '')}
+                  </a>
+                ) : null,
+            },
           ]}
         />
       ),
@@ -353,6 +383,12 @@ export default function ContractsPage() {
           columns={[
             { key: 'invoiceType', title: '发票类型', type: 'select', options: invoiceTypeOptions, width: 240 },
             { key: 'verificationResult', title: '查验结果', type: 'select', options: verificationResultOptions, width: 240 },
+            { key: 'amount', title: '发票金额' },
+            { key: 'number', title: '发票号码' },
+            { key: 'code', title: '发票代码' },
+            { key: 'issueDate', title: '开票日期', type: 'date' },
+            { key: 'sourceFileUrl', title: '发票源文件', type: 'file', width: 220 },
+            { key: 'imageUrl', title: '发票图片', type: 'file', width: 220 },
           ]}
         />
       </Modal>
