@@ -110,7 +110,7 @@ const REQUIREMENT: JodooModule = {
     { header: '招聘重启日期', field: 'deadline', transform: dateVal },
   ],
   attachments: [{ header: '附件', field: 'attachmentUrl' }],
-  groupKeyHeaders: ['客户名称', '岗位名称'],
+  groupKeyHeaders: ['客户名称', '岗位名称', '创建时间'],
   subtables: [
     {
       relationField: 'positionProfiles', match: '知识分类',
@@ -148,7 +148,7 @@ const REQUIREMENT: JodooModule = {
     if (scalars.headcount == null) scalars.headcount = 1
     if (!scalars.baseCity) scalars.baseCity = '—'
   },
-  dedupe: (s) => ({ customerId: s.customerId, positionName: s.positionName }),
+  dedupe: (s) => ({ customerId: s.customerId, positionName: s.positionName, createdAt: s.createdAt }),
 }
 
 const CANDIDATE: JodooModule = {
@@ -180,7 +180,7 @@ const CANDIDATE: JodooModule = {
     { header: 'Offer', field: 'offerFileUrl' },
     { header: '背景调查报告', field: 'backgroundCheckReportUrl' },
   ],
-  groupKeyHeaders: ['候选人姓名', '客户简称', '岗位名称'],
+  groupKeyHeaders: ['候选人姓名', '客户简称', '岗位名称', '创建时间'],
   subtables: [
     {
       relationField: 'guaranteeCommunications', match: '沟通内容',
@@ -222,7 +222,7 @@ const CANDIDATE: JodooModule = {
     scalars.recruitmentChannel = '其他'
     if (!scalars.recommendationStatus) scalars.recommendationStatus = 'PENDING'
   },
-  dedupe: (s) => ({ name: s.name, customerShortName: s.customerShortName ?? null, requirementId: s.requirementId ?? null }),
+  dedupe: (s) => ({ name: s.name, customerShortName: s.customerShortName ?? null, requirementId: s.requirementId ?? null, createdAt: s.createdAt }),
 }
 
 const KNOWLEDGE: JodooModule = {

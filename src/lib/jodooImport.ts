@@ -59,7 +59,7 @@ export interface JodooModule {
   userFields?: { header: string; field: string }[]
   subtables?: JodooSubtable[]
   splitSubtables?: JodooSplitSub[]
-  groupKeyHeaders?: string[] // 子表展开行归并：同 key 多行＝主行(首)+子表展开
+  groupKeyHeaders?: string[] // 子表展开行归并 key（须含「创建时间」以区分同业务键的独立记录）：同 key 多行＝主行+子表展开
   resolveScalars?: (get: (header: string) => string, scalars: any) => Promise<void>
   dedupe: (scalars: any) => any | null
 }
@@ -246,7 +246,9 @@ export async function runFengcunImport(cfg: JodooModule, buf: ArrayBuffer, user:
 
   const resolveAttachment = buildAttachmentResolver(attachZips)
 
-  // 分组（按 groupKeyHeaders 拼 key；否则逐行）
+  // 分组：简道云封存包对一条主记录的主表单元格做纵向合并、子表展开成多行；exceljs 读出时把合并值
+  // 填充进每个子表行，故同一记录各行的 groupKeyHeaders 取值都相同 → 拼 key 归并。
+  // ⚠️ key 必须含「创建时间」：否则同客户同岗位名的多条独立记录(业务键相同、创建时间不同)会被误并成一条。
   const groups: { lead: string[]; rows: string[][]; __row: number }[] = []
   if (cfg.groupKeyHeaders?.length) {
     const idx = new Map<string, number>()
