@@ -270,9 +270,221 @@ const KNOWLEDGE: JodooModule = {
   dedupe: (s) => ({ keywords: s.keywords, createdAt: s.createdAt }),
 }
 
+const TALENT_POOL: JodooModule = {
+  model: 'talentPool',
+  tableName: 'talent_pool',
+  label: '人才储备库',
+  signature: ['人才姓名', '意向职位', '当前职位'],
+  submitterHeader: '提交人',
+  createdAtHeader: '创建时间',
+  updatedAtHeader: '修改时间',
+  fields: [
+    { header: '人才姓名', field: 'name', required: true },
+    { header: '意向职位', field: 'targetPosition' },
+    { header: '联系电话', field: 'phone' },
+    { header: '性别', field: 'gender', transform: GENDER },
+    { header: '最高学历', field: 'education' },
+    { header: '人才标签', field: 'tags', transform: arr },
+    { header: '职位类型', field: 'positionType' },
+    { header: '职位级别', field: 'positionLevel' },
+    { header: '出生年份', field: 'birthYear', transform: yearVal },
+    { header: '当前职位', field: 'currentPosition' },
+  ],
+  attachments: [{ header: '简历及相关资料', field: 'resumeUrl' }],
+  resolveScalars: async (_get, scalars) => {
+    // currentPosition / resumeUrl 在 schema 为 NOT NULL；当前职位缺失时用意向职位兜底（简历列均有 FINST）
+    if (!scalars.currentPosition) scalars.currentPosition = (scalars.targetPosition as string) || '—'
+  },
+  dedupe: (s) => ({ name: s.name, createdAt: s.createdAt }),
+}
+
+const CUSTOMER_CONTACT: JodooModule = {
+  model: 'customerContact',
+  tableName: 'customer_contacts',
+  label: '客户联系人信息',
+  signature: ['客户名称', '实例标题', '客户联系人信息'],
+  submitterHeader: '提交人',
+  createdAtHeader: '创建时间',
+  updatedAtHeader: '修改时间',
+  fields: [
+    { header: '实例标题', field: 'title', required: true },
+  ],
+  resolveScalars: async (get, scalars) => {
+    const cn = stripFinst(get('客户名称'))
+    if (!cn) throw new Error('缺少「客户名称」')
+    const cid = await findCustomerId(cn)
+    if (cid == null) throw new Error(`找不到客户「${cn}」，请先导入客户基本信息`)
+    scalars.customerId = cid
+    if (!scalars.title) scalars.title = `${cn}联系人`
+  },
+  subtables: [{
+    relationField: 'contacts', match: '联系人姓名',
+    build: async (g) => {
+      const nm = g('联系人姓名').trim()
+      if (!nm) return null
+      return { contactName: nm, contactTitle: g('联系人职务').trim() || null, contactPhone: g('联系人电话').trim() || null, contactEmail: g('联系人邮箱').trim() || null, contactHobby: g('联系人爱好').trim() || null }
+    },
+    jsonHeader: '联系人JSON',
+    fromJson: async (o: any) => (o?.contactName ? { contactName: o.contactName, contactTitle: o.contactTitle || null, contactPhone: o.contactPhone || null, contactEmail: o.contactEmail || null, contactHobby: o.contactHobby || null } : null),
+  }],
+  dedupe: (s) => ({ customerId: s.customerId, title: s.title, createdAt: s.createdAt }),
+}
+
+const CLIENT_SUPPLEMENT: JodooModule = {
+  model: 'clientSupplement',
+  tableName: 'client_supplements',
+  label: '客户交付补充信息',
+  signature: ['客户名称', '开聊话术', '需求客户'],
+  submitterHeader: '提交人',
+  createdAtHeader: '创建时间',
+  updatedAtHeader: '修改时间',
+  fields: [
+    { header: '需求客户', field: 'demandCustomer' },
+    { header: '开聊话术', field: 'openingSpeech' },
+    { header: '备注', field: 'notes' },
+  ],
+  resolveScalars: async (get, scalars) => {
+    const cn = stripFinst(get('客户名称'))
+    if (!cn) throw new Error('缺少「客户名称」')
+    const cid = await findCustomerId(cn)
+    if (cid == null) throw new Error(`找不到客户「${cn}」，请先导入客户基本信息`)
+    scalars.customerId = cid
+  },
+  subtables: [
+    {
+      relationField: 'demandUpdates', match: '需求更新内容',
+      build: async (g) => {
+        const ct = g('需求更新内容').trim(), dt = g('日期').trim()
+        if (!ct && !dt) return null
+        return { date: dateVal(dt) ?? null, content: ct || null }
+      },
+      jsonHeader: '需求更新JSON',
+      fromJson: async (o: any) => ((o?.content || o?.date) ? { date: dateVal(o.date) ?? null, content: o.content || null } : null),
+    },
+    {
+      relationField: 'customerProfiles', match: '专项',
+      build: async (g) => {
+        const sp = g('专项').trim(), ds = g('专项描述').trim()
+        if (!sp && !ds) return null
+        return { specialty: sp || null, description: ds || null }
+      },
+      jsonHeader: '客户画像JSON',
+      fromJson: async (o: any) => ((o?.specialty || o?.description) ? { specialty: o.specialty || null, description: o.description || null } : null),
+    },
+  ],
+  dedupe: (s) => ({ customerId: s.customerId, createdAt: s.createdAt }),
+}
+
+// 商机/合同专用：枚举、费率(取数字)、合同有效期区间(取前两个日期为起止)
+const NATURE = mapEnum({ 直接客户: 'DIRECT', 间接客户: 'INDIRECT' })
+const decVal = (s: string) => { const n = parseFloat(String(s).replace(/[^\d.]/g, '')); return Number.isNaN(n) ? undefined : n }
+const periodSplit = (raw: string): [Date | null, Date | null] => {
+  const ds = String(raw).match(/\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/g) || []
+  return [ds[0] ? dateVal(ds[0]) ?? null : null, ds[1] ? dateVal(ds[1]) ?? null : null]
+}
+
+const OPPORTUNITY: JodooModule = {
+  model: 'opportunity',
+  tableName: 'opportunities',
+  label: '商机信息',
+  signature: ['商机名称', '商机描述', '所属区域'],
+  submitterHeader: '提交人',
+  createdAtHeader: '创建时间',
+  updatedAtHeader: '修改时间',
+  fields: [
+    { header: '商机名称', field: 'name', required: true },
+    { header: '商机描述', field: 'description' },
+    { header: '所属区域', field: 'region' },
+    { header: '商机状态', field: 'status' },
+    { header: '商机性质', field: 'nature', transform: NATURE },
+    { header: '商机联系人', field: 'contactName' },
+    { header: '商机联系人职务', field: 'contactTitle' },
+    { header: '商机联系人电话/EMAIL/微信', field: 'contactInfo' },
+    { header: '公司销售决策信息', field: 'salesDecisionInfo' },
+    { header: '客户决策人', field: 'customerDecisionMaker' },
+    { header: '决策人相关信息描述', field: 'decisionMakerDescription' },
+  ],
+  attachments: [{ header: '附件1', field: 'attachmentUrl' }],
+  userFields: [{ header: '销售负责人', field: 'salesOwnerId' }],
+  groupKeyHeaders: ['商机名称', '创建时间'],
+  resolveScalars: async (_get, scalars) => {
+    // NOT NULL 字段兜底
+    if (!scalars.description) scalars.description = '—'
+    if (!scalars.region) scalars.region = '—'
+    if (!scalars.status) scalars.status = '线索阶段'
+    if (!scalars.salesDecisionInfo) scalars.salesDecisionInfo = '—'
+    if (!scalars.customerDecisionMaker) scalars.customerDecisionMaker = '—'
+    if (!scalars.decisionMakerDescription) scalars.decisionMakerDescription = '—'
+  },
+  subtables: [{
+    relationField: 'progressRecords', match: '进展描述',
+    build: async (g) => {
+      const ds = g('进展描述').trim(), dt = g('日期').trim()
+      if (!ds && !dt) return null
+      return { date: dateVal(dt) ?? null, description: ds || null }
+    },
+    jsonHeader: '商机进展JSON',
+    fromJson: async (o: any) => ((o?.description || o?.date) ? { date: dateVal(o.date) ?? null, description: o.description || null } : null),
+  }],
+  dedupe: (s) => ({ name: s.name, createdAt: s.createdAt }),
+}
+
+const CONTRACT: JodooModule = {
+  model: 'contract',
+  tableName: 'contracts',
+  label: '销售合同信息管理',
+  signature: ['客户名称', '合同名称', '服务类型'],
+  submitterHeader: '提交人',
+  createdAtHeader: '创建时间',
+  updatedAtHeader: '修改时间',
+  fields: [
+    { header: '合同名称', field: 'contractName', required: true },
+    { header: '签订年份', field: 'signingYear', transform: yearVal },
+    { header: '服务类型', field: 'serviceType' },
+    { header: '猎头服务费率%', field: 'headhunterFeeRate', transform: decVal },
+    { header: '计费月数', field: 'billingMonths', transform: intVal },
+    { header: 'ROP服务费率', field: 'ropFeeRate', transform: decVal },
+    { header: '备注', field: 'notes' },
+    { header: '合同到期日期', field: 'expiryDate', transform: dateVal },
+  ],
+  attachments: [{ header: '合同附件', field: 'contractFileUrl' }],
+  userFields: [{ header: '销售负责人', field: 'salesOwnerId' }, { header: '交付负责人', field: 'deliveryOwnerId' }],
+  groupKeyHeaders: ['客户名称', '合同名称', '创建时间'],
+  resolveScalars: async (get, scalars) => {
+    const cn = stripFinst(get('客户名称'))
+    if (!cn) throw new Error('缺少「客户名称」')
+    const cid = await findCustomerId(cn)
+    if (cid == null) throw new Error(`找不到客户「${cn}」，请先导入客户基本信息`)
+    scalars.customerId = cid
+    // 合同有效期「起_止」拆分；NOT NULL 字段兜底
+    const [s, e] = periodSplit(get('合同有效期'))
+    scalars.effectiveStart = s ?? (scalars.createdAt as Date) ?? new Date(0)
+    scalars.effectiveEnd = e ?? scalars.effectiveStart
+    if (!scalars.expiryDate) scalars.expiryDate = scalars.effectiveEnd
+    if (!scalars.serviceType) scalars.serviceType = '—'
+    if (scalars.signingYear == null) scalars.signingYear = new Date(scalars.effectiveStart).getFullYear()
+  },
+  subtables: [{
+    relationField: 'invoices', match: '发票类型',
+    build: async (g) => {
+      const it = g('发票类型').trim(), vr = g('查验结果').trim()
+      if (!it && !vr) return null
+      return { invoiceType: it || null, verificationResult: vr || null }
+    },
+    jsonHeader: '发票JSON',
+    fromJson: async (o: any) => ((o?.invoiceType || o?.verificationResult) ? { invoiceType: o.invoiceType || null, verificationResult: o.verificationResult || null } : null),
+  }],
+  dedupe: (s) => ({ customerId: s.customerId, contractName: s.contractName, createdAt: s.createdAt }),
+}
+
 export const JODOO_MODULES: Partial<Record<ResourceKey, JodooModule>> = {
   CUSTOMER,
   REQUIREMENT,
   CANDIDATE,
   KNOWLEDGE,
+  TALENT_POOL,
+  CUSTOMER_CONTACT,
+  CLIENT_SUPPLEMENT,
+  OPPORTUNITY,
+  CONTRACT,
 }

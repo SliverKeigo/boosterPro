@@ -124,7 +124,7 @@ function horizontalMergeRegions(merges: any): { c0: number; c1: number }[] {
   }
   return out
 }
-async function parseSheet(buf: ArrayBuffer, jsonHeaders: string[] = []): Promise<{ header: string[]; header2: string[]; rows: { cols: string[]; __row: number }[]; regions: { c0: number; c1: number }[] }> {
+async function parseSheet(buf: ArrayBuffer): Promise<{ header: string[]; header2: string[]; rows: { cols: string[]; __row: number }[]; regions: { c0: number; c1: number }[] }> {
   const mod: any = await import('exceljs')
   const ExcelJS = mod.default ?? mod
   const wb = new ExcelJS.Workbook()
@@ -134,9 +134,10 @@ async function parseSheet(buf: ArrayBuffer, jsonHeaders: string[] = []): Promise
   const colCount = ws.columnCount
   const header: string[] = []
   for (let c = 1; c <= colCount; c++) header[c - 1] = cellText(ws.getRow(1).getCell(c).value).trim()
-  // 表头行数检测：本系统导出包含 JSON 子表列(如「办公地址JSON」)→单行表头、数据第 2 行起；
-  // 原生封存包无此列→双行表头(第 2 行为子表字段名)、数据第 3 行起。
-  const singleRow = jsonHeaders.length > 0 && header.some((h) => jsonHeaders.includes(h))
+  // 表头行数：有横向合并(子表组)=双行表头(第 2 行为子表字段名、数据第 3 行起)；无=单行表头(数据第 2 行起)。
+  // 有子表的模块(客户/需求/候选/知识库)是双行；无子表的模块(如人才库)和本系统导出包都无横向合并 → 单行。
+  const regions = horizontalMergeRegions(ws.model?.merges)
+  const singleRow = regions.length === 0
   const header2: string[] = []
   if (!singleRow) for (let c = 1; c <= colCount; c++) header2[c - 1] = cellText(ws.getRow(2).getCell(c).value).trim()
   const rows: { cols: string[]; __row: number }[] = []
@@ -150,7 +151,7 @@ async function parseSheet(buf: ArrayBuffer, jsonHeaders: string[] = []): Promise
     }
     if (hasAny) rows.push({ cols, __row: r })
   }
-  return { header, header2, rows, regions: singleRow ? [] : horizontalMergeRegions(ws.model?.merges) }
+  return { header, header2, rows, regions }
 }
 
 // ── 附件：resources zip(可多卷) → finstId 索引 + FINST 单元格落盘 ──────────────
@@ -233,8 +234,7 @@ function bjDate(s: string): Date | null {
 // ── 主入口 ────────────────────────────────────────────────────────────────────
 export async function runFengcunImport(cfg: JodooModule, buf: ArrayBuffer, user: CurrentUser): Promise<JodooResult> {
   const { excel, attachZips } = await openFengcun(buf)
-  const jsonHeaders = [...(cfg.subtables ?? []), ...(cfg.splitSubtables ?? [])].map((s) => s.jsonHeader).filter(Boolean) as string[]
-  const { header, header2, rows, regions } = await parseSheet(excel, jsonHeaders)
+  const { header, header2, rows, regions } = await parseSheet(excel)
 
   const missing = cfg.signature.filter((s) => !header.includes(s))
   if (missing.length) throw new HttpError(400, `该封存包不属于「${cfg.label}」模块（缺少列：${missing.join('、')}），请在对应模块导入`)

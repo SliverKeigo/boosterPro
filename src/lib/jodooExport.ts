@@ -15,6 +15,7 @@ const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || './uploads')
 
 // 反向映射（与 jodooConfigs 的正向一一对应）
 const GENDER_OUT: Record<string, string> = { MALE: '男', FEMALE: '女', ANY: '不限' }
+const NATURE_OUT: Record<string, string> = { DIRECT: '直接客户', INDIRECT: '间接客户' }
 const EDU_OUT: Record<string, string> = { BACHELOR: '本科', MASTER: '硕士', DOCTOR: '博士', ASSOCIATE: '大专', OTHER: '其他' }
 const TIER_OUT: Record<string, string> = { T985_211: '985/211', GENERAL_FIRST: '双一流', GENERAL: '普通', OVERSEAS: '海外留学' }
 const RSTATUS_OUT: Record<string, string> = {
@@ -137,6 +138,99 @@ const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
     ],
     subs: [{ jsonHeader: '管理细则JSON', toJson: (r) => (r.managementRecords ?? []).map((m: any) => ({ submitterName: m.submitter?.name ?? null, details: m.details, date: fmtDate(m.date) })) }],
     attachments: [{ header: '知识文件', get: (r) => r.fileUrl }],
+  },
+  TALENT_POOL: {
+    model: 'talentPool', tag: '人才储备库',
+    include: { createdBy: { select: { name: true } } },
+    columns: [
+      { header: '人才姓名', get: (r) => r.name },
+      { header: '意向职位', get: (r) => r.targetPosition },
+      { header: '联系电话', get: (r) => r.phone },
+      { header: '性别', get: (r) => GENDER_OUT[r.gender] ?? '' },
+      { header: '最高学历', get: (r) => r.education },
+      { header: '人才标签', get: (r) => joinArr(r.tags) },
+      { header: '职位类型', get: (r) => r.positionType },
+      { header: '职位级别', get: (r) => r.positionLevel },
+      { header: '出生年份', get: (r) => r.birthYear },
+      { header: '当前职位', get: (r) => r.currentPosition },
+      { header: '提交人', get: (r) => r.createdBy?.name },
+      { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
+    ],
+    subs: [],
+    attachments: [{ header: '简历及相关资料', get: (r) => r.resumeUrl }],
+  },
+  CUSTOMER_CONTACT: {
+    model: 'customerContact', tag: '客户联系人信息',
+    include: { customer: { select: { fullName: true } }, createdBy: { select: { name: true } }, contacts: true },
+    columns: [
+      { header: '客户名称', get: (r) => r.customer?.fullName },
+      { header: '实例标题', get: (r) => r.title },
+      { header: '提交人', get: (r) => r.createdBy?.name },
+      { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
+    ],
+    subs: [{ jsonHeader: '联系人JSON', toJson: (r) => (r.contacts ?? []).map((c: any) => ({ contactName: c.contactName, contactTitle: c.contactTitle, contactPhone: c.contactPhone, contactEmail: c.contactEmail, contactHobby: c.contactHobby })) }],
+    attachments: [],
+  },
+  CLIENT_SUPPLEMENT: {
+    model: 'clientSupplement', tag: '客户交付补充信息',
+    include: { customer: { select: { fullName: true } }, createdBy: { select: { name: true } }, demandUpdates: true, customerProfiles: true },
+    columns: [
+      { header: '客户名称', get: (r) => r.customer?.fullName },
+      { header: '需求客户', get: (r) => r.demandCustomer },
+      { header: '开聊话术', get: (r) => r.openingSpeech },
+      { header: '备注', get: (r) => r.notes },
+      { header: '提交人', get: (r) => r.createdBy?.name },
+      { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
+    ],
+    subs: [
+      { jsonHeader: '需求更新JSON', toJson: (r) => (r.demandUpdates ?? []).map((d: any) => ({ date: fmtDate(d.date), content: d.content })) },
+      { jsonHeader: '客户画像JSON', toJson: (r) => (r.customerProfiles ?? []).map((p: any) => ({ specialty: p.specialty, description: p.description })) },
+    ],
+    attachments: [],
+  },
+  OPPORTUNITY: {
+    model: 'opportunity', tag: '商机信息',
+    include: { salesOwner: { select: { name: true } }, createdBy: { select: { name: true } }, progressRecords: true },
+    columns: [
+      { header: '商机名称', get: (r) => r.name },
+      { header: '商机描述', get: (r) => r.description },
+      { header: '所属区域', get: (r) => r.region },
+      { header: '商机状态', get: (r) => r.status },
+      { header: '商机性质', get: (r) => NATURE_OUT[r.nature] ?? '' },
+      { header: '商机联系人', get: (r) => r.contactName },
+      { header: '商机联系人职务', get: (r) => r.contactTitle },
+      { header: '商机联系人电话/EMAIL/微信', get: (r) => r.contactInfo },
+      { header: '公司销售决策信息', get: (r) => r.salesDecisionInfo },
+      { header: '客户决策人', get: (r) => r.customerDecisionMaker },
+      { header: '决策人相关信息描述', get: (r) => r.decisionMakerDescription },
+      { header: '销售负责人', get: (r) => r.salesOwner?.name },
+      { header: '提交人', get: (r) => r.createdBy?.name },
+      { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
+    ],
+    subs: [{ jsonHeader: '商机进展JSON', toJson: (r) => (r.progressRecords ?? []).map((p: any) => ({ date: fmtDate(p.date), description: p.description })) }],
+    attachments: [{ header: '附件1', get: (r) => r.attachmentUrl }],
+  },
+  CONTRACT: {
+    model: 'contract', tag: '销售合同信息管理',
+    include: { customer: { select: { fullName: true } }, salesOwner: { select: { name: true } }, deliveryOwner: { select: { name: true } }, createdBy: { select: { name: true } }, invoices: true },
+    columns: [
+      { header: '客户名称', get: (r) => r.customer?.fullName },
+      { header: '合同名称', get: (r) => r.contractName },
+      { header: '签订年份', get: (r) => r.signingYear },
+      { header: '合同有效期', get: (r) => [fmtDate(r.effectiveStart), fmtDate(r.effectiveEnd)].filter(Boolean).join('_') },
+      { header: '服务类型', get: (r) => r.serviceType },
+      { header: '猎头服务费率%', get: (r) => (r.headhunterFeeRate != null ? Number(r.headhunterFeeRate) : '') },
+      { header: '计费月数', get: (r) => r.billingMonths },
+      { header: 'ROP服务费率', get: (r) => (r.ropFeeRate != null ? Number(r.ropFeeRate) : '') },
+      { header: '备注', get: (r) => r.notes },
+      { header: '销售负责人', get: (r) => r.salesOwner?.name },
+      { header: '交付负责人', get: (r) => r.deliveryOwner?.name },
+      { header: '合同到期日期', get: (r) => fmtDate(r.expiryDate) },
+      { header: '提交人', get: (r) => r.createdBy?.name },
+      { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
+    ],
+    subs: [{ jsonHeader: '发票JSON', toJson: (r) => (r.invoices ?? []).map((i: any) => ({ invoiceType: i.invoiceType, verificationResult: i.verificationResult })) }],
+    attachments: [{ header: '合同附件', get: (r) => r.contractFileUrl }],
   },
 }
 
