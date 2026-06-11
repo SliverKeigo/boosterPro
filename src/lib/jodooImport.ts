@@ -28,6 +28,7 @@ export interface JodooAttachment {
 }
 export interface JodooCtx {
   ensureUser: (name: string) => Promise<number>
+  resolveAttachment: (cell: string) => Promise<string | null> // 子表里的附件(FINST 单元格)落盘并返回 /api/files URL
 }
 // 宽表展开子表：靠第 1 行横向合并区间圈定，match=区间第 2 行须含的独有字段名（认领该区间）；
 // build 用 getSub(第2行字段名)→该列值 构建一条记录（返回 null 跳过）。
@@ -299,7 +300,7 @@ export async function runFengcunImport(cfg: JodooModule, buf: ArrayBuffer, user:
   let updated = 0
   await prisma.$transaction(async (tx: any) => {
     const ensureUser = makeEnsureUser(tx, user.id)
-    const ctx: JodooCtx = { ensureUser }
+    const ctx: JodooCtx = { ensureUser, resolveAttachment }
     const m = tx[cfg.model]
     for (const op of ops) {
       const { updatedAt: impUpdatedAt, ...data } = op.scalars as any // updatedAt 抽出：@updatedAt 会挡 ORM 写入，下面用 raw SQL 直写

@@ -112,6 +112,8 @@ const REQUIREMENT: JodooModule = {
     { header: '学历要求', field: 'educationRequirement' },
     { header: '语言要求', field: 'languageRequirement' },
     { header: '招聘重启日期', field: 'deadline', transform: dateVal },
+    { header: '加分项', field: 'bonusPoints' },
+    { header: '行业与资源', field: 'industryResources' },
   ],
   attachments: [{ header: '附件', field: 'attachmentUrl' }],
   groupKeyHeaders: ['客户名称', '岗位名称', '创建时间'],
@@ -119,14 +121,14 @@ const REQUIREMENT: JodooModule = {
     {
       relationField: 'positionProfiles', match: '知识分类',
       build: async (g) => {
-        const cat = g('知识分类').trim(), amt = g('知识解读').trim()
-        if (!cat && !amt) return null
-        return { knowledgeCategory: cat || null, knowledgeAmount: amt || null }
+        const cat = g('知识分类').trim(), amt = g('知识解读').trim(), con = g('形成的共识和管理要求').trim()
+        if (!cat && !amt && !con) return null
+        return { knowledgeCategory: cat || null, knowledgeAmount: amt || null, consensusRequirement: con || null }
       },
       jsonHeader: '岗位画像JSON',
       fromJson: async (o: any) => {
-        if (!o?.knowledgeCategory && !o?.knowledgeAmount) return null
-        return { knowledgeCategory: o.knowledgeCategory || null, knowledgeAmount: o.knowledgeAmount || null }
+        if (!o?.knowledgeCategory && !o?.knowledgeAmount && !o?.consensusRequirement) return null
+        return { knowledgeCategory: o.knowledgeCategory || null, knowledgeAmount: o.knowledgeAmount || null, consensusRequirement: o.consensusRequirement || null }
       },
     },
     {
@@ -363,13 +365,13 @@ const CLIENT_SUPPLEMENT: JodooModule = {
     },
     {
       relationField: 'customerProfiles', match: '专项',
-      build: async (g) => {
-        const sp = g('专项').trim(), ds = g('专项描述').trim()
-        if (!sp && !ds) return null
-        return { specialty: sp || null, description: ds || null }
+      build: async (g, ctx) => {
+        const sp = g('专项').trim(), ds = g('专项描述').trim(), att = g('附件').trim()
+        if (!sp && !ds && !att) return null
+        return { specialty: sp || null, description: ds || null, attachmentUrl: att ? await ctx.resolveAttachment(att) : null }
       },
       jsonHeader: '客户画像JSON',
-      fromJson: async (o: any) => ((o?.specialty || o?.description) ? { specialty: o.specialty || null, description: o.description || null } : null),
+      fromJson: async (o: any) => ((o?.specialty || o?.description || o?.attachmentUrl) ? { specialty: o.specialty || null, description: o.description || null, attachmentUrl: o.attachmentUrl || null } : null),
     },
   ],
   dedupe: (s) => ({ customerId: s.customerId, createdAt: s.createdAt }),
@@ -446,6 +448,7 @@ const CONTRACT: JodooModule = {
     { header: 'ROP服务费率', field: 'ropFeeRate', transform: decVal },
     { header: '备注', field: 'notes' },
     { header: '合同到期日期', field: 'expiryDate', transform: dateVal },
+    { header: '开票信息', field: 'invoiceInfoText' },
   ],
   attachments: [{ header: '合同附件', field: 'contractFileUrl' }],
   userFields: [{ header: '销售负责人', field: 'salesOwnerId' }, { header: '交付负责人', field: 'deliveryOwnerId' }],
@@ -466,13 +469,13 @@ const CONTRACT: JodooModule = {
   },
   subtables: [{
     relationField: 'invoices', match: '发票类型',
-    build: async (g) => {
-      const it = g('发票类型').trim(), vr = g('查验结果').trim()
-      if (!it && !vr) return null
-      return { invoiceType: it || null, verificationResult: vr || null }
+    build: async (g, ctx) => {
+      const it = g('发票类型').trim(), vr = g('查验结果').trim(), am = g('发票金额').trim(), nm = g('发票号码').trim(), cd = g('发票代码').trim(), idt = g('开票日期').trim(), sf = g('发票源文件').trim(), img = g('发票图片').trim()
+      if (![it, vr, am, nm, cd, idt, sf, img].some((x) => x)) return null
+      return { invoiceType: it || null, verificationResult: vr || null, amount: am || null, number: nm || null, code: cd || null, issueDate: dateVal(idt) ?? null, sourceFileUrl: sf ? await ctx.resolveAttachment(sf) : null, imageUrl: img ? await ctx.resolveAttachment(img) : null }
     },
     jsonHeader: '发票JSON',
-    fromJson: async (o: any) => ((o?.invoiceType || o?.verificationResult) ? { invoiceType: o.invoiceType || null, verificationResult: o.verificationResult || null } : null),
+    fromJson: async (o: any) => (([o?.invoiceType, o?.verificationResult, o?.amount, o?.number, o?.code, o?.issueDate, o?.sourceFileUrl, o?.imageUrl].some((x) => x)) ? { invoiceType: o.invoiceType || null, verificationResult: o.verificationResult || null, amount: o.amount || null, number: o.number || null, code: o.code || null, issueDate: dateVal(o.issueDate) ?? null, sourceFileUrl: o.sourceFileUrl || null, imageUrl: o.imageUrl || null } : null),
   }],
   dedupe: (s) => ({ customerId: s.customerId, contractName: s.contractName, createdAt: s.createdAt }),
 }

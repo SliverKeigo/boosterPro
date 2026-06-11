@@ -253,6 +253,7 @@ model SupplementCustomerProfile {
   supplementId Int              @map("supplement_id")
   specialty    String?          @db.Text
   description  String?          @db.Text
+  attachmentUrl String?         @map("attachment_url") @db.Text
   createdAt    DateTime         @default(now()) @map("created_at")
 
   @@map("supplement_customer_profiles")
@@ -320,6 +321,8 @@ model Requirement {
   attachmentUrl        String?                      @map("attachment_url") @db.Text
   latestUpdate         String?                      @map("latest_update") @db.Text
   industry             String?                      @db.Text
+  bonusPoints          String?                      @map("bonus_points") @db.Text
+  industryResources    String?                      @map("industry_resources") @db.Text
   followDate           DateTime?                    @map("follow_date") @db.Date
   positionProfiles     RequirementPositionProfile[]
   urgentRecords        RequirementUrgentRecord[]
@@ -345,6 +348,7 @@ model RequirementPositionProfile {
   requirementId     Int         @map("requirement_id")
   knowledgeCategory String?     @map("knowledge_category") @db.Text
   knowledgeAmount   String?     @map("knowledge_amount") @db.Text
+  consensusRequirement String?  @map("consensus_requirement") @db.Text
   createdAt         DateTime    @default(now()) @map("created_at")
 
   @@map("requirement_position_profiles")
@@ -543,9 +547,15 @@ model ContractInvoice {
   id                 Int      @id @default(autoincrement())
   contract           Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
   contractId         Int      @map("contract_id")
-  invoiceType        String?  @map("invoice_type") @db.Text
-  verificationResult String?  @map("verification_result") @db.Text
-  createdAt          DateTime @default(now()) @map("created_at")
+  invoiceType        String?   @map("invoice_type") @db.Text
+  verificationResult String?   @map("verification_result") @db.Text
+  amount             String?   @db.Text
+  number             String?   @map("invoice_number") @db.Text
+  code               String?   @map("invoice_code") @db.Text
+  issueDate          DateTime? @map("issue_date") @db.Date
+  sourceFileUrl      String?   @map("source_file_url") @db.Text
+  imageUrl           String?   @map("image_url") @db.Text
+  createdAt          DateTime  @default(now()) @map("created_at")
 
   @@map("contract_invoices")
 }
