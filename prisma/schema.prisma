@@ -64,7 +64,7 @@ enum OpportunityNature {
 
 model Department {
   id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(100)
+  name      String   @db.Text
   users     User[]
   groups    Group[]
   hiddenRulesAsSource DepartmentHiddenResource[] @relation("DeptHideSource")
@@ -82,7 +82,7 @@ model DepartmentHiddenResource {
   id               Int        @id @default(autoincrement())
   department       Department @relation("DeptHideSource", fields: [departmentId], references: [id], onDelete: Cascade)
   departmentId     Int        @map("department_id") // 数据所属(源)部门
-  resource         String     @db.VarChar(50)
+  resource         String     @db.Text
   hiddenFromDept   Department @relation("DeptHideTarget", fields: [hiddenFromDeptId], references: [id], onDelete: Cascade)
   hiddenFromDeptId Int        @map("hidden_from_dept_id") // 对此(目标)部门隐藏
   createdAt        DateTime   @default(now()) @map("created_at")
@@ -95,7 +95,7 @@ model DepartmentHiddenResource {
 // 组：挂在部门之下（部门 → 多个组）。组有组长(leaderId)与成员(User.groupId)。支撑工作计划「仅组长可新增」。
 model Group {
   id           Int        @id @default(autoincrement())
-  name         String     @db.VarChar(100)
+  name         String     @db.Text
   department   Department @relation(fields: [departmentId], references: [id])
   departmentId Int        @map("department_id")
   leader       User?      @relation("GroupLeader", fields: [leaderId], references: [id])
@@ -111,7 +111,7 @@ model Group {
 
 model Role {
   id          Int      @id @default(autoincrement())
-  name        String   @unique @db.VarChar(100)
+  name        String   @unique @db.Text
   description String?  @db.Text
   users       User[]
   createdAt   DateTime @default(now()) @map("created_at")
@@ -122,10 +122,10 @@ model Role {
 
 model User {
   id                   Int                         @id @default(autoincrement())
-  name                 String                      @db.VarChar(100)
-  username             String                      @unique @db.VarChar(100)
-  email                String?                     @unique @db.VarChar(255)
-  passwordHash         String?                     @map("password_hash") @db.VarChar(255)
+  name                 String                      @db.Text
+  username             String                      @unique @db.Text
+  email                String?                     @unique @db.Text
+  passwordHash         String?                     @map("password_hash") @db.Text
   department           Department?                 @relation(fields: [departmentId], references: [id])
   departmentId         Int?                        @map("department_id")
   group                Group?                      @relation("GroupMembers", fields: [groupId], references: [id])
@@ -170,12 +170,12 @@ model User {
 
 model Customer {
   id                 Int                     @id @default(autoincrement())
-  fullName           String?                 @map("full_name") @db.VarChar(200)
-  shortName          String                  @map("short_name") @db.VarChar(200)
-  formerName         String?                 @map("former_name") @db.VarChar(200)
-  industry           String?                 @db.VarChar(100)
-  region             String                  @db.VarChar(100)
-  detailedAddress    String                  @map("detailed_address") @db.VarChar(500)
+  fullName           String?                 @map("full_name") @db.Text
+  shortName          String                  @map("short_name") @db.Text
+  formerName         String?                 @map("former_name") @db.Text
+  industry           String?                 @db.Text
+  region             String                  @db.Text
+  detailedAddress    String                  @map("detailed_address") @db.Text
   companyCulture     String?                 @map("company_culture") @db.Text
   openingSpeech      String?                 @map("opening_speech") @db.Text
   benchmarkCompanies String?                 @map("benchmark_companies") @db.Text
@@ -206,7 +206,7 @@ model CustomerOfficeAddress {
   id         Int      @id @default(autoincrement())
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   customerId Int      @map("customer_id")
-  address    String   @db.VarChar(500)
+  address    String   @db.Text
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@map("customer_office_addresses")
@@ -216,7 +216,7 @@ model ClientSupplement {
   id                    Int                         @id @default(autoincrement())
   customer              Customer                    @relation(fields: [customerId], references: [id], onDelete: Cascade)
   customerId            Int                         @map("customer_id")
-  demandCustomer        String?                     @map("demand_customer") @db.VarChar(200)
+  demandCustomer        String?                     @map("demand_customer") @db.Text
   openingSpeech         String?                     @map("opening_speech") @db.Text
   companyCultureWelfare String?                     @map("company_culture_welfare") @db.Text
   notes                 String?                     @db.Text
@@ -260,7 +260,7 @@ model SupplementCustomerProfile {
 
 model CustomerContact {
   id                 Int                     @id @default(autoincrement())
-  title              String                  @db.VarChar(200)
+  title              String                  @db.Text
   customer           Customer                @relation(fields: [customerId], references: [id], onDelete: Cascade)
   customerId         Int                     @map("customer_id")
   submitter          User?                   @relation("CustomerContactSubmitter", fields: [submitterId], references: [id])
@@ -285,10 +285,10 @@ model CustomerContactPerson {
   id                Int             @id @default(autoincrement())
   customerContact   CustomerContact @relation(fields: [customerContactId], references: [id], onDelete: Cascade)
   customerContactId Int             @map("customer_contact_id")
-  contactName       String?         @map("contact_name") @db.VarChar(200)
-  contactTitle      String?         @map("contact_title") @db.VarChar(200)
-  contactPhone      String?         @map("contact_phone") @db.VarChar(255)
-  contactEmail      String?         @map("contact_email") @db.VarChar(255)
+  contactName       String?         @map("contact_name") @db.Text
+  contactTitle      String?         @map("contact_title") @db.Text
+  contactPhone      String?         @map("contact_phone") @db.Text
+  contactEmail      String?         @map("contact_email") @db.Text
   contactHobby      String?         @map("contact_hobby") @db.Text
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
@@ -300,18 +300,18 @@ model Requirement {
   id                   Int                          @id @default(autoincrement())
   customer             Customer                     @relation(fields: [customerId], references: [id])
   customerId           Int                          @map("customer_id")
-  recruiter            String?                      @db.VarChar(255)
-  positionName         String                       @map("position_name") @db.VarChar(255)
+  recruiter            String?                      @db.Text
+  positionName         String                       @map("position_name") @db.Text
   headcount            Int
-  monthlySalary        String?                      @map("monthly_salary") @db.VarChar(50)
-  annualSalary         String?                      @map("annual_salary") @db.VarChar(50)
-  ageRange             String?                      @map("age_range") @db.VarChar(50)
+  monthlySalary        String?                      @map("monthly_salary") @db.Text
+  annualSalary         String?                      @map("annual_salary") @db.Text
+  ageRange             String?                      @map("age_range") @db.Text
   genderRequirement    GenderType?                  @default(ANY) @map("gender_requirement")
   educationRequirement String?                      @map("education_requirement") @db.Text
   languageRequirement  String?                      @map("language_requirement") @db.Text
   status               String[]
   deadline             DateTime?                    @db.Date
-  baseCity             String                       @map("base_city") @db.VarChar(255)
+  baseCity             String                       @map("base_city") @db.Text
   jobDescription       String?                      @map("job_description") @db.Text
   talentProfile        String?                      @map("talent_profile") @db.Text
   projectExperience    String?                      @map("project_experience") @db.Text
@@ -319,7 +319,7 @@ model Requirement {
   notes                String?                      @db.Text
   attachmentUrl        String?                      @map("attachment_url") @db.Text
   latestUpdate         String?                      @map("latest_update") @db.Text
-  industry             String?                      @db.VarChar(255)
+  industry             String?                      @db.Text
   followDate           DateTime?                    @map("follow_date") @db.Date
   positionProfiles     RequirementPositionProfile[]
   urgentRecords        RequirementUrgentRecord[]
@@ -364,19 +364,19 @@ model RequirementUrgentRecord {
 
 model Candidate {
   id                       Int                               @id @default(autoincrement())
-  name                     String                            @db.VarChar(100)
+  name                     String                            @db.Text
   birthYear                Int?                              @map("birth_year") // 出生年份（年）
-  phone                    String?                           @db.VarChar(50)
-  email                    String?                           @db.VarChar(255)
+  phone                    String?                           @db.Text
+  email                    String?                           @db.Text
   education                EducationLevel?
   schoolTier               String[]                          @map("school_tier") // 院校层次（多选，存枚举 key）
   customer                 Customer?                         @relation(fields: [customerId], references: [id])
   customerId               Int?                              @map("customer_id")
-  customerShortName        String?                           @map("customer_short_name") @db.VarChar(200)
+  customerShortName        String?                           @map("customer_short_name") @db.Text
   requirement              Requirement?                      @relation(fields: [requirementId], references: [id])
   requirementId            Int?                              @map("requirement_id")
-  recruitmentParty         String?                           @map("recruitment_party") @db.VarChar(200)
-  recruitmentChannel       String                            @map("recruitment_channel") @db.VarChar(200)
+  recruitmentParty         String?                           @map("recruitment_party") @db.Text
+  recruitmentChannel       String                            @map("recruitment_channel") @db.Text
   recommendationTime       DateTime?                         @map("recommendation_time")
   recommendationStatus     RecommendationStatus              @default(PENDING) @map("recommendation_status")
   recommendationReportUrl  String?                           @map("recommendation_report_url") @db.Text
@@ -437,15 +437,15 @@ model CandidateRiskEvent {
 
 model TalentPool {
   id              Int         @id @default(autoincrement())
-  name            String      @db.VarChar(100)
+  name            String      @db.Text
   birthYear       Int?        @map("birth_year") // 出生年份（年）
   gender          GenderType?
-  education       String?     @db.VarChar(50)
-  phone           String?     @db.VarChar(50)
-  currentPosition String      @map("current_position") @db.VarChar(200)
-  targetPosition  String?     @map("target_position") @db.VarChar(200)
-  positionType    String?     @map("position_type") @db.VarChar(100)
-  positionLevel   String?     @map("position_level") @db.VarChar(100)
+  education       String?     @db.Text
+  phone           String?     @db.Text
+  currentPosition String      @map("current_position") @db.Text
+  targetPosition  String?     @map("target_position") @db.Text
+  positionType    String?     @map("position_type") @db.Text
+  positionLevel   String?     @map("position_level") @db.Text
   age             Int?
   tags            String[]
   resumeUrl       String      @map("resume_url") @db.Text
@@ -464,16 +464,16 @@ model TalentPool {
 
 model Opportunity {
   id                       Int                   @id @default(autoincrement())
-  name                     String                @db.VarChar(200)
+  name                     String                @db.Text
   description              String                @db.Text
-  region                   String                @db.VarChar(100)
-  status                   String                @default("线索阶段") @db.VarChar(50)
+  region                   String                @db.Text
+  status                   String                @default("线索阶段") @db.Text
   nature                   OpportunityNature     @default(DIRECT)
-  contactName              String?               @map("contact_name") @db.VarChar(100)
-  contactTitle             String?               @map("contact_title") @db.VarChar(100)
-  contactInfo              String?               @map("contact_info") @db.VarChar(500)
+  contactName              String?               @map("contact_name") @db.Text
+  contactTitle             String?               @map("contact_title") @db.Text
+  contactInfo              String?               @map("contact_info") @db.Text
   salesDecisionInfo        String                @map("sales_decision_info") @db.Text
-  customerDecisionMaker    String                @map("customer_decision_maker") @db.VarChar(100)
+  customerDecisionMaker    String                @map("customer_decision_maker") @db.Text
   decisionMakerDescription String                @map("decision_maker_description") @db.Text
   salesOwner               User?                 @relation("OpportunitySalesOwner", fields: [salesOwnerId], references: [id])
   salesOwnerId             Int?                  @map("sales_owner_id")
@@ -507,12 +507,12 @@ model Contract {
   id                 Int               @id @default(autoincrement())
   customer           Customer          @relation(fields: [customerId], references: [id])
   customerId         Int               @map("customer_id")
-  contractName       String            @map("contract_name") @db.VarChar(200)
+  contractName       String            @map("contract_name") @db.Text
   signingYear        Int               @map("signing_year")
   effectiveStart     DateTime          @map("effective_start") @db.Date
   effectiveEnd       DateTime          @map("effective_end") @db.Date
   expiryDate         DateTime          @map("expiry_date") @db.Date
-  serviceType        String            @map("service_type") @db.VarChar(100)
+  serviceType        String            @map("service_type") @db.Text
   headhunterFeeRate  Decimal?          @map("headhunter_fee_rate") @db.Decimal(5, 2)
   billingMonths      Int?              @map("billing_months")
   ropFeeRate         Decimal?          @map("rop_fee_rate") @db.Decimal(5, 2)
@@ -543,7 +543,7 @@ model ContractInvoice {
   id                 Int      @id @default(autoincrement())
   contract           Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
   contractId         Int      @map("contract_id")
-  invoiceType        String?  @map("invoice_type") @db.VarChar(255)
+  invoiceType        String?  @map("invoice_type") @db.Text
   verificationResult String?  @map("verification_result") @db.Text
   createdAt          DateTime @default(now()) @map("created_at")
 
@@ -552,7 +552,7 @@ model ContractInvoice {
 
 model KnowledgeBase {
   id                 Int                         @id @default(autoincrement())
-  category           String                      @db.VarChar(100)
+  category           String                      @db.Text
   tags               String[]
   keywords           String                      @db.Text
   fileUrl            String?                     @map("file_url") @db.Text
@@ -560,7 +560,7 @@ model KnowledgeBase {
   trainingOutline    String?                     @map("training_outline") @db.Text
   internalLecturer   User?                       @relation("KnowledgeInternalLecturer", fields: [internalLecturerId], references: [id])
   internalLecturerId Int?                        @map("internal_lecturer_id")
-  externalLecturer   String?                     @map("external_lecturer") @db.VarChar(255)
+  externalLecturer   String?                     @map("external_lecturer") @db.Text
   managementRecords  KnowledgeManagementRecord[]
   createdAt          DateTime                    @default(now()) @map("created_at")
   updatedAt          DateTime                    @updatedAt @map("updated_at")
@@ -634,7 +634,7 @@ model WorkPlanAssignment {
   itemId    Int          @map("item_id")
   member    User         @relation(fields: [memberId], references: [id])
   memberId  Int          @map("member_id")
-  planDates String?      @map("plan_dates") @db.VarChar(100)
+  planDates String?      @map("plan_dates") @db.Text
 
   @@unique([itemId, memberId])
   @@map("work_plan_assignments")
@@ -643,8 +643,8 @@ model WorkPlanAssignment {
 // 权限组：八个业务菜单(resource)各可配置多个权限组，每组持有若干功能权限(actions)与一组成员
 model PermissionGroup {
   id         Int                     @id @default(autoincrement())
-  name       String                  @db.VarChar(200)
-  resource   String                  @db.VarChar(50)
+  name       String                  @db.Text
+  resource   String                  @db.Text
   actions    String[]
   applyToAll Boolean                 @default(false) @map("apply_to_all")
   members    PermissionGroupMember[]
@@ -660,7 +660,7 @@ model PermissionGroupMember {
   id         Int             @id @default(autoincrement())
   group      PermissionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId    Int             @map("group_id")
-  memberType String          @map("member_type") @db.VarChar(20)
+  memberType String          @map("member_type") @db.Text
   memberId   Int             @map("member_id")
   createdAt  DateTime        @default(now()) @map("created_at")
 
@@ -672,9 +672,9 @@ model PermissionGroupMember {
 // 数据字典：类型（如 industry 行业 / recruitment_channel 招聘渠道），软枚举下拉选项集中维护
 model DictType {
   id        Int        @id @default(autoincrement())
-  code      String     @unique @db.VarChar(50)
-  name      String     @db.VarChar(100)
-  remark    String?    @db.VarChar(200)
+  code      String     @unique @db.Text
+  name      String     @db.Text
+  remark    String?    @db.Text
   items     DictItem[]
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
@@ -687,8 +687,8 @@ model DictItem {
   id        Int      @id @default(autoincrement())
   type      DictType @relation(fields: [typeId], references: [id], onDelete: Cascade)
   typeId    Int      @map("type_id")
-  label     String   @db.VarChar(200)
-  value     String   @db.VarChar(200)
+  label     String   @db.Text
+  value     String   @db.Text
   sort      Int      @default(0)
   enabled   Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
@@ -702,8 +702,8 @@ model DictItem {
 // 模板含 {{变量}} 占位，运行时由 getPrompt(key, vars) 填充；库中无该 key 时回退代码内置默认值。
 model AiPrompt {
   id          Int      @id @default(autoincrement())
-  key         String   @unique @db.VarChar(100) // 业务键，如 job_profile / company_info / supplement_opening
-  name        String   @db.VarChar(200) // 显示名
+  key         String   @unique @db.Text // 业务键，如 job_profile / company_info / supplement_opening
+  name        String   @db.Text // 显示名
   content     String   @db.Text // 提示词模板（含 {{占位}}）
   description String?  @db.Text // 说明 / 可用变量
   createdAt   DateTime @default(now()) @map("created_at")
@@ -715,14 +715,14 @@ model AiPrompt {
 // 数据共享授权：把「某人/某部门 录入的 某资源数据」开放给「某用户/某部门」查看或编辑
 model DataGrant {
   id            Int      @id @default(autoincrement())
-  resource      String   @db.VarChar(50) // ∈ RESOURCE_KEYS
-  sourceType    String   @map("source_type") @db.VarChar(20) // OWNER | DEPARTMENT
+  resource      String   @db.Text // ∈ RESOURCE_KEYS
+  sourceType    String   @map("source_type") @db.Text // OWNER | DEPARTMENT
   sourceUserId  Int?     @map("source_user_id")
   sourceDeptId  Int?     @map("source_dept_id")
-  granteeType   String   @map("grantee_type") @db.VarChar(20) // USER | DEPARTMENT
+  granteeType   String   @map("grantee_type") @db.Text // USER | DEPARTMENT
   granteeUserId Int?     @map("grantee_user_id")
   granteeDeptId Int?     @map("grantee_dept_id")
-  access        String   @db.VarChar(10) // VIEW | EDIT（EDIT 蕴含 VIEW）
+  access        String   @db.Text // VIEW | EDIT（EDIT 蕴含 VIEW）
   grantedById   Int?     @map("granted_by_id")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
