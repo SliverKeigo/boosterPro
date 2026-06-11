@@ -20,13 +20,14 @@ export async function GET() {
         content: row?.content || def.content,
         description: row?.description || def.description,
         overridden: !!row, // 是否已被库覆盖（否则用代码默认值）
+        createdAt: row?.createdAt ?? null, // 默认项无创建时间(代码内置)，仅自定义项有
         updatedAt: row?.updatedAt ?? null,
       }
     })
     // 库里若存在 PROMPT_DEFAULTS 之外的自定义 key，也带出
     for (const r of rows) {
       if (!PROMPT_DEFAULTS[r.key]) {
-        data.push({ id: r.id, key: r.key, name: r.name, content: r.content, description: r.description, overridden: true, updatedAt: r.updatedAt })
+        data.push({ id: r.id, key: r.key, name: r.name, content: r.content, description: r.description, overridden: true, createdAt: r.createdAt, updatedAt: r.updatedAt })
       }
     }
     return NextResponse.json({ data, total: data.length })

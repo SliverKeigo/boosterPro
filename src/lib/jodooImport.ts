@@ -54,6 +54,8 @@ export interface JodooModule {
   signature: string[]
   submitterHeader: string
   createdAtHeader?: string
+  updatedAtHeader?: string // 简道云「修改时间」列；导入时绕过 @updatedAt 直写 updated_at
+  tableName?: string       // 物理表名（raw UPDATE updated_at 用）
   fields: JodooField[]
   attachments?: JodooAttachment[]
   userFields?: { header: string; field: string }[]
@@ -283,6 +285,7 @@ export async function runFengcunImport(cfg: JodooModule, buf: ArrayBuffer, user:
         if (val !== null && val !== undefined && !(Array.isArray(val) && val.length === 0)) scalars[f.field] = val
       }
       if (cfg.createdAtHeader) { const d = bjDate(getVal(g.lead, cfg.createdAtHeader)); if (d) scalars.createdAt = d }
+      if (cfg.updatedAtHeader) { const d = bjDate(getVal(g.lead, cfg.updatedAtHeader)); if (d) scalars.updatedAt = d }
       if (cfg.resolveScalars) await cfg.resolveScalars((h) => getVal(g.lead, h), scalars)
       ops.push({ scalars, lead: g.lead, rows: g.rows, row: g.__row })
     } catch (e: any) {
@@ -299,7 +302,7 @@ export async function runFengcunImport(cfg: JodooModule, buf: ArrayBuffer, user:
     const ctx: JodooCtx = { ensureUser }
     const m = tx[cfg.model]
     for (const op of ops) {
-      const data = { ...op.scalars }
+      const { updatedAt: impUpdatedAt, ...data } = op.scalars as any // updatedAt 抽出：@updatedAt 会挡 ORM 写入，下面用 raw SQL 直写
       const submitterName = getVal(op.lead, cfg.submitterHeader).trim()
       const ownerId = submitterName ? await ensureUser(submitterName) : user.id
       for (const a of cfg.attachments ?? []) {
@@ -342,16 +345,23 @@ export async function runFengcunImport(cfg: JodooModule, buf: ArrayBuffer, user:
 
       const where = cfg.dedupe(op.scalars)
       const exist = where ? await m.findFirst({ where, select: { id: true } }) : null
+      let rowId: number
       if (exist) {
         const rewrite: any = {}
         for (const [rel, list] of Object.entries(subData)) rewrite[rel] = { deleteMany: {}, create: list }
         await m.update({ where: { id: exist.id }, data: { ...data, updatedById: ownerId, ...rewrite } })
+        rowId = exist.id
         updated++
       } else {
         const nest: any = {}
         for (const [rel, list] of Object.entries(subData)) nest[rel] = { create: list }
-        await m.create({ data: { ...data, createdById: ownerId, ...nest } })
+        const rec = await m.create({ data: { ...data, createdById: ownerId, ...nest }, select: { id: true } })
+        rowId = rec.id
         created++
+      }
+      // 「修改时间」：updatedAt 是 @updatedAt 自动字段、ORM 写不进去，用 raw SQL 直接覆盖 updated_at
+      if (impUpdatedAt && cfg.tableName) {
+        await tx.$executeRawUnsafe(`UPDATE "${cfg.tableName}" SET updated_at = $1 WHERE id = $2`, impUpdatedAt, rowId)
       }
     }
   }, { timeout: 120000 })

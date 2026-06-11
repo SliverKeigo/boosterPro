@@ -55,6 +55,8 @@ const subDate = (s: string): Date | null => dateVal(s) ?? null
 // ── 四模块配置 ────────────────────────────────────────────────────────────────
 const CUSTOMER: JodooModule = {
   model: 'customer',
+  tableName: 'customers',
+  updatedAtHeader: '修改时间',
   label: '客户基本信息',
   signature: ['客户名称', '客户简称', '提交人'],
   submitterHeader: '提交人',
@@ -84,6 +86,8 @@ const CUSTOMER: JodooModule = {
 
 const REQUIREMENT: JodooModule = {
   model: 'requirement',
+  tableName: 'requirements',
+  updatedAtHeader: '修改时间',
   label: '客户需求管理',
   signature: ['岗位名称', '岗位状态', '客户名称'],
   submitterHeader: '提交人',
@@ -153,6 +157,8 @@ const REQUIREMENT: JodooModule = {
 
 const CANDIDATE: JodooModule = {
   model: 'candidate',
+  tableName: 'candidates',
+  updatedAtHeader: '修改时间',
   label: '候选人管理',
   signature: ['候选人姓名', '推荐状态', '客户简称'],
   submitterHeader: '提交人',
@@ -227,6 +233,8 @@ const CANDIDATE: JodooModule = {
 
 const KNOWLEDGE: JodooModule = {
   model: 'knowledgeBase',
+  tableName: 'knowledge_base',
+  updatedAtHeader: '修改时间',
   label: '公司知识库',
   signature: ['关键词', '知识分类', '提交人'],
   submitterHeader: '提交人',

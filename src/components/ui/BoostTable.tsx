@@ -272,14 +272,14 @@ export function BoostTable<T extends Record<string, any>>({
   const [colModalOpen, setColModalOpen] = useState(false)
   const [visible, setVisible] = useState<Record<string, boolean>>(() => {
     const defaults: Record<string, boolean> = Object.fromEntries(
-      columns.map((c) => [c.key, c.defaultVisible !== false]),
+      columns.map((c) => [c.key, true]), // 默认全部显示（用户仍可在「显示列」里手动隐藏；defaultVisible 字段保留但不再用于默认隐藏）
     )
     // 初始化即同步读入持久化的列显示配置：visible 一开始就是正确值，
     // 避免「异步载入」与「保存 effect」竞争导致客户端路由切换时被默认值覆盖。
     const key = storageKey ?? title
     if (key && typeof window !== 'undefined') {
       try {
-        const raw = window.localStorage.getItem('bp:cols:' + key)
+        const raw = window.localStorage.getItem('bp:cols:v2:' + key)
         if (raw) {
           const saved = JSON.parse(raw) as Record<string, boolean>
           for (const c of columns) if (typeof saved[c.key] === 'boolean') defaults[c.key] = saved[c.key]
@@ -296,7 +296,7 @@ export function BoostTable<T extends Record<string, any>>({
     const key = storageKey ?? title
     if (!key || typeof window === 'undefined') return
     try {
-      window.localStorage.setItem('bp:cols:' + key, JSON.stringify(visible))
+      window.localStorage.setItem('bp:cols:v2:' + key, JSON.stringify(visible))
     } catch {
       /* ignore quota errors */
     }
