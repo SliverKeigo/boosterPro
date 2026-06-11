@@ -249,7 +249,7 @@ export default function SupplementsPage() {
         confirmLoading={submitting}
         readOnly={mode === 'view'}
         onEdit={can(RES, 'EDIT') && canEditRow(RES, editing) ? () => setMode('edit') : undefined}
-        width={720}
+        width={1040}
       >
         <div className="grid grid-cols-2 gap-4">
           <Field label="客户名称" required>

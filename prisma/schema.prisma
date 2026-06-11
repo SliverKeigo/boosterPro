@@ -593,6 +593,7 @@ model KnowledgeManagementRecord {
   submitter   User?         @relation(fields: [submitterId], references: [id])
   submitterId Int?          @map("submitter_id")
   details     String?       @db.Text
+  reviewParticipants String? @map("review_participants") @db.Text
   createdAt   DateTime      @default(now()) @map("created_at")
 
   @@map("knowledge_management_records")

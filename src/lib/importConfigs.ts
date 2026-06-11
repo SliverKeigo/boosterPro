@@ -306,7 +306,7 @@ export const CONFIGS: Record<string, ImportResource> = {
       { header: '外部讲师', field: 'externalLecturer' },
     ],
     subtables: [
-      { header: '管理记录（日期 | 详情）', relationField: 'managementRecords', fields: [{ key: 'date', type: 'date' }, { key: 'details' }] },
+      { header: '管理记录（日期 | 详情 | 评审参与人）', relationField: 'managementRecords', fields: [{ key: 'date', type: 'date' }, { key: 'details' }, { key: 'reviewParticipants' }] },
     ],
   },
 }

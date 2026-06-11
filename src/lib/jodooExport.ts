@@ -138,7 +138,7 @@ const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
       { header: '提交人', get: (r) => r.createdBy?.name },
       { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
     ],
-    subs: [{ jsonHeader: '管理细则JSON', toJson: (r) => (r.managementRecords ?? []).map((m: any) => ({ submitterName: m.submitter?.name ?? null, details: m.details, date: fmtDate(m.date) })) }],
+    subs: [{ jsonHeader: '管理细则JSON', toJson: (r) => (r.managementRecords ?? []).map((m: any) => ({ submitterName: m.submitter?.name ?? null, details: m.details, date: fmtDate(m.date), reviewParticipants: m.reviewParticipants })) }],
     attachments: [{ header: '知识文件', get: (r) => r.fileUrl }],
   },
   TALENT_POOL: {
@@ -180,7 +180,6 @@ const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
       { header: '客户名称', get: (r) => r.customer?.fullName },
       { header: '需求客户', get: (r) => r.demandCustomer },
       { header: '开聊话术', get: (r) => r.openingSpeech },
-      { header: '备注', get: (r) => r.notes },
       { header: '提交人', get: (r) => r.createdBy?.name },
       { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
     ],
@@ -188,7 +187,7 @@ const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
       { jsonHeader: '需求更新JSON', toJson: (r) => (r.demandUpdates ?? []).map((d: any) => ({ date: fmtDate(d.date), content: d.content })) },
       { jsonHeader: '客户画像JSON', toJson: (r) => (r.customerProfiles ?? []).map((p: any) => ({ specialty: p.specialty, description: p.description, attachmentUrl: p.attachmentUrl })) },
     ],
-    attachments: [],
+    attachments: [{ header: '备注', get: (r) => r.attachmentUrl }], // 「备注」列＝附件
   },
   OPPORTUNITY: {
     model: 'opportunity', tag: '商机信息',

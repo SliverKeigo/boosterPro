@@ -302,7 +302,7 @@ export default function ContractsPage() {
         confirmLoading={submitting}
         readOnly={mode === 'view'}
         onEdit={can(RES, 'EDIT') && canEditRow(RES, editing) ? () => setMode('edit') : undefined}
-        width={760}
+        width={1180}
       >
         <div className="grid grid-cols-2 gap-4">
           <Field label="关联客户" required>

@@ -255,14 +255,14 @@ const KNOWLEDGE: JodooModule = {
     {
       relationField: 'managementRecords', match: '管理明细',
       build: async (g, ctx: JodooCtx) => {
-        const sub = g('提交人').trim(), det = g('管理明细').trim(), dt = g('日期').trim()
-        if (!sub && !det && !dt) return null
-        return { submitterId: sub ? await ctx.ensureUser(sub) : null, details: det || null, date: subDate(dt) }
+        const sub = g('提交人').trim(), det = g('管理明细').trim(), dt = g('日期').trim(), rev = g('评审参与人').trim()
+        if (!sub && !det && !dt && !rev) return null
+        return { submitterId: sub ? await ctx.ensureUser(sub) : null, details: det || null, date: subDate(dt), reviewParticipants: rev || null }
       },
       jsonHeader: '管理细则JSON',
       fromJson: async (o: any, ctx: JodooCtx) => {
         if (!o?.submitterName && !o?.details && !o?.date) return null
-        return { submitterId: o.submitterName ? await ctx.ensureUser(o.submitterName) : null, details: o.details || null, date: subDate(o.date) }
+        return { submitterId: o.submitterName ? await ctx.ensureUser(o.submitterName) : null, details: o.details || null, date: subDate(o.date), reviewParticipants: o.reviewParticipants || null }
       },
     },
   ],
@@ -343,8 +343,9 @@ const CLIENT_SUPPLEMENT: JodooModule = {
   fields: [
     { header: '需求客户', field: 'demandCustomer' },
     { header: '开聊话术', field: 'openingSpeech' },
-    { header: '备注', field: 'notes' },
   ],
+  // 封存包「备注」列实为附件(FINST 引用，如 餐厅介绍.pdf)，落盘到主表 attachmentUrl；本系统的「备注」文本字段(notes)封存包无对应列，不导
+  attachments: [{ header: '备注', field: 'attachmentUrl' }],
   resolveScalars: async (get, scalars) => {
     const cn = stripFinst(get('客户名称'))
     if (!cn) throw new Error('缺少「客户名称」')

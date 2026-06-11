@@ -194,6 +194,6 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '培训大纲', getValue: (r) => r.trainingOutline ?? '' },
     { header: '内部讲师', getValue: (r) => r.internalLecturer?.name ?? '' },
     { header: '外部讲师', getValue: (r) => r.externalLecturer ?? '' },
-    { header: '管理记录（日期 | 详情）', getValue: (r) => subRows(r.managementRecords, (x) => [fmtDate(x.date), x.details]) },
+    { header: '管理记录（日期 | 详情 | 评审参与人）', getValue: (r) => subRows(r.managementRecords, (x) => [fmtDate(x.date), x.details, x.reviewParticipants]) },
   ],
 }

@@ -151,6 +151,7 @@ export default function KnowledgePage() {
         // select 的 option value 是字符串，须 String 化才能回显
         submitterId: x.submitterId != null ? String(x.submitterId) : '',
         details: x.details ?? '',
+        reviewParticipants: x.reviewParticipants ?? '',
       })),
     })
     setOpen(true)
@@ -247,6 +248,7 @@ export default function KnowledgePage() {
             { key: 'date', title: '日期', render: (v) => fmtDate(v) },
             { key: 'submitter', title: '提交人', render: (v: any) => v?.name ?? '—' },
             { key: 'details', title: '细则内容' },
+            { key: 'reviewParticipants', title: '评审参与人' },
           ]}
         />
       ),
@@ -426,6 +428,7 @@ export default function KnowledgePage() {
                 { key: 'submitterId', title: '提交人', type: 'select', width: 160,
                   options: users.map((u) => ({ label: u.name, value: String(u.id) })) },
                 { key: 'details', title: '细则内容', type: 'textarea', width: 320 },
+                { key: 'reviewParticipants', title: '评审参与人', type: 'textarea', width: 240 },
               ]}
             />
           </>
