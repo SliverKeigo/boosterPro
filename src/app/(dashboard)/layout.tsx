@@ -174,19 +174,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen">
       {/* ── 侧边栏 ── */}
       <aside className="bp-sidebar-scroll fixed left-0 top-0 bottom-0 z-40 flex w-60 flex-col overflow-y-auto bg-[#0F172A] text-slate-300">
-        {/* Logo */}
-        <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-white/10 px-5">
-          {/* 公司 logo（步思特咨询，圆形图案部分；整图在 public/logo.png） */}
+        {/* Logo：完整公司 logo 原图（public/logo.png） */}
+        <div className="flex shrink-0 flex-col items-center gap-1.5 border-b border-white/10 px-5 pb-3 pt-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.png" alt="步思特咨询" className="h-8 w-8 shrink-0 object-contain" />
-          <div className="flex min-w-0 flex-col">
-            <span className="text-lg font-bold leading-tight tracking-wide text-white">BoosterPro</span>
-            {/* 版本小字：低调灰、不抢视觉；CI 构建带短 commit hash，本地构建只有版本号 */}
-            <span className="truncate text-[10px] leading-none text-slate-500">
-              v{process.env.NEXT_PUBLIC_APP_VERSION}
-              {process.env.NEXT_PUBLIC_BUILD_SHA ? ` · ${process.env.NEXT_PUBLIC_BUILD_SHA}` : ''}
-            </span>
-          </div>
+          <img src="/logo.png" alt="步思特咨询 BoosterPro" className="w-28 object-contain" />
+          {/* 版本小字：低调灰、不抢视觉；CI 构建带短 commit hash，本地构建只有版本号 */}
+          <span className="truncate text-[10px] leading-none text-slate-500">
+            v{process.env.NEXT_PUBLIC_APP_VERSION}
+            {process.env.NEXT_PUBLIC_BUILD_SHA ? ` · ${process.env.NEXT_PUBLIC_BUILD_SHA}` : ''}
+          </span>
         </div>
 
         {/* 菜单 */}
