@@ -88,12 +88,12 @@ body {
   background: #94a3b8;
 }
 
-/* Sidebar scrollbar (浅色侧边栏，与全局浅色滚动条一致) */
+/* Sidebar scrollbar (on dark bg) */
 .bp-sidebar-scroll::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #334155;
 }
 .bp-sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #475569;
 }
 
 /* 页面内容区：让每个页面的根容器自动撑满主区高度，

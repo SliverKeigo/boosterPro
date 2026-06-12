@@ -173,13 +173,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen">
       {/* ── 侧边栏 ── */}
-      <aside className="bp-sidebar-scroll fixed left-0 top-0 bottom-0 z-40 flex w-60 flex-col overflow-y-auto border-r border-base-300 bg-white text-slate-600">
-        {/* Logo：完整公司 logo 原图（public/logo.png，黑字，浅色侧边栏直接可见） */}
-        <div className="flex shrink-0 flex-col items-center gap-1.5 border-b border-base-300 px-5 pb-3 pt-4">
+      <aside className="bp-sidebar-scroll fixed left-0 top-0 bottom-0 z-40 flex w-60 flex-col overflow-y-auto bg-[#0F172A] text-slate-300">
+        {/* Logo：完整公司 logo 原图（public/logo.png） */}
+        <div className="flex shrink-0 flex-col items-center gap-1.5 border-b border-white/10 px-5 pb-3 pt-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="步思特咨询 BoosterPro" className="w-28 object-contain" />
           {/* 版本小字：低调灰、不抢视觉；CI 构建带短 commit hash，本地构建只有版本号 */}
-          <span className="truncate text-[10px] leading-none text-slate-400">
+          <span className="truncate text-[10px] leading-none text-slate-500">
             v{process.env.NEXT_PUBLIC_APP_VERSION}
             {process.env.NEXT_PUBLIC_BUILD_SHA ? ` · ${process.env.NEXT_PUBLIC_BUILD_SHA}` : ''}
           </span>
@@ -192,7 +192,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             className={`mb-2 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
               pathname === '/'
                 ? 'bg-primary text-white shadow-sm'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             }`}
           >
             <LayoutDashboard className="h-4 w-4 shrink-0" />
@@ -205,7 +205,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <button
                   type="button"
                   onClick={() => toggleGroup(group.key)}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold uppercase tracking-wider text-slate-400 transition-colors hover:text-slate-700"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold uppercase tracking-wider text-slate-400 transition-colors hover:text-slate-200"
                 >
                   <group.icon className="h-3.5 w-3.5" />
                   <span className="flex-1 text-left">{group.label}</span>
@@ -224,7 +224,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors ${
                               active
                                 ? 'bg-primary text-white shadow-sm'
-                                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                                : 'text-slate-300 hover:bg-white/5 hover:text-white'
                             }`}
                           >
                             <item.icon className="h-4 w-4 shrink-0" />
@@ -242,14 +242,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* 底部用户卡 */}
         {user && (
-          <div className="shrink-0 border-t border-base-300 p-3">
+          <div className="shrink-0 border-t border-white/10 p-3">
             <div className="flex items-center gap-2.5 rounded-lg px-2 py-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
                 {user.name.slice(0, 1)}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-slate-800">{user.name}</div>
-                <div className="truncate text-xs text-slate-400">
+                <div className="truncate text-sm font-medium text-white">{user.name}</div>
+                <div className="truncate text-xs text-slate-500">
                   {user.role?.name ?? user.department?.name ?? '成员'}
                 </div>
               </div>
