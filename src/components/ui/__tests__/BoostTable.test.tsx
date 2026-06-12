@@ -2,6 +2,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+// BoostTable 用 useMyPermissions 拿 userId 拼持久化 key（按用户隔离）；测试 mock 成固定用户 7
+vi.mock('@/lib/usePermissions', () => ({
+  useMyPermissions: () => ({ perm: { userId: 7, isAdmin: true, permissions: {} }, loading: false, can: () => true }),
+}))
+
 import { BoostTable, type BoostColumn } from '@/components/ui/BoostTable'
 
 interface Row {
@@ -230,7 +235,7 @@ describe('BoostTable', () => {
 
   it('筛选条件持久化：重新挂载（如再次进入页面）后沿用上次筛选，无需重新添加', async () => {
     const user = userEvent.setup()
-    const KEY = 'bp:filters:测试持久化'
+    const KEY = 'bp:filters:u7:测试持久化' // 带 userId 前缀（按用户隔离）
     window.localStorage.removeItem(KEY)
 
     // 第一次进入：设置「姓名 包含 李」并应用

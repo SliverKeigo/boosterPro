@@ -26,6 +26,7 @@ import { Modal } from './Modal'
 import { exportToExcel } from '@/lib/exportExcel'
 import { IMPORT_COLUMNS, markRequired } from '@/lib/importColumns'
 import { ImportModal } from './ImportModal'
+import { useMyPermissions } from '@/lib/usePermissions'
 
 export interface BoostColumn<T> {
   key: string
@@ -239,13 +240,22 @@ export function BoostTable<T extends Record<string, any>>({
   const [sortDraft, setSortDraft] = useState<SortRule[]>([])
   const sortId = useRef(0)
   const [page, setPage] = useState(1)
-  // 每页条数：初始化即读入持久化值（白名单校验），下次进入沿用上次选择；
-  // storageKey 缺省时回退 title 作 key，二者皆空则不持久化、退回 pageSize 默认。
-  const [size, setSize] = useState<number>(() => {
-    const key = storageKey ?? title
-    if (key && typeof window !== 'undefined') {
+  // ── 个人偏好持久化（每页条数 / 显示列 / 筛选）：按【登录用户】隔离 ──
+  // key 形如 bp:cols:v2:u<userId>:<storageKey|title>。带上 userId 后：同一浏览器多账号
+  // 各存各的、互不串；uid 未就绪(perm 异步加载中)时 prefKey 返回 null → 暂不读写，
+  // 待 perm 到位后由下方「补载 effect」从正确的 key 重新载入（覆盖首渲染的默认值）。
+  // 注：仍是浏览器 localStorage，不跨设备跟随——跨设备需后端存偏好（暂未做）。
+  const { perm } = useMyPermissions()
+  const prefKey = (prefix: string): string | null => {
+    const base = storageKey ?? title
+    const uid = perm?.userId
+    return base && uid != null ? `${prefix}u${uid}:${base}` : null
+  }
+  const readSize = (): number => {
+    const k = prefKey('bp:pageSize:')
+    if (k && typeof window !== 'undefined') {
       try {
-        const raw = window.localStorage.getItem('bp:pageSize:' + key)
+        const raw = window.localStorage.getItem(k)
         if (raw != null) {
           const n = Number(raw)
           if ((PAGE_SIZE_OPTIONS as readonly number[]).includes(n)) return n
@@ -255,31 +265,13 @@ export function BoostTable<T extends Record<string, any>>({
       }
     }
     return pageSize
-  })
-  // 每页条数变更时写回（与列显示配置同样的「初始即读入 + 变更即写回」策略）
-  useEffect(() => {
-    const key = storageKey ?? title
-    if (!key || typeof window === 'undefined') return
-    try {
-      window.localStorage.setItem('bp:pageSize:' + key, String(size))
-    } catch {
-      /* ignore quota errors */
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [size])
-  const [fullscreen, setFullscreen] = useState(false)
-  // 「显示列」弹窗开关（内部 state 控制，不改对外 props）
-  const [colModalOpen, setColModalOpen] = useState(false)
-  const [visible, setVisible] = useState<Record<string, boolean>>(() => {
-    const defaults: Record<string, boolean> = Object.fromEntries(
-      columns.map((c) => [c.key, true]), // 默认全部显示（用户仍可在「显示列」里手动隐藏；defaultVisible 字段保留但不再用于默认隐藏）
-    )
-    // 初始化即同步读入持久化的列显示配置：visible 一开始就是正确值，
-    // 避免「异步载入」与「保存 effect」竞争导致客户端路由切换时被默认值覆盖。
-    const key = storageKey ?? title
-    if (key && typeof window !== 'undefined') {
+  }
+  const readVisible = (): Record<string, boolean> => {
+    const defaults: Record<string, boolean> = Object.fromEntries(columns.map((c) => [c.key, true]))
+    const k = prefKey('bp:cols:v2:')
+    if (k && typeof window !== 'undefined') {
       try {
-        const raw = window.localStorage.getItem('bp:cols:v2:' + key)
+        const raw = window.localStorage.getItem(k)
         if (raw) {
           const saved = JSON.parse(raw) as Record<string, boolean>
           for (const c of columns) if (typeof saved[c.key] === 'boolean') defaults[c.key] = saved[c.key]
@@ -289,31 +281,17 @@ export function BoostTable<T extends Record<string, any>>({
       }
     }
     return defaults
-  })
-
-  // 列显示变更时写回（visible 初始化时已读入，故无需载入 effect 与 loadedRef 守卫）
-  useEffect(() => {
-    const key = storageKey ?? title
-    if (!key || typeof window === 'undefined') return
-    try {
-      window.localStorage.setItem('bp:cols:v2:' + key, JSON.stringify(visible))
-    } catch {
-      /* ignore quota errors */
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible])
-  /** 已生效的筛选条件（驱动管线）；初始化即读入持久化值——下次进入沿用上次筛选，无需重新添加 */
-  const [conditions, setConditions] = useState<FilterCondition[]>(() => {
-    const key = storageKey ?? title
-    if (key && typeof window !== 'undefined') {
+  }
+  const readConditions = (): FilterCondition[] => {
+    const k = prefKey('bp:filters:')
+    if (k && typeof window !== 'undefined') {
       try {
-        const raw = window.localStorage.getItem('bp:filters:' + key)
+        const raw = window.localStorage.getItem(k)
         if (raw) {
           const saved: unknown = JSON.parse(raw)
           if (Array.isArray(saved)) {
             const OPS: readonly FilterOp[] = ['contains', 'eq', 'neq', 'before', 'after', 'gt', 'lt', 'in']
             return saved
-              // 字段需仍存在于当前列、运算符/值形状合法（列改名或脏数据则丢弃该条）
               .filter(
                 (c: any) =>
                   c &&
@@ -339,23 +317,70 @@ export function BoostTable<T extends Record<string, any>>({
       }
     }
     return []
-  })
+  }
+
+  // 每页条数：初始化即读入持久化值（白名单校验），下次进入沿用上次选择。
+  const [size, setSize] = useState<number>(readSize)
+  // 每页条数变更时写回（uid 未就绪→prefKey null→跳过，避免污染匿名 key）
+  useEffect(() => {
+    const k = prefKey('bp:pageSize:')
+    if (!k || typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(k, String(size))
+    } catch {
+      /* ignore quota errors */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [size])
+  const [fullscreen, setFullscreen] = useState(false)
+  // 「显示列」弹窗开关（内部 state 控制，不改对外 props）
+  const [colModalOpen, setColModalOpen] = useState(false)
+  // 默认全部显示；初始化即读入该用户持久化的列显示配置（readVisible 内含默认全 true + 覆盖）
+  const [visible, setVisible] = useState<Record<string, boolean>>(readVisible)
+
+  // 列显示变更时写回
+  useEffect(() => {
+    const k = prefKey('bp:cols:v2:')
+    if (!k || typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(k, JSON.stringify(visible))
+    } catch {
+      /* ignore quota errors */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible])
+  /** 已生效的筛选条件（驱动管线）；初始化即读入该用户持久化值——下次进入沿用上次筛选 */
+  const [conditions, setConditions] = useState<FilterCondition[]>(readConditions)
   /** 面板内正在编辑的草稿条件 */
   const [draft, setDraft] = useState<FilterCondition[]>([])
   // 计数器从已恢复条数起步，避免与恢复条件的 id（0..n-1）冲突
   const condId = useRef(conditions.length)
 
-  // 筛选条件变更时写回（与列显示 / 每页条数同一「初始即读入 + 变更即写回」策略）
+  // 筛选条件变更时写回
   useEffect(() => {
-    const key = storageKey ?? title
-    if (!key || typeof window === 'undefined') return
+    const k = prefKey('bp:filters:')
+    if (!k || typeof window === 'undefined') return
     try {
-      window.localStorage.setItem('bp:filters:' + key, JSON.stringify(conditions))
+      window.localStorage.setItem(k, JSON.stringify(conditions))
     } catch {
       /* ignore quota errors */
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conditions])
+
+  // 补载：perm 异步加载中挂载时(首渲染 uid=null，三项用了默认值)，待 userId 就绪/切换后
+  // 从该用户的 key 重新载入三项偏好，覆盖默认值。loadedUidRef 确保仅在 uid 真正变化时执行一次，
+  // 避免与上面三个「变更写回」effect 互相触发。
+  const loadedUidRef = useRef<number | null | undefined>(perm?.userId)
+  useEffect(() => {
+    const uid = perm?.userId
+    if (uid == null || uid === loadedUidRef.current) return
+    loadedUidRef.current = uid
+    setSize(readSize())
+    setVisible(readVisible())
+    setConditions(readConditions())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [perm?.userId])
 
   const accessorOf = (col: BoostColumn<T>) =>
     col.accessor ?? ((r: T) => (r as any)[col.key])
