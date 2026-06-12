@@ -16,8 +16,7 @@ describe('buildCustomerData - 字段映射与清洗', () => {
         shortName: '某某',
         industry: '金融',
         region: '上海',
-        locationLat: '31.2',
-        locationLng: '121.4',
+        location: '广东省珠海市香洲区某某路1号',
         // 应被剔除
         id: 1,
         createdAt: 'x',
@@ -35,9 +34,8 @@ describe('buildCustomerData - 字段映射与清洗', () => {
     expect(out.shortName).toBe('某某')
     expect(out.industry).toBe('金融')
     expect(out.region).toBe('上海')
-    // locationLat/Lng 在白名单内、原样保留（builder 不做数值转换）
-    expect(out.locationLat).toBe('31.2')
-    expect(out.locationLng).toBe('121.4')
+    // location(定位，位置文字)在白名单内、原样保留
+    expect(out.location).toBe('广东省珠海市香洲区某某路1号')
     expect(out).not.toHaveProperty('id')
     expect(out).not.toHaveProperty('createdAt')
     expect(out).not.toHaveProperty('supplements')

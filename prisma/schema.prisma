@@ -179,8 +179,8 @@ model Customer {
   companyCulture     String?                 @map("company_culture") @db.Text
   openingSpeech      String?                 @map("opening_speech") @db.Text
   benchmarkCompanies String?                 @map("benchmark_companies") @db.Text
-  locationLat        Decimal?                @map("location_lat") @db.Decimal(10, 8)
-  locationLng        Decimal?                @map("location_lng") @db.Decimal(11, 8)
+  // 简道云「定位」是移动端定位组件(存位置文字)，非经纬度数字——原 locationLat/Lng 系臆测建模、三库从未有数据，已废弃(库中旧列保留不删)
+  location           String?                 @db.Text
   attachmentUrl      String?                 @map("attachment_url") @db.Text
   officeAddresses    CustomerOfficeAddress[]
   supplements        ClientSupplement[]

@@ -173,6 +173,7 @@ export const CONFIGS: Record<string, ImportResource> = {
       { header: '客户全称', field: 'fullName' },
       { header: '客户简称', field: 'shortName', required: true },
       { header: '曾用名', field: 'formerName' },
+      { header: '定位', field: 'location' },
       { header: '所属行业', field: 'industry' },
       { header: '区域', field: 'region', required: true },
       { header: '详细地址', field: 'detailedAddress', required: true },

@@ -50,6 +50,7 @@ const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
       { header: '对标企业', get: (r) => r.benchmarkCompanies },
       { header: '开聊话术', get: (r) => r.openingSpeech },
       { header: '客户曾用名', get: (r) => r.formerName },
+      { header: '定位', get: (r) => r.location },
       { header: '提交人', get: (r) => r.createdBy?.name },
       { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
     ],

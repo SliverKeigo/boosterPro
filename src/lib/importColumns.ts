@@ -87,6 +87,7 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '客户全称', getValue: (r) => r.fullName ?? '' },
     { header: '客户简称', getValue: (r) => r.shortName ?? '' },
     { header: '曾用名', getValue: (r) => r.formerName ?? '' },
+    { header: '定位', getValue: (r) => r.location ?? '' },
     { header: '所属行业', getValue: (r) => r.industry ?? '' },
     { header: '区域', getValue: (r) => r.region ?? '' },
     { header: '详细地址', getValue: (r) => r.detailedAddress ?? '' },

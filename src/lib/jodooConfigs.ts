@@ -68,9 +68,9 @@ const CUSTOMER: JodooModule = {
     { header: '对标企业', field: 'benchmarkCompanies' },
     { header: '开聊话术', field: 'openingSpeech' },
     { header: '客户曾用名', field: 'formerName' },
+    { header: '定位', field: 'location' }, // 简道云定位组件＝位置文字，原样导入
   ],
   attachments: [{ header: '客户附件资料', field: 'attachmentUrl' }],
-  // 「定位」列暂不导：定位组件经纬度顺序未知、且本批数据为空，待样例确认后再补 locationLat/Lng。
   splitSubtables: [{
     header: '多个办公地址', relationField: 'officeAddresses', field: 'address',
     jsonHeader: '办公地址JSON', fromJson: async (o: any) => (o?.address ? { address: o.address } : null),

@@ -20,8 +20,7 @@ const CUSTOMER_SCALAR_FIELDS = [
   'companyCulture',
   'openingSpeech',
   'benchmarkCompanies',
-  'locationLat',
-  'locationLng',
+  'location',
   'attachmentUrl',
 ] as const
 

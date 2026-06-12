@@ -34,6 +34,7 @@ const EMPTY_FORM: any = {
   companyCulture: '',
   openingSpeech: '',
   benchmarkCompanies: '',
+  location: '',
   attachmentUrl: '',
   officeAddresses: [],
 }
@@ -122,6 +123,7 @@ export default function ClientsPage() {
       companyCulture: r.companyCulture ?? '',
       openingSpeech: r.openingSpeech ?? '',
       benchmarkCompanies: r.benchmarkCompanies ?? '',
+      location: r.location ?? '',
       officeAddresses: (r.officeAddresses ?? []).map((x: any) => ({
         address: x.address ?? '',
       })),
@@ -200,8 +202,7 @@ export default function ClientsPage() {
     { key: 'companyCulture', title: '企业文化与福利', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{stripHtml(v)}</span> : '—' },
     { key: 'openingSpeech', title: '开聊话术', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{v}</span> : '—' },
     { key: 'benchmarkCompanies', title: '对标企业', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{v}</span> : '—' },
-    { key: 'locationLat', title: '纬度', defaultVisible: false, filterType: 'number', render: (v) => (v ?? '') === '' ? '—' : String(v) },
-    { key: 'locationLng', title: '经度', defaultVisible: false, filterType: 'number', render: (v) => (v ?? '') === '' ? '—' : String(v) },
+    { key: 'location', title: '定位', defaultVisible: false, render: (v) => v || '—' },
     { key: 'attachmentUrl', title: '客户附件资料', defaultVisible: false, sortable: false, render: (v) => v ? '已上传' : '—' },
   ]
 
@@ -292,6 +293,9 @@ export default function ClientsPage() {
           </Field>
           <Field label="详细地址" required>
             <input className="input input-bordered w-full" value={form.detailedAddress} onChange={(e) => setField('detailedAddress', e.target.value)} placeholder="请输入" />
+          </Field>
+          <Field label="定位">
+            <input className="input input-bordered w-full" value={form.location} onChange={(e) => setField('location', e.target.value)} placeholder="位置信息（如 广东省珠海市香洲区xx路xx号）" />
           </Field>
         </div>
 
