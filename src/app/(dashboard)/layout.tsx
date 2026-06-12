@@ -23,6 +23,7 @@ import {
   BookMarked,
   LogOut,
   ChevronDown,
+  KeyRound,
   Briefcase,
   ClipboardList,
   Sparkles,
@@ -30,7 +31,7 @@ import {
   Contact,
   type LucideIcon,
 } from 'lucide-react'
-import { Popconfirm, useToast } from '@/components/ui'
+import { Modal, Field, useToast } from '@/components/ui'
 import { useMyPermissions, clearPermissionCache } from '@/lib/usePermissions'
 import { clearRefCache } from '@/lib/refCache'
 import { clearDictCache } from '@/lib/useDict'
@@ -121,6 +122,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const toast = useToast()
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [openKeys, setOpenKeys] = useState<string[]>(GROUPS.map((g) => g.key))
+  // 修改密码弹窗（右上角用户菜单进入；员工自助改自己的密码）
+  const [pwOpen, setPwOpen] = useState(false)
+  const [pwForm, setPwForm] = useState({ oldPassword: '', newPassword: '', confirm: '' })
+  const [pwSubmitting, setPwSubmitting] = useState(false)
 
   const { can, isAdmin, loading: permLoading } = useMyPermissions()
 
@@ -163,6 +168,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     toast.success('已退出登录')
     router.push('/login')
     router.refresh()
+  }
+
+  const handleChangePassword = async () => {
+    if (!pwForm.oldPassword || !pwForm.newPassword) return toast.error('请填写当前密码与新密码')
+    if (pwForm.newPassword.length < 8) return toast.error('新密码至少 8 位')
+    if (pwForm.newPassword !== pwForm.confirm) return toast.error('两次输入的新密码不一致')
+    setPwSubmitting(true)
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldPassword: pwForm.oldPassword, newPassword: pwForm.newPassword }),
+      })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || '')
+      toast.success('密码已修改')
+      setPwOpen(false)
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : '修改失败')
+    } finally {
+      setPwSubmitting(false)
+    }
   }
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
@@ -273,23 +299,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <div className="flex items-center gap-2">
             {user && (
-              <Popconfirm
-                title="确认退出登录？"
-                okText="退出"
-                okDanger
-                onConfirm={handleLogout}
-              >
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm gap-2 normal-case"
-                >
+              <div className="dropdown dropdown-end">
+                <button tabIndex={0} type="button" className="btn btn-ghost btn-sm gap-2 normal-case">
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
                     {user.name.slice(0, 1)}
                   </div>
                   <span className="text-sm font-medium">{user.name}</span>
-                  <LogOut className="h-4 w-4 text-base-content/40" />
+                  <ChevronDown className="h-3.5 w-3.5 text-base-content/40" />
                 </button>
-              </Popconfirm>
+                <ul tabIndex={0} className="dropdown-content menu z-50 mt-1 w-44 rounded-box border border-base-300 bg-base-100 p-1.5 shadow-lg">
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPwForm({ oldPassword: '', newPassword: '', confirm: '' })
+                        setPwOpen(true)
+                        ;(document.activeElement as HTMLElement | null)?.blur() // 收起下拉
+                      }}
+                    >
+                      <KeyRound className="h-4 w-4" />修改密码
+                    </button>
+                  </li>
+                  <li>
+                    <button type="button" className="text-error" onClick={handleLogout}>
+                      <LogOut className="h-4 w-4" />退出登录
+                    </button>
+                  </li>
+                </ul>
+              </div>
             )}
           </div>
         </header>
@@ -297,6 +334,48 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* 内容 */}
         <main className="bp-page-main flex flex-1 flex-col overflow-hidden p-6">{children}</main>
       </div>
+
+      {/* 修改密码弹窗（右上角用户菜单进入） */}
+      <Modal
+        open={pwOpen}
+        title="修改密码"
+        width={420}
+        onClose={() => setPwOpen(false)}
+        onOk={handleChangePassword}
+        okText="保存"
+        confirmLoading={pwSubmitting}
+      >
+        <div className="grid grid-cols-1 gap-4">
+          <Field label="当前密码" required>
+            <input
+              type="password"
+              className="input input-bordered w-full"
+              value={pwForm.oldPassword}
+              onChange={(e) => setPwForm((f) => ({ ...f, oldPassword: e.target.value }))}
+              autoComplete="current-password"
+            />
+          </Field>
+          <Field label="新密码" required>
+            <input
+              type="password"
+              className="input input-bordered w-full"
+              value={pwForm.newPassword}
+              onChange={(e) => setPwForm((f) => ({ ...f, newPassword: e.target.value }))}
+              placeholder="至少 8 位"
+              autoComplete="new-password"
+            />
+          </Field>
+          <Field label="确认新密码" required>
+            <input
+              type="password"
+              className="input input-bordered w-full"
+              value={pwForm.confirm}
+              onChange={(e) => setPwForm((f) => ({ ...f, confirm: e.target.value }))}
+              autoComplete="new-password"
+            />
+          </Field>
+        </div>
+      </Modal>
     </div>
   )
 }
