@@ -26,7 +26,6 @@ import {
   Briefcase,
   ClipboardList,
   Sparkles,
-  Zap,
   BarChart3,
   Contact,
   type LucideIcon,
@@ -177,9 +176,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className="bp-sidebar-scroll fixed left-0 top-0 bottom-0 z-40 flex w-60 flex-col overflow-y-auto bg-[#0F172A] text-slate-300">
         {/* Logo */}
         <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-white/10 px-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
-            <Zap className="h-5 w-5 text-white" />
-          </div>
+          {/* 公司 logo（步思特咨询，圆形图案部分；整图在 public/logo.png） */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.png" alt="步思特咨询" className="h-8 w-8 shrink-0 object-contain" />
           <div className="flex min-w-0 flex-col">
             <span className="text-lg font-bold leading-tight tracking-wide text-white">BoosterPro</span>
             {/* 版本小字：低调灰、不抢视觉；CI 构建带短 commit hash，本地构建只有版本号 */}

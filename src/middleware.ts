@@ -3,7 +3,8 @@ import type { NextRequest } from 'next/server'
 import { verifyToken, AUTH_COOKIE } from '@/lib/auth'
 
 // 不需要认证的路径前缀（/api/health 供运维看门狗免登录探活）
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout', '/api/health']
+// logo 两张图放行：登录页(未登录态)也要能加载品牌 logo
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout', '/api/health', '/logo.png', '/logo-icon.png']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

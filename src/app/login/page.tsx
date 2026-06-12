@@ -6,18 +6,9 @@ import './login.css'
 
 // 品牌标识：圆角方块 + 向上箭头(boost)，浅色(玻璃背景)版
 function BrandMark({ size = 32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 36 36" fill="none" aria-hidden="true">
-      <rect x="2" y="2" width="32" height="32" rx="9" fill="rgba(255,255,255,0.14)" />
-      <path
-        d="M18 25.5 V13 M12.5 18.5 L18 12.5 L23.5 18.5"
-        stroke="#ffffff"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
+  // 公司 logo（步思特咨询，圆形图案，public/logo-icon.png）
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/logo-icon.png" alt="" width={size} height={size} style={{ objectFit: 'contain' }} aria-hidden="true" />
 }
 
 export default function LoginPage() {
