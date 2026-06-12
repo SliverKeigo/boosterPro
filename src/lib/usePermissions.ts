@@ -110,12 +110,14 @@ export function useMyPermissions() {
   // 注意仍需配合 can(resource,'EDIT'/'DELETE') —— 本函数只判数据归属，不判功能权限。
   const canEditRow = (
     resource: string,
+    // 允许 null/undefined：各页 onEdit={...canEditRow(RES, editing)...} 在「新增」模式 editing 为 null，
+    // 非管理员(不走 isAdmin 短路)会以 null 调入 → 不防护则 null.createdById 直接崩整页(管理员测不出)。
     row: {
       createdById?: number | null
       createdBy?: { id?: number | null; departmentId?: number | null } | null
-    },
+    } | null | undefined,
   ): boolean => {
-    if (!perm) return false
+    if (!perm || !row) return false
     if (perm.isAdmin) return true
     if (row.createdById === perm.userId) return true
     const g = perm.grants?.[resource]
