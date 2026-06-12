@@ -125,6 +125,18 @@ function horizontalMergeRegions(merges: any): { c0: number; c1: number }[] {
   }
   return out
 }
+// 表头区是否有合并＝双行表头的判据：起于第 1 行、且(纵向跨到第 2 行 或 横向跨多列)。
+// 不能只看横向合并——客户包唯一子表(多个办公地址)是单列、无横向合并，但普通列均有 A1:A2 纵向合并，仍是双行表头；
+// 只按「无横向合并→单行」会把它第 2 行(exceljs 纵向合并填充出的重复表头)当数据，导入出「客户名称」脏行。
+function hasHeaderMerge(merges: any): boolean {
+  for (const m of (Array.isArray(merges) ? merges : []) as string[]) {
+    const mm = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(m)
+    if (!mm) continue
+    const c1 = colLetterToNum(mm[1]), r1 = +mm[2], c2 = colLetterToNum(mm[3]), r2 = +mm[4]
+    if (r1 === 1 && (r2 >= 2 || c2 > c1)) return true
+  }
+  return false
+}
 async function parseSheet(buf: ArrayBuffer): Promise<{ header: string[]; header2: string[]; rows: { cols: string[]; __row: number }[]; regions: { c0: number; c1: number }[] }> {
   const mod: any = await import('exceljs')
   const ExcelJS = mod.default ?? mod
@@ -135,10 +147,11 @@ async function parseSheet(buf: ArrayBuffer): Promise<{ header: string[]; header2
   const colCount = ws.columnCount
   const header: string[] = []
   for (let c = 1; c <= colCount; c++) header[c - 1] = cellText(ws.getRow(1).getCell(c).value).trim()
-  // 表头行数：有横向合并(子表组)=双行表头(第 2 行为子表字段名、数据第 3 行起)；无=单行表头(数据第 2 行起)。
-  // 有子表的模块(客户/需求/候选/知识库)是双行；无子表的模块(如人才库)和本系统导出包都无横向合并 → 单行。
+  // 表头行数：表头区(第 1 行起)有任何合并＝双行表头(第 2 行为子表字段名、数据第 3 行起)；
+  // 完全无＝单行表头(数据第 2 行起)。原包(客户/需求/候选/联系人/知识库)普通列纵向合并 1-2 行、
+  // 多列子表组横向合并 → 双行；人才库原包与本系统导出包无任何表头合并 → 单行。
   const regions = horizontalMergeRegions(ws.model?.merges)
-  const singleRow = regions.length === 0
+  const singleRow = !hasHeaderMerge(ws.model?.merges)
   const header2: string[] = []
   if (!singleRow) for (let c = 1; c <= colCount; c++) header2[c - 1] = cellText(ws.getRow(2).getCell(c).value).trim()
   const rows: { cols: string[]; __row: number }[] = []
