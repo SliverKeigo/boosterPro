@@ -2,15 +2,8 @@
 import { NextResponse } from 'next/server'
 import { handleApiError, HttpError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
-import { getCurrentUser } from '@/lib/permissions'
+import { requirePermission } from '@/lib/permissions'
 import { RESOURCE_KEYS, ACTION_KEYS } from '@/lib/resources'
-
-// 仅管理员可管理权限：未登录或非 admin 一律 403
-async function requireAdmin() {
-  const user = await getCurrentUser()
-  if (!user || !user.isAdmin) throw new HttpError(403, '仅管理员可管理权限')
-  return user
-}
 
 const MEMBER_TYPES = ['USER', 'DEPARTMENT', 'ROLE']
 
@@ -65,7 +58,7 @@ function validatePermissionGroupInput(
 // 更新权限组：name/resource/actions/applyToAll，members 整体重建
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_PERMISSION', 'EDIT')
     const { id } = await params
     const body = await req.json()
     const { name, resource, actions = [], applyToAll = false, members = [] } = body
@@ -94,7 +87,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 // 删除权限组（members 已配置级联删除）
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_PERMISSION', 'DELETE')
     const { id } = await params
     await prisma.permissionGroup.delete({ where: { id: parseInt(id) } })
     return NextResponse.json({ success: true })

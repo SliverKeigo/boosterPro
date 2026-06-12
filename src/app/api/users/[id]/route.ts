@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { handleApiError, HttpError } from '@/lib/apiError'
-import { getCurrentUser, requireAdmin } from '@/lib/permissions'
+import { getCurrentUser, requirePermission, hasAction } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
@@ -15,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const pid = parseInt(id)
     if (!Number.isInteger(pid) || pid <= 0) throw new HttpError(400, '非法的 ID')
 
-    if (me.isAdmin) {
+    if (me.isAdmin || (await hasAction(me, 'SYS_USER', 'VIEW'))) {
       const user = await prisma.user.findUnique({
         where: { id: pid },
         omit: { passwordHash: true },
@@ -43,10 +43,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin()
+    const me = await requirePermission('SYS_USER', 'EDIT')
     const { id } = await params
     const pid = parseInt(id)
     if (!Number.isInteger(pid) || pid <= 0) throw new HttpError(400, '非法的 ID')
+    // 提权兜底：被授权「用户管理」的非管理员，不得操作管理员账号（否则可改管理员密码=接管系统）
+    const target = await prisma.user.findUnique({ where: { id: pid }, select: { isAdmin: true } })
+    if (!target) throw new HttpError(404, '未找到')
+    if (target.isAdmin && !me.isAdmin) throw new HttpError(403, '仅管理员可操作管理员账号')
     const body = await req.json()
     const { name, username, email, password, departmentId, roleId } = body
 
@@ -76,10 +80,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin()
+    const me = await requirePermission('SYS_USER', 'DELETE')
     const { id } = await params
     const pid = parseInt(id)
     if (!Number.isInteger(pid) || pid <= 0) throw new HttpError(400, '非法的 ID')
+    // 提权兜底：非管理员不得删除管理员账号
+    const target = await prisma.user.findUnique({ where: { id: pid }, select: { isAdmin: true } })
+    if (!target) throw new HttpError(404, '未找到')
+    if (target.isAdmin && !me.isAdmin) throw new HttpError(403, '仅管理员可操作管理员账号')
     await prisma.user.delete({ where: { id: pid } })
     return NextResponse.json({ success: true })
   } catch (e) {

@@ -8,14 +8,15 @@ vi.mock('@/lib/prisma', () => ({
 }))
 vi.mock('@/lib/permissions', () => ({
   getCurrentUser: vi.fn(),
-  requireAdmin: vi.fn(),
+  requirePermission: vi.fn(),
+  hasAction: vi.fn(),
 }))
 vi.mock('bcryptjs', () => ({
   default: { hash: vi.fn(async () => 'HASH'), compare: vi.fn(async () => true) },
 }))
 
 import { prisma } from '@/lib/prisma'
-import { getCurrentUser, requireAdmin } from '@/lib/permissions'
+import { getCurrentUser, requirePermission, hasAction } from '@/lib/permissions'
 import bcrypt from 'bcryptjs'
 import { GET, PUT, DELETE } from '@/app/api/users/[id]/route'
 
@@ -26,8 +27,11 @@ const ctx = (id = '1') => ({ params: Promise.resolve({ id }) })
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mock(requireAdmin).mockResolvedValue(admin)
+  mock(requirePermission).mockResolvedValue(admin)
   mock(getCurrentUser).mockResolvedValue(admin)
+  mock(hasAction).mockResolvedValue(false)
+  // PUT/DELETE 的「目标账号保护」查询默认命中普通用户
+  mock(prisma.user.findUnique).mockResolvedValue({ isAdmin: false })
 })
 
 describe('GET /api/users/[id]', () => {
@@ -39,6 +43,17 @@ describe('GET /api/users/[id]', () => {
     const args = mock(prisma.user.findUnique).mock.calls[0][0]
     expect(args.omit).toEqual({ passwordHash: true })
     expect(args.include).toEqual({ department: true, role: true })
+  })
+
+  it('被授「用户管理-查看」的普通用户：全量字段', async () => {
+    mock(getCurrentUser).mockResolvedValue(normal)
+    mock(hasAction).mockResolvedValue(true)
+    mock(prisma.user.findUnique).mockResolvedValue({ id: 1, name: 'A' })
+    const res = await GET(new Request('http://t'), ctx('1'))
+    expect(res.status).toBe(200)
+    expect(hasAction).toHaveBeenCalledWith(normal, 'SYS_USER', 'VIEW')
+    const args = mock(prisma.user.findUnique).mock.calls[0][0]
+    expect(args.omit).toEqual({ passwordHash: true })
   })
 
   it('普通用户：仅 { id, name }', async () => {
@@ -74,10 +89,10 @@ describe('PUT /api/users/[id]', () => {
   const makeReq = (body: unknown) =>
     new Request('http://t', { method: 'PUT', body: JSON.stringify(body) })
 
-  it('管理员更新：传 password 时哈希，omit passwordHash，返回 200', async () => {
+  it('有权限更新：传 password 时哈希，omit passwordHash，返回 200', async () => {
     mock(prisma.user.update).mockResolvedValue({ id: 1, name: '改' })
     const res = await PUT(makeReq({ name: '改', password: 'pw', departmentId: '3' }), ctx('1'))
-    expect(requireAdmin).toHaveBeenCalled()
+    expect(requirePermission).toHaveBeenCalledWith('SYS_USER', 'EDIT')
     expect(bcrypt.hash).toHaveBeenCalledWith('pw', 10)
     const args = mock(prisma.user.update).mock.calls[0][0]
     expect(args.where).toEqual({ id: 1 })
@@ -96,15 +111,39 @@ describe('PUT /api/users/[id]', () => {
     expect(args.data.passwordHash).toBeUndefined()
   })
 
-  it('非管理员 → 403（关键安全断言），不写库', async () => {
-    mock(requireAdmin).mockRejectedValue(new HttpError(403, '仅管理员可执行该操作'))
+  it('被授权的非管理员操作管理员账号 → 403（提权兜底），不写库', async () => {
+    mock(requirePermission).mockResolvedValue(normal) // 有 SYS_USER-EDIT 的普通用户
+    mock(prisma.user.findUnique).mockResolvedValue({ isAdmin: true }) // 目标是管理员
+    const res = await PUT(makeReq({ password: 'hack' }), ctx('1'))
+    expect(res.status).toBe(403)
+    expect((await res.json()).error).toContain('仅管理员可操作管理员账号')
+    expect(prisma.user.update).not.toHaveBeenCalled()
+  })
+
+  it('管理员操作管理员账号 → 放行', async () => {
+    mock(requirePermission).mockResolvedValue(admin)
+    mock(prisma.user.findUnique).mockResolvedValue({ isAdmin: true })
+    mock(prisma.user.update).mockResolvedValue({ id: 1 })
+    const res = await PUT(makeReq({ name: '改' }), ctx('1'))
+    expect(res.status).toBe(200)
+  })
+
+  it('目标不存在 → 404，不写库', async () => {
+    mock(prisma.user.findUnique).mockResolvedValue(null)
+    const res = await PUT(makeReq({ name: '改' }), ctx('999'))
+    expect(res.status).toBe(404)
+    expect(prisma.user.update).not.toHaveBeenCalled()
+  })
+
+  it('无权限 → 403（关键安全断言），不写库', async () => {
+    mock(requirePermission).mockRejectedValue(new HttpError(403, '您没有执行该操作的权限'))
     const res = await PUT(makeReq({ name: '改' }), ctx('1'))
     expect(res.status).toBe(403)
     expect(prisma.user.update).not.toHaveBeenCalled()
   })
 
   it('未登录 → 401', async () => {
-    mock(requireAdmin).mockRejectedValue(new HttpError(401, '未登录或登录已过期'))
+    mock(requirePermission).mockRejectedValue(new HttpError(401, '未登录或登录已过期'))
     const res = await PUT(makeReq({ name: '改' }), ctx('1'))
     expect(res.status).toBe(401)
   })
@@ -117,24 +156,39 @@ describe('PUT /api/users/[id]', () => {
 })
 
 describe('DELETE /api/users/[id]', () => {
-  it('管理员删除：调用 prisma.user.delete，返回 success', async () => {
+  it('有权限删除：调用 prisma.user.delete，返回 success', async () => {
     mock(prisma.user.delete).mockResolvedValue({ id: 1 })
     const res = await DELETE(new Request('http://t', { method: 'DELETE' }), ctx('1'))
-    expect(requireAdmin).toHaveBeenCalled()
+    expect(requirePermission).toHaveBeenCalledWith('SYS_USER', 'DELETE')
     expect(mock(prisma.user.delete).mock.calls[0][0]).toEqual({ where: { id: 1 } })
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({ success: true })
   })
 
-  it('非管理员 → 403（关键安全断言），不删除', async () => {
-    mock(requireAdmin).mockRejectedValue(new HttpError(403, '仅管理员可执行该操作'))
+  it('被授权的非管理员删除管理员账号 → 403（提权兜底），不删除', async () => {
+    mock(requirePermission).mockResolvedValue(normal)
+    mock(prisma.user.findUnique).mockResolvedValue({ isAdmin: true })
+    const res = await DELETE(new Request('http://t', { method: 'DELETE' }), ctx('1'))
+    expect(res.status).toBe(403)
+    expect(prisma.user.delete).not.toHaveBeenCalled()
+  })
+
+  it('目标不存在 → 404，不删除', async () => {
+    mock(prisma.user.findUnique).mockResolvedValue(null)
+    const res = await DELETE(new Request('http://t', { method: 'DELETE' }), ctx('999'))
+    expect(res.status).toBe(404)
+    expect(prisma.user.delete).not.toHaveBeenCalled()
+  })
+
+  it('无权限 → 403（关键安全断言），不删除', async () => {
+    mock(requirePermission).mockRejectedValue(new HttpError(403, '您没有执行该操作的权限'))
     const res = await DELETE(new Request('http://t', { method: 'DELETE' }), ctx('1'))
     expect(res.status).toBe(403)
     expect(prisma.user.delete).not.toHaveBeenCalled()
   })
 
   it('未登录 → 401', async () => {
-    mock(requireAdmin).mockRejectedValue(new HttpError(401, '未登录或登录已过期'))
+    mock(requirePermission).mockRejectedValue(new HttpError(401, '未登录或登录已过期'))
     const res = await DELETE(new Request('http://t', { method: 'DELETE' }), ctx('1'))
     expect(res.status).toBe(401)
   })

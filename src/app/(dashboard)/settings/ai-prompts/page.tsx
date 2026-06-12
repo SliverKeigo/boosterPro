@@ -11,7 +11,7 @@ const clip = (s?: string) => (s ? (s.length > 40 ? s.slice(0, 40) + '…' : s) :
 
 export default function AiPromptsPage() {
   const toast = useToast()
-  const { isAdmin, loading: permLoading } = useMyPermissions()
+  const { can, loading: permLoading } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -81,7 +81,7 @@ export default function AiPromptsPage() {
       </div>
     )
   }
-  if (!isAdmin) {
+  if (!can('SYS_PROMPT', 'VIEW')) {
     return (
       <div>
         <div className="mb-4">
@@ -94,7 +94,7 @@ export default function AiPromptsPage() {
               <ShieldAlert className="h-8 w-8 text-error" />
             </div>
             <h2 className="mt-2 text-lg font-semibold text-base-content">无权访问</h2>
-            <p className="max-w-md text-sm text-base-content/50">仅管理员可访问</p>
+            <p className="max-w-md text-sm text-base-content/50">无权限访问，请联系管理员开通</p>
           </div>
         </div>
       </div>
@@ -133,7 +133,7 @@ export default function AiPromptsPage() {
             <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openDetail(r)}>
               <Eye className="h-3.5 w-3.5" />详情
             </button>
-            {r.overridden && (
+            {can('SYS_PROMPT', 'DELETE') && r.overridden && (
               <Popconfirm title="恢复为代码内置默认提示词？" onConfirm={() => handleReset(r.key)}>
                 <button className="btn btn-ghost btn-xs gap-1 text-warning">
                   <RotateCcw className="h-3.5 w-3.5" />恢复默认
@@ -152,7 +152,7 @@ export default function AiPromptsPage() {
         okText="保存"
         confirmLoading={submitting}
         readOnly={mode === 'view'}
-        onEdit={isAdmin ? () => setMode('edit') : undefined}
+        onEdit={can('SYS_PROMPT', 'EDIT') ? () => setMode('edit') : undefined}
         width={720}
       >
         <div className="grid grid-cols-1 gap-4">

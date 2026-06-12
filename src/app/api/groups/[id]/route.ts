@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { handleApiError, HttpError } from '@/lib/apiError'
-import { requireAdmin, getSessionPayload } from '@/lib/permissions'
+import { requirePermission, getSessionPayload } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 
 function pidOf(id: string): number {
@@ -32,7 +32,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_GROUP', 'EDIT')
     const pid = pidOf((await params).id)
     const { name, departmentId, leaderId, memberIds } = await req.json()
     if (!name?.trim()) return NextResponse.json({ error: '组名称不能为空' }, { status: 400 })
@@ -66,7 +66,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_GROUP', 'DELETE')
     const pid = pidOf((await params).id)
     await prisma.$transaction(async (tx) => {
       // 先解绑成员，再删组（避免外键约束）

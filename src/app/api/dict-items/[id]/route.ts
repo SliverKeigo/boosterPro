@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { handleApiError, HttpError } from '@/lib/apiError'
-import { requireAdmin } from '@/lib/permissions'
+import { requirePermission } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 
-// 更新字典项（仅管理员）：label / value 非空
+// 更新字典项（需 SYS_DICT.EDIT）：label / value 非空
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_DICT', 'EDIT')
     const { id } = await params
     const pid = parseInt(id)
     if (!Number.isInteger(pid) || pid <= 0) throw new HttpError(400, '非法的 ID')
@@ -29,10 +29,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-// 删除字典项（仅管理员）
+// 删除字典项（需 SYS_DICT.DELETE）
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_DICT', 'DELETE')
     const { id } = await params
     const pid = parseInt(id)
     if (!Number.isInteger(pid) || pid <= 0) throw new HttpError(400, '非法的 ID')

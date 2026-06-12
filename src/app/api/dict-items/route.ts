@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { handleApiError, HttpError } from '@/lib/apiError'
-import { requireAdmin } from '@/lib/permissions'
+import { requirePermission } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 
-// 某字典类型下的字典项列表（仅管理员）：?typeId=X，按 sort,id 升序
+// 某字典类型下的字典项列表（需 SYS_DICT.VIEW）：?typeId=X，按 sort,id 升序
 export async function GET(req: Request) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_DICT', 'VIEW')
     const typeIdRaw = new URL(req.url).searchParams.get('typeId')
     const typeId = parseInt(typeIdRaw ?? '')
     if (!Number.isInteger(typeId) || typeId <= 0) throw new HttpError(400, '非法的字典类型 ID')
@@ -21,10 +21,10 @@ export async function GET(req: Request) {
   }
 }
 
-// 新建字典项（仅管理员）：label / value 非空，typeId 必须存在
+// 新建字典项（需 SYS_DICT.CREATE）：label / value 非空，typeId 必须存在
 export async function POST(req: Request) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_DICT', 'CREATE')
     const body = await req.json()
     const { typeId, label, value, sort, enabled } = body
     const tid = parseInt(typeId)

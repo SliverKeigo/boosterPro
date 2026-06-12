@@ -35,7 +35,7 @@ import { Modal, Field, useToast } from '@/components/ui'
 import { useMyPermissions, clearPermissionCache } from '@/lib/usePermissions'
 import { clearRefCache } from '@/lib/refCache'
 import { clearDictCache } from '@/lib/useDict'
-import { PATH_TO_RESOURCE } from '@/lib/resources'
+import { PATH_TO_RESOURCE, SYS_PATH_TO_RESOURCE } from '@/lib/resources'
 
 interface NavItem {
   href: string
@@ -127,7 +127,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [pwForm, setPwForm] = useState({ oldPassword: '', newPassword: '', confirm: '' })
   const [pwSubmitting, setPwSubmitting] = useState(false)
 
-  const { can, isAdmin, loading: permLoading } = useMyPermissions()
+  const { can, loading: permLoading } = useMyPermissions()
 
   const fetchUser = useCallback(async () => {
     try {
@@ -146,17 +146,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     })()
   }, [fetchUser])
 
-  // 菜单按权限过滤：八个业务菜单看 VIEW 权限，系统管理组限管理员；权限加载中先全显，避免闪烁
+  // 菜单按权限过滤：业务菜单按首段路径查资源 VIEW；系统管理子菜单按完整两段路径
+  // (settings/users 等)查对应 SYS_* 资源 VIEW（管理员的权限 map 含全部系统资源，天然全显）。
+  // 权限加载中先全显，避免闪烁。
   const canSeeItem = (item: NavItem) => {
-    // 按首段路径查资源，子路由（如 /reports/candidate-recommendation）继承父级 VIEW 权限
-    const res = PATH_TO_RESOURCE[item.href.replace(/^\//, '').split('/')[0]]
+    const path = item.href.replace(/^\//, '')
+    const res = SYS_PATH_TO_RESOURCE[path] ?? PATH_TO_RESOURCE[path.split('/')[0]]
     if (res) return permLoading || can(res, 'VIEW')
     return true
   }
-  const canSeeGroup = (group: NavGroup) => {
-    if (group.key === 'system') return permLoading || isAdmin
-    return group.items.some(canSeeItem)
-  }
+  // 组显隐＝组内任一子项可见（系统管理组不再限管理员，按子项授权情况显示）
+  const canSeeGroup = (group: NavGroup) => group.items.some(canSeeItem)
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })

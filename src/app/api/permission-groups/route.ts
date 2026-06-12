@@ -2,15 +2,8 @@
 import { NextResponse } from 'next/server'
 import { handleApiError, HttpError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
-import { getCurrentUser } from '@/lib/permissions'
+import { requirePermission } from '@/lib/permissions'
 import { RESOURCE_KEYS, ACTION_KEYS } from '@/lib/resources'
-
-// 仅管理员可管理权限：未登录或非 admin 一律 403
-async function requireAdmin() {
-  const user = await getCurrentUser()
-  if (!user || !user.isAdmin) throw new HttpError(403, '仅管理员可管理权限')
-  return user
-}
 
 const MEMBER_TYPES = ['USER', 'DEPARTMENT', 'ROLE']
 
@@ -65,7 +58,7 @@ function validatePermissionGroupInput(
 // 列表：支持 ?resource=KEY 过滤，返回 { data }（含成员）
 export async function GET(req: Request) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_PERMISSION', 'VIEW')
     const resource = new URL(req.url).searchParams.get('resource')
     const data = await prisma.permissionGroup.findMany({
       where: resource ? { resource } : undefined,
@@ -81,7 +74,7 @@ export async function GET(req: Request) {
 // 新建权限组：applyToAll=true 时 members 可为空数组
 export async function POST(req: Request) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_PERMISSION', 'CREATE')
     const body = await req.json()
     const { name, resource, actions = [], applyToAll = false, members = [] } = body
     const { applyToAll: applyAll, members: normalizedMembers } =

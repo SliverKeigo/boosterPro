@@ -36,8 +36,38 @@ export const PATH_TO_RESOURCE: Record<string, ResourceKey> = Object.fromEntries(
   RESOURCES.map((r) => [r.path, r.key]),
 ) as Record<string, ResourceKey>
 
+// ── 系统管理子模块资源 ────────────────────────────────────────────────────────
+// 每个子模块独立授权（「权限设置」里按 查看/新增/编辑/删除 勾选；不含导入导出）。
+// ⚠️ 提权提示：SYS_PERMISSION / SYS_USER 等授出去≈把管理员权力授出去（被授权者可改权限、
+// 重置他人密码）——是否授权由管理员自行斟酌。users API 另有兜底：非 admin 不得操作
+// admin 账号、不得设置 isAdmin 标志（见 users route）。
+export const SYSTEM_RESOURCES = [
+  { key: 'SYS_USER', label: '用户管理', path: 'settings/users' },
+  { key: 'SYS_DEPARTMENT', label: '部门管理', path: 'settings/departments' },
+  { key: 'SYS_GROUP', label: '组管理', path: 'settings/groups' },
+  { key: 'SYS_ROLE', label: '角色管理', path: 'settings/roles' },
+  { key: 'SYS_PERMISSION', label: '权限设置', path: 'settings/permissions' },
+  { key: 'SYS_DATA_GRANT', label: '数据共享', path: 'settings/data-grants' },
+  { key: 'SYS_DICT', label: '字典管理', path: 'settings/dictionaries' },
+  { key: 'SYS_PROMPT', label: '提示词管理', path: 'settings/ai-prompts' },
+] as const
+
+export type SystemResourceKey = (typeof SYSTEM_RESOURCES)[number]['key']
+// 业务资源 + 系统资源的并集类型：权限判定(hasAction/requirePermission)按此收口
+export type AnyResourceKey = ResourceKey | SystemResourceKey
+
+export const SYSTEM_RESOURCE_KEYS = SYSTEM_RESOURCES.map((r) => r.key) as SystemResourceKey[]
+export const ALL_RESOURCE_KEYS: AnyResourceKey[] = [...RESOURCE_KEYS, ...SYSTEM_RESOURCE_KEYS]
+// 系统资源可配动作（无导入导出，权限矩阵据此裁剪列）
+export const SYSTEM_ACTION_KEYS: ActionKey[] = ['VIEW', 'CREATE', 'EDIT', 'DELETE']
+
+// 系统子菜单路径(settings/xx) → 资源 key（菜单显隐用，两段路径）
+export const SYS_PATH_TO_RESOURCE: Record<string, SystemResourceKey> = Object.fromEntries(
+  SYSTEM_RESOURCES.map((r) => [r.path, r.key]),
+) as Record<string, SystemResourceKey>
+
 export const RESOURCE_LABEL: Record<string, string> = Object.fromEntries(
-  RESOURCES.map((r) => [r.key, r.label]),
+  [...RESOURCES, ...SYSTEM_RESOURCES].map((r) => [r.key, r.label]),
 )
 export const ACTION_LABEL: Record<string, string> = Object.fromEntries(
   ACTIONS.map((a) => [a.key, a.label]),

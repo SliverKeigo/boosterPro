@@ -45,7 +45,7 @@ type FormState = typeof EMPTY_FORM
 
 export default function DataGrantsPage() {
   const toast = useToast()
-  const { isAdmin, loading: permLoading } = useMyPermissions()
+  const { can, loading: permLoading } = useMyPermissions()
 
   const [grants, setGrants] = useState<DataGrant[]>([])
   const [users, setUsers] = useState<OptionItem[]>([])
@@ -211,8 +211,8 @@ export default function DataGrantsPage() {
     )
   }
 
-  // 非管理员
-  if (!isAdmin) {
+  // 无该资源查看权限
+  if (!can('SYS_DATA_GRANT', 'VIEW')) {
     return (
       <div>
         <div className="mb-4">
@@ -225,7 +225,7 @@ export default function DataGrantsPage() {
               <ShieldAlert className="h-8 w-8 text-error" />
             </div>
             <h2 className="mt-2 text-lg font-semibold text-base-content">无权访问</h2>
-            <p className="max-w-md text-sm text-base-content/50">仅管理员可管理数据共享授权</p>
+            <p className="max-w-md text-sm text-base-content/50">无权限访问，请联系管理员开通</p>
           </div>
         </div>
       </div>
@@ -241,10 +241,12 @@ export default function DataGrantsPage() {
             把「某人 / 某部门 录入的某类数据」开放给指定用户或部门查看 / 编辑（注：查看默认全公司可见、可在「部门管理」按模块关闭；此处主要用于授予编辑权限）
           </p>
         </div>
-        <button className="btn btn-primary btn-sm gap-1.5" onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          新增授权
-        </button>
+        {can('SYS_DATA_GRANT', 'CREATE') && (
+          <button className="btn btn-primary btn-sm gap-1.5" onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            新增授权
+          </button>
+        )}
       </div>
 
       {/* 授权列表 */}
@@ -302,13 +304,15 @@ export default function DataGrantsPage() {
                       <Eye className="h-3.5 w-3.5" />
                       详情
                     </button>
-                    <button
-                      className="btn btn-ghost btn-xs gap-1 text-error"
-                      onClick={() => handleDelete(g.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      撤销
-                    </button>
+                    {can('SYS_DATA_GRANT', 'DELETE') && (
+                      <button
+                        className="btn btn-ghost btn-xs gap-1 text-error"
+                        onClick={() => handleDelete(g.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        撤销
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

@@ -4,10 +4,10 @@ import { HttpError } from '@/lib/apiError'
 vi.mock('@/lib/prisma', () => ({
   prisma: { dictItem: { update: vi.fn(), delete: vi.fn() } },
 }))
-vi.mock('@/lib/permissions', () => ({ requireAdmin: vi.fn() }))
+vi.mock('@/lib/permissions', () => ({ requireAdmin: vi.fn(), requirePermission: vi.fn() }))
 
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/permissions'
+import { requireAdmin, requirePermission } from '@/lib/permissions'
 import { PUT, DELETE } from '@/app/api/dict-items/[id]/route'
 
 const mock = (fn: unknown) => fn as ReturnType<typeof vi.fn>
@@ -25,12 +25,14 @@ const put = (body: unknown, id = '1') =>
 beforeEach(() => {
   vi.clearAllMocks()
   mock(requireAdmin).mockResolvedValue({ id: 1, isAdmin: true })
+  mock(requirePermission).mockResolvedValue({ id: 1, isAdmin: true })
 })
 
 describe('PUT /api/dict-items/[id]', () => {
   it('合法 → 200，含可选 sort/enabled', async () => {
     mock(prisma.dictItem.update).mockResolvedValue({ id: 1 })
     const res = await put({ label: '男', value: 'M', sort: 5, enabled: false })
+    expect(requirePermission).toHaveBeenCalledWith('SYS_DICT', 'EDIT')
     expect(res.status).toBe(200)
     const args = mock(prisma.dictItem.update).mock.calls[0][0]
     expect(args.where).toEqual({ id: 1 })
@@ -55,8 +57,8 @@ describe('PUT /api/dict-items/[id]', () => {
     expect(res.status).toBe(400)
   })
 
-  it('非管理员 → 403', async () => {
-    mock(requireAdmin).mockRejectedValue(new HttpError(403, 'x'))
+  it('无权限 → 403', async () => {
+    mock(requirePermission).mockRejectedValue(new HttpError(403, 'x'))
     const res = await put({ label: '男', value: 'M' })
     expect(res.status).toBe(403)
     expect(prisma.dictItem.update).not.toHaveBeenCalled()
@@ -67,6 +69,7 @@ describe('DELETE /api/dict-items/[id]', () => {
   it('合法 → success', async () => {
     mock(prisma.dictItem.delete).mockResolvedValue({ id: 1 })
     const res = await DELETE(new Request('http://t/api/dict-items/1'), ctx('1'))
+    expect(requirePermission).toHaveBeenCalledWith('SYS_DICT', 'DELETE')
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({ success: true })
   })
@@ -77,8 +80,8 @@ describe('DELETE /api/dict-items/[id]', () => {
     expect(prisma.dictItem.delete).not.toHaveBeenCalled()
   })
 
-  it('非管理员 → 403', async () => {
-    mock(requireAdmin).mockRejectedValue(new HttpError(403, 'x'))
+  it('无权限 → 403', async () => {
+    mock(requirePermission).mockRejectedValue(new HttpError(403, 'x'))
     const res = await DELETE(new Request('http://t/api/dict-items/1'), ctx('1'))
     expect(res.status).toBe(403)
     expect(prisma.dictItem.delete).not.toHaveBeenCalled()

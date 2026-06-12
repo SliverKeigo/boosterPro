@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, AUTH_COOKIE } from '@/lib/auth'
 import { HttpError } from '@/lib/apiError'
-import { RESOURCE_KEYS, ACTION_KEYS, type ResourceKey, type ActionKey } from '@/lib/resources'
+import { ALL_RESOURCE_KEYS, ACTION_KEYS, type AnyResourceKey, type ResourceKey, type ActionKey } from '@/lib/resources'
 
 export interface CurrentUser {
   id: number
@@ -40,9 +40,9 @@ export const getSessionPayload = cache(async () => {
 
 // 计算用户对所有 resource 的功能权限集合：{ CANDIDATE: ['VIEW','CREATE',...], ... }
 export async function getPermissionMap(user: CurrentUser): Promise<Record<string, string[]>> {
-  // 管理员：全部资源全部动作
+  // 管理员：全部资源（业务+系统）全部动作
   if (user.isAdmin) {
-    return Object.fromEntries(RESOURCE_KEYS.map((k) => [k, [...ACTION_KEYS]]))
+    return Object.fromEntries(ALL_RESOURCE_KEYS.map((k) => [k, [...ACTION_KEYS]]))
   }
   // 收集所有作用于该用户的权限组：应用于全部用户 / 指定该用户 / 该用户所在部门 / 该用户的角色
   const or: any[] = [
@@ -60,7 +60,7 @@ export async function getPermissionMap(user: CurrentUser): Promise<Record<string
     select: { resource: true, actions: true },
   })
   const map: Record<string, Set<string>> = {}
-  for (const k of RESOURCE_KEYS) map[k] = new Set()
+  for (const k of ALL_RESOURCE_KEYS) map[k] = new Set()
   for (const g of groups) {
     if (!map[g.resource]) map[g.resource] = new Set()
     for (const a of g.actions) map[g.resource].add(a)
@@ -69,7 +69,7 @@ export async function getPermissionMap(user: CurrentUser): Promise<Record<string
 }
 
 // 功能级判定：用户对某资源是否拥有某动作权限
-export async function hasAction(user: CurrentUser, resource: ResourceKey, action: ActionKey): Promise<boolean> {
+export async function hasAction(user: CurrentUser, resource: AnyResourceKey, action: ActionKey): Promise<boolean> {
   if (user.isAdmin) return true
   const map = await getPermissionMap(user)
   return (map[resource] ?? []).includes(action)
@@ -82,7 +82,7 @@ export function isOwnerOrAdmin(user: CurrentUser, row: { createdById?: number | 
 }
 
 // route 守卫：要求已登录 + 对资源有指定功能权限，否则抛 HttpError（由 handleApiError 处理）。返回当前用户。
-export async function requirePermission(resource: ResourceKey, action: ActionKey): Promise<CurrentUser> {
+export async function requirePermission(resource: AnyResourceKey, action: ActionKey): Promise<CurrentUser> {
   const user = await getCurrentUser()
   if (!user) throw new HttpError(401, '未登录或登录已过期')
   if (!user.isAdmin && !(await hasAction(user, resource, action))) {

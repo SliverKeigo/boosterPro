@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
-import { getCurrentUser, requireAdmin } from '@/lib/permissions'
+import { getCurrentUser, requirePermission, hasAction } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
@@ -17,7 +17,8 @@ export async function GET(req: Request) {
     const q = new URL(req.url).searchParams.get('q')?.trim()
     const nameWhere = q ? { name: { contains: q, mode: 'insensitive' as const } } : undefined
 
-    if (me.isAdmin) {
+    // 全量字段：管理员或被授「用户管理-查看」者（普通用户仍只给精简下拉字段）
+    if (me.isAdmin || (await hasAction(me, 'SYS_USER', 'VIEW'))) {
       const data = await prisma.user.findMany({
         where: nameWhere,
         orderBy: { createdAt: 'asc' },
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_USER', 'CREATE')
     const body = await req.json()
     const { name, username, email, password, departmentId, roleId } = body
     if (!name) return NextResponse.json({ error: '用户名不能为空' }, { status: 400 })

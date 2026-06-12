@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { handleApiError, HttpError } from '@/lib/apiError'
-import { requireAdmin } from '@/lib/permissions'
+import { requirePermission } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 
-// 字典类型列表（仅管理员）：含字典项数量，按 code 升序
+// 字典类型列表（需 SYS_DICT.VIEW）：含字典项数量，按 code 升序
 export async function GET() {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_DICT', 'VIEW')
     const data = await prisma.dictType.findMany({
       include: { _count: { select: { items: true } } },
       orderBy: { code: 'asc' },
@@ -17,10 +17,10 @@ export async function GET() {
   }
 }
 
-// 新建字典类型（仅管理员）：code / name 非空
+// 新建字典类型（需 SYS_DICT.CREATE）：code / name 非空
 export async function POST(req: Request) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_DICT', 'CREATE')
     const body = await req.json()
     const { code, name, remark } = body
     if (typeof code !== 'string' || !code.trim()) throw new HttpError(400, '字典编码不能为空')

@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/apiError'
-import { requireAdmin, getSessionPayload } from '@/lib/permissions'
+import { requirePermission, getSessionPayload } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 
-// 组 = 部门下的小组（组挂部门之下）。建组 / 配成员 / 设组长归管理员。
+// 组 = 部门下的小组（组挂部门之下）。建组 / 配成员 / 设组长需 SYS_GROUP 对应权限（admin 恒过）。
 // 返回全量数据，前端 BoostTable 负责搜索 / 排序 / 分页。
 export async function GET(req: Request) {
   try {
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_GROUP', 'CREATE')
     const { name, departmentId, leaderId, memberIds } = await req.json()
     if (!name?.trim()) return NextResponse.json({ error: '组名称不能为空' }, { status: 400 })
     if (!departmentId) return NextResponse.json({ error: '请选择所属部门' }, { status: 400 })

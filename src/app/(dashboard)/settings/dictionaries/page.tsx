@@ -38,7 +38,9 @@ type ItemForm = typeof EMPTY_ITEM_FORM
 
 export default function DictionariesPage() {
   const toast = useToast()
-  const { isAdmin, loading: permLoading } = useMyPermissions()
+  const { can, loading: permLoading } = useMyPermissions()
+  // 派生为布尔值供 effect 依赖（can 每次渲染都是新引用，直接入 deps 会反复触发）
+  const canView = can('SYS_DICT', 'VIEW')
 
   // 字典类型
   const [types, setTypes] = useState<DictType[]>([])
@@ -109,22 +111,22 @@ export default function DictionariesPage() {
     [toast],
   )
 
-  // 管理员就绪后加载类型；effect 同步路径不含 setState（fetchTypes 首条语句即 await）。
+  // 有查看权限后加载类型；effect 同步路径不含 setState（fetchTypes 首条语句即 await）。
   useEffect(() => {
-    if (permLoading || !isAdmin) return
+    if (permLoading || !canView) return
     void (async () => {
       await fetchTypes()
     })()
-  }, [permLoading, isAdmin, fetchTypes])
+  }, [permLoading, canView, fetchTypes])
 
   // 选中类型变化后加载其字典项。activeTypeId 为 null 时不发请求，items 由初值 / 上次结果兜底；
   // effect 同步路径不含 setState（fetchItems 首条语句即 await），规避 react-hooks/set-state-in-effect。
   useEffect(() => {
-    if (permLoading || !isAdmin || activeTypeId == null) return
+    if (permLoading || !canView || activeTypeId == null) return
     void (async () => {
       await fetchItems(activeTypeId, true)
     })()
-  }, [permLoading, isAdmin, activeTypeId, fetchItems])
+  }, [permLoading, canView, activeTypeId, fetchItems])
 
   // ── 字典类型增删改 ──────────────────────────────────────────────
   const openCreateType = () => {
@@ -260,8 +262,8 @@ export default function DictionariesPage() {
     )
   }
 
-  // 非管理员
-  if (!isAdmin) {
+  // 无该资源查看权限
+  if (!canView) {
     return (
       <div>
         <div className="mb-4">
@@ -274,7 +276,7 @@ export default function DictionariesPage() {
               <ShieldAlert className="h-8 w-8 text-error" />
             </div>
             <h2 className="mt-2 text-lg font-semibold text-base-content">无权访问</h2>
-            <p className="max-w-md text-sm text-base-content/50">仅管理员可管理数据字典</p>
+            <p className="max-w-md text-sm text-base-content/50">无权限访问，请联系管理员开通</p>
           </div>
         </div>
       </div>
@@ -295,10 +297,12 @@ export default function DictionariesPage() {
         <div className="card border border-base-300 bg-base-100 shadow-sm">
           <div className="flex items-center justify-between border-b border-base-300 px-4 py-3">
             <span className="text-sm font-semibold text-base-content">字典类型</span>
-            <button className="btn btn-primary btn-xs gap-1" onClick={openCreateType}>
-              <Plus className="h-3.5 w-3.5" />
-              新增类型
-            </button>
+            {can('SYS_DICT', 'CREATE') && (
+              <button className="btn btn-primary btn-xs gap-1" onClick={openCreateType}>
+                <Plus className="h-3.5 w-3.5" />
+                新增类型
+              </button>
+            )}
           </div>
           <div className="p-2">
             {typesLoading ? (
@@ -361,21 +365,23 @@ export default function DictionariesPage() {
                           >
                             <Eye className="h-3.5 w-3.5" />
                           </button>
-                          <span onClick={(e) => e.stopPropagation()}>
-                            <Popconfirm
-                              title="确认删除该字典类型？"
-                              description="其下所有字典项将一并删除。"
-                              onConfirm={() => handleDeleteType(t.id)}
-                            >
-                              <button
-                                type="button"
-                                aria-label="删除类型"
-                                className="btn btn-ghost btn-xs btn-square text-error"
+                          {can('SYS_DICT', 'DELETE') && (
+                            <span onClick={(e) => e.stopPropagation()}>
+                              <Popconfirm
+                                title="确认删除该字典类型？"
+                                description="其下所有字典项将一并删除。"
+                                onConfirm={() => handleDeleteType(t.id)}
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </Popconfirm>
-                          </span>
+                                <button
+                                  type="button"
+                                  aria-label="删除类型"
+                                  className="btn btn-ghost btn-xs btn-square text-error"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </Popconfirm>
+                            </span>
+                          )}
                         </div>
                       </div>
                     </li>
@@ -398,14 +404,16 @@ export default function DictionariesPage() {
                 </span>
               )}
             </div>
-            <button
-              className="btn btn-primary btn-xs gap-1"
-              onClick={openCreateItem}
-              disabled={activeTypeId == null}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              新增字典项
-            </button>
+            {can('SYS_DICT', 'CREATE') && (
+              <button
+                className="btn btn-primary btn-xs gap-1"
+                onClick={openCreateItem}
+                disabled={activeTypeId == null}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                新增字典项
+              </button>
+            )}
           </div>
 
           <div className="p-2">
@@ -463,15 +471,17 @@ export default function DictionariesPage() {
                               <Eye className="h-3.5 w-3.5" />
                               详情
                             </button>
-                            <Popconfirm
-                              title="确认删除该字典项？"
-                              onConfirm={() => handleDeleteItem(it.id)}
-                            >
-                              <button className="btn btn-ghost btn-xs gap-1 text-error">
-                                <Trash2 className="h-3.5 w-3.5" />
-                                删除
-                              </button>
-                            </Popconfirm>
+                            {can('SYS_DICT', 'DELETE') && (
+                              <Popconfirm
+                                title="确认删除该字典项？"
+                                onConfirm={() => handleDeleteItem(it.id)}
+                              >
+                                <button className="btn btn-ghost btn-xs gap-1 text-error">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  删除
+                                </button>
+                              </Popconfirm>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -493,7 +503,7 @@ export default function DictionariesPage() {
         okText={editingType ? '保存' : '创建'}
         confirmLoading={typeSubmitting}
         readOnly={modeType === 'view'}
-        onEdit={isAdmin ? () => setModeType('edit') : undefined}
+        onEdit={can('SYS_DICT', 'EDIT') ? () => setModeType('edit') : undefined}
         width={520}
       >
         <div className="flex flex-col gap-4">
@@ -534,7 +544,7 @@ export default function DictionariesPage() {
         okText={editingItem ? '保存' : '创建'}
         confirmLoading={itemSubmitting}
         readOnly={modeItem === 'view'}
-        onEdit={isAdmin ? () => setModeItem('edit') : undefined}
+        onEdit={can('SYS_DICT', 'EDIT') ? () => setModeItem('edit') : undefined}
         width={520}
       >
         <div className="flex flex-col gap-4">

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { handleApiError, HttpError } from '@/lib/apiError'
-import { requireAdmin, getSessionPayload } from '@/lib/permissions'
+import { requirePermission, getSessionPayload } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 import { RESOURCE_KEYS, type ResourceKey } from '@/lib/resources'
 
@@ -25,7 +25,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_DEPARTMENT', 'EDIT')
     const { id } = await params
     const pid = parseInt(id)
     if (!Number.isInteger(pid) || pid <= 0) throw new HttpError(400, '非法的 ID')
@@ -75,7 +75,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin()
+    await requirePermission('SYS_DEPARTMENT', 'DELETE')
     const { id } = await params
     const pid = parseInt(id)
     if (!Number.isInteger(pid) || pid <= 0) throw new HttpError(400, '非法的 ID')

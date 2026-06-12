@@ -6,9 +6,12 @@ import { Modal, Field, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import {
   RESOURCES,
+  SYSTEM_RESOURCES,
+  SYSTEM_RESOURCE_KEYS,
+  SYSTEM_ACTION_KEYS,
   ACTIONS,
   ACTION_LABEL,
-  type ResourceKey,
+  type AnyResourceKey,
 } from '@/lib/resources'
 
 type MemberType = 'USER' | 'DEPARTMENT' | 'ROLE'
@@ -45,9 +48,11 @@ type FormState = typeof EMPTY_FORM
 
 export default function PermissionsPage() {
   const toast = useToast()
-  const { isAdmin, loading: permLoading } = useMyPermissions()
+  const { can, loading: permLoading } = useMyPermissions()
+  // 本页自身的访问权（SYS_PERMISSION）；管理员恒 true
+  const canView = can('SYS_PERMISSION', 'VIEW')
 
-  const [activeResource, setActiveResource] = useState<ResourceKey>(RESOURCES[0].key)
+  const [activeResource, setActiveResource] = useState<AnyResourceKey>(RESOURCES[0].key)
   const [groups, setGroups] = useState<PermissionGroup[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -67,7 +72,7 @@ export default function PermissionsPage() {
   // 拉取当前资源的权限组。showLoading=false（如初始 / tab effect）时不在同步路径触发 setState，
   // 首条语句即 await（规避 react-hooks/set-state-in-effect）；loading 初值即 true。
   const fetchGroups = useCallback(
-    async (resource: ResourceKey, showLoading = false) => {
+    async (resource: AnyResourceKey, showLoading = false) => {
       try {
         if (showLoading) setLoading(true)
         const res = await fetch(`/api/permission-groups?resource=${resource}`)
@@ -102,19 +107,19 @@ export default function PermissionsPage() {
 
   // 管理员就绪后加载选项；effect 同步路径不含 setState（fetchOptions 首条语句即 await）。
   useEffect(() => {
-    if (permLoading || !isAdmin) return
+    if (permLoading || !canView) return
     void (async () => {
       await fetchOptions()
     })()
-  }, [permLoading, isAdmin, fetchOptions])
+  }, [permLoading, canView, fetchOptions])
 
   // 切换资源 / 管理员就绪后加载权限组。effect 同步路径不传 showLoading，故不触发 setLoading。
   useEffect(() => {
-    if (permLoading || !isAdmin) return
+    if (permLoading || !canView) return
     void (async () => {
       await fetchGroups(activeResource)
     })()
-  }, [permLoading, isAdmin, activeResource, fetchGroups])
+  }, [permLoading, canView, activeResource, fetchGroups])
 
   const openCreate = () => {
     setEditing(null)
@@ -232,8 +237,8 @@ export default function PermissionsPage() {
     )
   }
 
-  // 非管理员
-  if (!isAdmin) {
+  // 无本页访问权
+  if (!canView) {
     return (
       <div>
         <div className="mb-4">
@@ -291,15 +296,32 @@ export default function PermissionsPage() {
             为用户、部门或角色配置对各业务资源的功能权限
           </p>
         </div>
-        <button className="btn btn-primary btn-sm gap-1.5" onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          新增权限组
-        </button>
+        {can('SYS_PERMISSION', 'CREATE') && (
+          <button className="btn btn-primary btn-sm gap-1.5" onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            新增权限组
+          </button>
+        )}
       </div>
 
-      {/* 资源 tabs */}
-      <div role="tablist" className="tabs tabs-boxed mb-4 flex-wrap bg-base-200">
+      {/* 资源 tabs：业务模块 / 系统管理 两组 */}
+      <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-base-content/40">业务模块</div>
+      <div role="tablist" className="tabs tabs-boxed mb-3 flex-wrap bg-base-200">
         {RESOURCES.map((r) => (
+          <button
+            key={r.key}
+            role="tab"
+            className={`tab gap-1.5 ${activeResource === r.key ? 'tab-active' : ''}`}
+            onClick={() => setActiveResource(r.key)}
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            {r.label}
+          </button>
+        ))}
+      </div>
+      <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-base-content/40">系统管理</div>
+      <div role="tablist" className="tabs tabs-boxed mb-4 flex-wrap bg-base-200">
+        {SYSTEM_RESOURCES.map((r) => (
           <button
             key={r.key}
             role="tab"
@@ -362,13 +384,15 @@ export default function PermissionsPage() {
                       <Eye className="h-3.5 w-3.5" />
                       详情
                     </button>
-                    <button
-                      className="btn btn-ghost btn-xs gap-1 text-error"
-                      onClick={() => handleDelete(g.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      删除
-                    </button>
+                    {can('SYS_PERMISSION', 'DELETE') && (
+                      <button
+                        className="btn btn-ghost btn-xs gap-1 text-error"
+                        onClick={() => handleDelete(g.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        删除
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -386,7 +410,7 @@ export default function PermissionsPage() {
         okText={editing ? '保存' : '创建'}
         confirmLoading={submitting}
         readOnly={mode === 'view'}
-        onEdit={isAdmin ? () => setMode('edit') : undefined}
+        onEdit={can('SYS_PERMISSION', 'EDIT') ? () => setMode('edit') : undefined}
         width={680}
       >
         <div className="flex flex-col gap-4">
@@ -401,8 +425,11 @@ export default function PermissionsPage() {
 
           <Field label="功能权限" required>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {/* 导入已恢复（全模块导出→改→导入），IMPORT 权限可正常配置 */}
-              {ACTIONS.map((a) => (
+              {/* 业务资源全六动作；系统管理资源无导入/导出，按 SYSTEM_ACTION_KEYS 裁剪 */}
+              {(SYSTEM_RESOURCE_KEYS.includes(activeResource as never)
+                ? ACTIONS.filter((a) => SYSTEM_ACTION_KEYS.includes(a.key))
+                : ACTIONS
+              ).map((a) => (
                 <label
                   key={a.key}
                   className="flex cursor-pointer items-center gap-2 rounded-lg border border-base-300 px-3 py-2 hover:bg-base-200"

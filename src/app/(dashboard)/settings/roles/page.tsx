@@ -10,7 +10,7 @@ const EMPTY_FORM: any = { name: '', description: '' }
 
 export default function RolesPage() {
   const toast = useToast()
-  const { isAdmin, loading: permLoading } = useMyPermissions()
+  const { can, loading: permLoading } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -124,8 +124,8 @@ export default function RolesPage() {
     )
   }
 
-  // 非管理员
-  if (!isAdmin) {
+  // 无该资源查看权限
+  if (!can('SYS_ROLE', 'VIEW')) {
     return (
       <div>
         <div className="mb-4">
@@ -138,7 +138,7 @@ export default function RolesPage() {
               <ShieldAlert className="h-8 w-8 text-error" />
             </div>
             <h2 className="mt-2 text-lg font-semibold text-base-content">无权访问</h2>
-            <p className="max-w-md text-sm text-base-content/50">仅管理员可访问</p>
+            <p className="max-w-md text-sm text-base-content/50">无权限访问，请联系管理员开通</p>
           </div>
         </div>
       </div>
@@ -169,7 +169,7 @@ export default function RolesPage() {
         data={data}
         loading={loading}
         rowKey="id"
-        onCreate={openCreate}
+        onCreate={can('SYS_ROLE', 'CREATE') ? openCreate : undefined}
         createText="新增角色"
         onImport={() => toast.info('导入功能开发中')}
         onRefresh={() => fetchData(true)}
@@ -180,12 +180,14 @@ export default function RolesPage() {
               <Eye className="h-3.5 w-3.5" />
               详情
             </button>
-            <Popconfirm title="确认删除该角色？" onConfirm={() => handleDelete(r.id)}>
-              <button className="btn btn-ghost btn-xs gap-1 text-error">
-                <Trash2 className="h-3.5 w-3.5" />
-                删除
-              </button>
-            </Popconfirm>
+            {can('SYS_ROLE', 'DELETE') && (
+              <Popconfirm title="确认删除该角色？" onConfirm={() => handleDelete(r.id)}>
+                <button className="btn btn-ghost btn-xs gap-1 text-error">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  删除
+                </button>
+              </Popconfirm>
+            )}
           </div>
         )}
       />
@@ -198,7 +200,7 @@ export default function RolesPage() {
         okText={editing ? '保存' : '创建'}
         confirmLoading={submitting}
         readOnly={mode === 'view'}
-        onEdit={isAdmin ? () => setMode('edit') : undefined}
+        onEdit={can('SYS_ROLE', 'EDIT') ? () => setMode('edit') : undefined}
         width={560}
       >
         <div className="grid grid-cols-1 gap-4">

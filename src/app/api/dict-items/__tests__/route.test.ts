@@ -7,10 +7,10 @@ vi.mock('@/lib/prisma', () => ({
     dictType: { findUnique: vi.fn() },
   },
 }))
-vi.mock('@/lib/permissions', () => ({ requireAdmin: vi.fn() }))
+vi.mock('@/lib/permissions', () => ({ requireAdmin: vi.fn(), requirePermission: vi.fn() }))
 
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/permissions'
+import { requireAdmin, requirePermission } from '@/lib/permissions'
 import { GET, POST } from '@/app/api/dict-items/route'
 
 const mock = (fn: unknown) => fn as ReturnType<typeof vi.fn>
@@ -26,12 +26,14 @@ const post = (body: unknown) =>
 beforeEach(() => {
   vi.clearAllMocks()
   mock(requireAdmin).mockResolvedValue({ id: 1, isAdmin: true })
+  mock(requirePermission).mockResolvedValue({ id: 1, isAdmin: true })
 })
 
 describe('GET /api/dict-items', () => {
   it('合法 typeId → 返回 {data}', async () => {
     mock(prisma.dictItem.findMany).mockResolvedValue([{ id: 1, label: '男', value: 'M' }])
     const res = await GET(new Request('http://t/api/dict-items?typeId=3'))
+    expect(requirePermission).toHaveBeenCalledWith('SYS_DICT', 'VIEW')
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({ data: [{ id: 1, label: '男', value: 'M' }] })
     expect(mock(prisma.dictItem.findMany).mock.calls[0][0].where).toEqual({ typeId: 3 })
@@ -43,8 +45,8 @@ describe('GET /api/dict-items', () => {
     expect(prisma.dictItem.findMany).not.toHaveBeenCalled()
   })
 
-  it('非管理员 → 403', async () => {
-    mock(requireAdmin).mockRejectedValue(new HttpError(403, 'x'))
+  it('无权限 → 403', async () => {
+    mock(requirePermission).mockRejectedValue(new HttpError(403, 'x'))
     const res = await GET(new Request('http://t/api/dict-items?typeId=3'))
     expect(res.status).toBe(403)
   })
@@ -55,6 +57,7 @@ describe('POST /api/dict-items', () => {
     mock(prisma.dictType.findUnique).mockResolvedValue({ id: 3 })
     mock(prisma.dictItem.create).mockResolvedValue({ id: 9 })
     const res = await post({ typeId: 3, label: '男', value: 'M' })
+    expect(requirePermission).toHaveBeenCalledWith('SYS_DICT', 'CREATE')
     expect(res.status).toBe(201)
     const args = mock(prisma.dictItem.create).mock.calls[0][0]
     expect(args.data).toMatchObject({ typeId: 3, label: '男', value: 'M', sort: 0, enabled: true })
@@ -83,8 +86,8 @@ describe('POST /api/dict-items', () => {
     expect(prisma.dictItem.create).not.toHaveBeenCalled()
   })
 
-  it('非管理员 → 403', async () => {
-    mock(requireAdmin).mockRejectedValue(new HttpError(403, 'x'))
+  it('无权限 → 403', async () => {
+    mock(requirePermission).mockRejectedValue(new HttpError(403, 'x'))
     const res = await post({ typeId: 3, label: '男', value: 'M' })
     expect(res.status).toBe(403)
     expect(prisma.dictItem.create).not.toHaveBeenCalled()

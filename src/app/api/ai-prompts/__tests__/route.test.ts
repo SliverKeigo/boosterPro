@@ -4,22 +4,24 @@ import { HttpError } from '@/lib/apiError'
 vi.mock('@/lib/prisma', () => ({
   prisma: { aiPrompt: { findMany: vi.fn(), upsert: vi.fn(), deleteMany: vi.fn() } },
 }))
-vi.mock('@/lib/permissions', () => ({ requireAdmin: vi.fn() }))
+vi.mock('@/lib/permissions', () => ({ requireAdmin: vi.fn(), requirePermission: vi.fn() }))
 
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/permissions'
+import { requireAdmin, requirePermission } from '@/lib/permissions'
 import { GET, PUT, DELETE } from '@/app/api/ai-prompts/route'
 
 const mock = (fn: unknown) => fn as ReturnType<typeof vi.fn>
 beforeEach(() => {
   vi.clearAllMocks()
   mock(requireAdmin).mockResolvedValue({ id: 1, isAdmin: true })
+  mock(requirePermission).mockResolvedValue({ id: 1, isAdmin: true })
 })
 
 describe('GET /api/ai-prompts', () => {
   it('库为空 → 列出内置 key（overridden=false）', async () => {
     mock(prisma.aiPrompt.findMany).mockResolvedValue([])
     const res = await GET()
+    expect(requirePermission).toHaveBeenCalledWith('SYS_PROMPT', 'VIEW')
     const body = await res.json()
     const keys = body.data.map((d: any) => d.key)
     expect(keys).toEqual(expect.arrayContaining(['job_profile', 'company_info', 'supplement_opening']))
@@ -35,8 +37,8 @@ describe('GET /api/ai-prompts', () => {
     expect(ci.content).toBe('X')
   })
 
-  it('非管理员 → 403', async () => {
-    mock(requireAdmin).mockRejectedValue(new HttpError(403, '仅管理员可执行该操作'))
+  it('无权限 → 403', async () => {
+    mock(requirePermission).mockRejectedValue(new HttpError(403, '您没有执行该操作的权限'))
     const res = await GET()
     expect(res.status).toBe(403)
   })
@@ -46,6 +48,7 @@ describe('PUT /api/ai-prompts', () => {
   it('upsert 保存覆盖', async () => {
     mock(prisma.aiPrompt.upsert).mockResolvedValue({ id: 1, key: 'company_info' })
     const res = await PUT(new Request('http://t/api/ai-prompts', { method: 'PUT', body: JSON.stringify({ key: 'company_info', name: 'n', content: 'c' }) }))
+    expect(requirePermission).toHaveBeenCalledWith('SYS_PROMPT', 'EDIT')
     expect(res.status).toBe(200)
     expect(mock(prisma.aiPrompt.upsert).mock.calls[0][0].where).toEqual({ key: 'company_info' })
   })
@@ -60,6 +63,7 @@ describe('DELETE /api/ai-prompts', () => {
   it('?key= → 删除覆盖（恢复默认）', async () => {
     mock(prisma.aiPrompt.deleteMany).mockResolvedValue({ count: 1 })
     const res = await DELETE(new Request('http://t/api/ai-prompts?key=company_info', { method: 'DELETE' }))
+    expect(requirePermission).toHaveBeenCalledWith('SYS_PROMPT', 'DELETE')
     expect(res.status).toBe(200)
     expect(prisma.aiPrompt.deleteMany).toHaveBeenCalledWith({ where: { key: 'company_info' } })
   })

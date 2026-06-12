@@ -13,11 +13,12 @@ vi.mock('@/lib/prisma', () => {
 })
 vi.mock('@/lib/permissions', () => ({
   requireAdmin: vi.fn(),
+  requirePermission: vi.fn(),
   getSessionPayload: vi.fn(async () => ({ userId: 1 })),
 }))
 
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/permissions'
+import { requireAdmin, requirePermission } from '@/lib/permissions'
 import { GET, PUT, DELETE } from '@/app/api/departments/[id]/route'
 
 const admin = { id: 1, name: 'A', email: null, isAdmin: true, departmentId: null, roleId: null }
@@ -27,14 +28,15 @@ const ctx = (id = '1') => ({ params: Promise.resolve({ id }) })
 beforeEach(() => {
   vi.clearAllMocks()
   mock(requireAdmin).mockResolvedValue(admin)
+  mock(requirePermission).mockResolvedValue(admin)
 })
 
 describe('GET /api/departments/[id]', () => {
-  // GET 无守卫
-  it('返回部门（无 requireAdmin 守卫）', async () => {
+  // GET 仅登录校验
+  it('返回部门（无 requirePermission 守卫）', async () => {
     mock(prisma.department.findUnique).mockResolvedValue({ id: 1, name: '研发部' })
     const res = await GET(new Request('http://t'), ctx('1'))
-    expect(requireAdmin).not.toHaveBeenCalled()
+    expect(requirePermission).not.toHaveBeenCalled()
     expect(res.status).toBe(200)
     expect(mock(prisma.department.findUnique).mock.calls[0][0].where).toEqual({ id: 1 })
   })
@@ -55,11 +57,11 @@ describe('PUT /api/departments/[id]', () => {
   const makeReq = (body: unknown) =>
     new Request('http://t', { method: 'PUT', body: JSON.stringify(body) })
 
-  it('管理员更新：事务内 update name，返回 200', async () => {
+  it('有 SYS_DEPARTMENT.EDIT 权限：事务内 update name，返回 200', async () => {
     mock(prisma.department.update).mockResolvedValue({ id: 1, name: '改' })
     mock(prisma.department.findUnique).mockResolvedValue({ id: 1, name: '改', hiddenRulesAsSource: [] })
     const res = await PUT(makeReq({ name: '改' }), ctx('1'))
-    expect(requireAdmin).toHaveBeenCalled()
+    expect(requirePermission).toHaveBeenCalledWith('SYS_DEPARTMENT', 'EDIT')
     const args = mock(prisma.department.update).mock.calls[0][0]
     expect(args.where).toEqual({ id: 1 })
     expect(args.data).toEqual({ name: '改' })
@@ -79,15 +81,15 @@ describe('PUT /api/departments/[id]', () => {
     expect(createArgs.data).toEqual([{ departmentId: 1, resource: 'CANDIDATE', hiddenFromDeptId: 2 }])
   })
 
-  it('非管理员 → 403（关键安全断言），不写库', async () => {
-    mock(requireAdmin).mockRejectedValue(new HttpError(403, '仅管理员可执行该操作'))
+  it('无权限 → 403（关键安全断言），不写库', async () => {
+    mock(requirePermission).mockRejectedValue(new HttpError(403, '您没有执行该操作的权限'))
     const res = await PUT(makeReq({ name: '改' }), ctx('1'))
     expect(res.status).toBe(403)
     expect(prisma.department.update).not.toHaveBeenCalled()
   })
 
   it('未登录 → 401', async () => {
-    mock(requireAdmin).mockRejectedValue(new HttpError(401, '未登录或登录已过期'))
+    mock(requirePermission).mockRejectedValue(new HttpError(401, '未登录或登录已过期'))
     const res = await PUT(makeReq({ name: '改' }), ctx('1'))
     expect(res.status).toBe(401)
   })
@@ -107,11 +109,11 @@ describe('PUT /api/departments/[id]', () => {
 describe('DELETE /api/departments/[id]', () => {
   const makeReq = () => new Request('http://t', { method: 'DELETE' })
 
-  it('管理员删除（无关联用户）：调用 prisma.department.delete，返回 success', async () => {
+  it('有 SYS_DEPARTMENT.DELETE 权限（无关联用户）：调用 prisma.department.delete，返回 success', async () => {
     mock(prisma.user.count).mockResolvedValue(0)
     mock(prisma.department.delete).mockResolvedValue({ id: 1 })
     const res = await DELETE(makeReq(), ctx('1'))
-    expect(requireAdmin).toHaveBeenCalled()
+    expect(requirePermission).toHaveBeenCalledWith('SYS_DEPARTMENT', 'DELETE')
     expect(mock(prisma.user.count).mock.calls[0][0]).toEqual({ where: { departmentId: 1 } })
     expect(mock(prisma.department.delete).mock.calls[0][0]).toEqual({ where: { id: 1 } })
     expect(res.status).toBe(200)
@@ -125,8 +127,8 @@ describe('DELETE /api/departments/[id]', () => {
     expect(prisma.department.delete).not.toHaveBeenCalled()
   })
 
-  it('非管理员 → 403（关键安全断言），不删除', async () => {
-    mock(requireAdmin).mockRejectedValue(new HttpError(403, '仅管理员可执行该操作'))
+  it('无权限 → 403（关键安全断言），不删除', async () => {
+    mock(requirePermission).mockRejectedValue(new HttpError(403, '您没有执行该操作的权限'))
     const res = await DELETE(makeReq(), ctx('1'))
     expect(res.status).toBe(403)
     expect(prisma.user.count).not.toHaveBeenCalled()
@@ -134,7 +136,7 @@ describe('DELETE /api/departments/[id]', () => {
   })
 
   it('未登录 → 401', async () => {
-    mock(requireAdmin).mockRejectedValue(new HttpError(401, '未登录或登录已过期'))
+    mock(requirePermission).mockRejectedValue(new HttpError(401, '未登录或登录已过期'))
     const res = await DELETE(makeReq(), ctx('1'))
     expect(res.status).toBe(401)
   })

@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
-import { Eye, Trash2, ArrowRightLeft } from 'lucide-react'
+import { Eye, Trash2, ArrowRightLeft, ShieldAlert } from 'lucide-react'
 import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, SearchSelect, searchFetch, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 
@@ -14,7 +14,7 @@ const EMPTY_FORM: any = {
 
 export default function UsersPage() {
   const toast = useToast()
-  const { isAdmin } = useMyPermissions()
+  const { can, loading: permLoading } = useMyPermissions()
   const [data, setData] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
   const [roles, setRoles] = useState<any[]>([])
@@ -160,6 +160,36 @@ export default function UsersPage() {
     }
   }
 
+  // 权限校验中
+  if (permLoading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <span className="loading loading-spinner loading-lg text-primary" />
+      </div>
+    )
+  }
+
+  // 无该资源查看权限
+  if (!can('SYS_USER', 'VIEW')) {
+    return (
+      <div>
+        <div className="mb-4">
+          <h1 className="text-xl font-bold text-base-content">用户管理</h1>
+          <p className="mt-0.5 text-sm text-base-content/50">管理系统用户及其部门、角色</p>
+        </div>
+        <div className="card border border-base-300 bg-base-100 shadow-sm">
+          <div className="card-body items-center py-20 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-error/10">
+              <ShieldAlert className="h-8 w-8 text-error" />
+            </div>
+            <h2 className="mt-2 text-lg font-semibold text-base-content">无权访问</h2>
+            <p className="max-w-md text-sm text-base-content/50">无权限访问，请联系管理员开通</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const columns: BoostColumn<any>[] = [
     { key: 'id', title: 'ID', width: 70, filterType: 'number' },
     { key: 'name', title: '用户名', render: (v) => <span className="font-medium">{v}</span> },
@@ -195,7 +225,7 @@ export default function UsersPage() {
         data={data}
         loading={loading}
         rowKey="id"
-        onCreate={openCreate}
+        onCreate={can('SYS_USER', 'CREATE') ? openCreate : undefined}
         createText="新增用户"
         onImport={() => toast.info('导入功能开发中')}
         onRefresh={() => fetchData(true)}
@@ -206,18 +236,20 @@ export default function UsersPage() {
               <Eye className="h-3.5 w-3.5" />
               详情
             </button>
-            {isAdmin && (
+            {can('SYS_USER', 'EDIT') && (
               <button className="btn btn-ghost btn-xs gap-1 text-secondary" onClick={() => openTransfer(r)}>
                 <ArrowRightLeft className="h-3.5 w-3.5" />
                 移交权限
               </button>
             )}
-            <Popconfirm title="确认删除该用户？" onConfirm={() => handleDelete(r.id)}>
-              <button className="btn btn-ghost btn-xs gap-1 text-error">
-                <Trash2 className="h-3.5 w-3.5" />
-                删除
-              </button>
-            </Popconfirm>
+            {can('SYS_USER', 'DELETE') && (
+              <Popconfirm title="确认删除该用户？" onConfirm={() => handleDelete(r.id)}>
+                <button className="btn btn-ghost btn-xs gap-1 text-error">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  删除
+                </button>
+              </Popconfirm>
+            )}
           </div>
         )}
       />
@@ -230,7 +262,7 @@ export default function UsersPage() {
         okText={editing ? '保存' : '创建'}
         confirmLoading={submitting}
         readOnly={mode === 'view'}
-        onEdit={isAdmin ? () => setMode('edit') : undefined}
+        onEdit={can('SYS_USER', 'EDIT') ? () => setMode('edit') : undefined}
         width={560}
       >
         <div className="grid grid-cols-1 gap-4">

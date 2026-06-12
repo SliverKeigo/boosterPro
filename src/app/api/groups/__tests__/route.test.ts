@@ -11,11 +11,12 @@ vi.mock('@/lib/prisma', () => {
 })
 vi.mock('@/lib/permissions', () => ({
   requireAdmin: vi.fn(),
+  requirePermission: vi.fn(),
   getSessionPayload: vi.fn(),
 }))
 
 import { prisma } from '@/lib/prisma'
-import { requireAdmin, getSessionPayload } from '@/lib/permissions'
+import { requireAdmin, requirePermission, getSessionPayload } from '@/lib/permissions'
 import { GET, POST } from '@/app/api/groups/route'
 
 const mock = (fn: unknown) => fn as ReturnType<typeof vi.fn>
@@ -25,6 +26,7 @@ const post = (body: unknown) =>
 beforeEach(() => {
   vi.clearAllMocks()
   mock(requireAdmin).mockResolvedValue({ id: 1, isAdmin: true })
+  mock(requirePermission).mockResolvedValue({ id: 1, isAdmin: true })
   mock(getSessionPayload).mockResolvedValue({ userId: 1 })
 })
 
@@ -63,6 +65,7 @@ describe('POST /api/groups', () => {
   it('合法 → 建组 + 成员 groupId 指向新组，201', async () => {
     mock(prisma.group.create).mockResolvedValue({ id: 10, name: 'A组' })
     const res = await post({ name: 'A组', departmentId: 2, leaderId: 3, memberIds: [3, 4] })
+    expect(requirePermission).toHaveBeenCalledWith('SYS_GROUP', 'CREATE')
     expect(res.status).toBe(201)
     expect(prisma.group.create).toHaveBeenCalledWith({
       data: { name: 'A组', departmentId: 2, leaderId: 3 },
