@@ -287,6 +287,8 @@ export default function ContractsPage() {
         createText="新增"
         importResource={can(RES, 'IMPORT') ? RES : undefined}
         onRefresh={() => fetchData(true)}
+        deleteEndpoint="/api/contracts"
+        canSelectRow={(r) => can(RES, 'DELETE') && canEditRow(RES, r)}
         showExport={can(RES, 'EXPORT')}
         searchPlaceholder="搜索合同名称 / 客户 / 服务类型…"
         actions={(r) => (

@@ -317,6 +317,8 @@ export default function RequirementsPage() {
         createText="新增"
         importResource={can(RES, 'IMPORT') ? RES : undefined}
         onRefresh={() => fetchData(true)}
+        deleteEndpoint="/api/requirements"
+        canSelectRow={(r) => can(RES, 'DELETE') && canEditRow(RES, r)}
         showExport={can(RES, 'EXPORT')}
         searchPlaceholder="搜索岗位 / 客户 / 状态 / 城市…"
         actions={(r) => (

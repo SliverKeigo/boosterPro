@@ -180,6 +180,8 @@ export default function GroupsPage() {
         data={data}
         loading={loading}
         rowKey="id"
+        deleteEndpoint="/api/groups"
+        canSelectRow={() => can('SYS_GROUP', 'DELETE')}
         onCreate={can('SYS_GROUP', 'CREATE') ? openCreate : undefined}
         createText="新增组"
         onRefresh={() => fetchData(true)}

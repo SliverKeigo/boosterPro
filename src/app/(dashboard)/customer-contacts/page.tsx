@@ -196,6 +196,8 @@ export default function CustomerContactsPage() {
         createText="新增"
         importResource={can(RES, 'IMPORT') ? RES : undefined}
         onRefresh={() => fetchData(true)}
+        deleteEndpoint="/api/customer-contacts"
+        canSelectRow={(r) => can(RES, 'DELETE') && canEditRow(RES, r)}
         showExport={can(RES, 'EXPORT')}
         searchPlaceholder="搜索标题 / 客户 / 提交人 / 联系人…"
         actions={(r) => (

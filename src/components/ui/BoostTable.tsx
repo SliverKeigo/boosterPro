@@ -20,8 +20,11 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Trash2,
 } from 'lucide-react'
 import { Dropdown } from './Dropdown'
+import { Popconfirm } from './Popconfirm'
+import { useToast } from './Toast'
 import { Modal } from './Modal'
 import { exportToExcel } from '@/lib/exportExcel'
 import { IMPORT_COLUMNS, markRequired } from '@/lib/importColumns'
@@ -80,6 +83,10 @@ interface BoostTableProps<T> {
   /** 是否显示导出按钮（受导出权限控制），默认 true */
   showExport?: boolean
   onRefresh?: () => void
+  /** 传入删除端点（如 '/api/candidates'）即开启「多选 + 批量删除」：勾选行后批量 DELETE `${deleteEndpoint}/${key}` */
+  deleteEndpoint?: string
+  /** 哪些行可被勾选删除（默认全部可选）；业务列表传 isOwner、系统管理传 isAdmin */
+  canSelectRow?: (record: T) => boolean
   moreActions?: MoreAction[]
   actions?: (record: T) => ReactNode
   actionsWidth?: number
@@ -223,6 +230,8 @@ export function BoostTable<T extends Record<string, any>>({
   onExport,
   showExport = true,
   onRefresh,
+  deleteEndpoint,
+  canSelectRow,
   moreActions,
   actions,
   actionsWidth = 140,
@@ -587,6 +596,57 @@ export function BoostTable<T extends Record<string, any>>({
     return (r as any)[rowKey] ?? i
   }
 
+  // ── 多选 + 批量删除（仅传入 deleteEndpoint 时启用）──
+  const toast = useToast()
+  const [selectedKeys, setSelectedKeys] = useState<Set<string | number>>(() => new Set())
+  const [batchDeleting, setBatchDeleting] = useState(false)
+  const selectable = !!deleteEndpoint
+  // 当前页「可勾选」行的 key（受 canSelectRow 约束：无权删的行不可选）
+  const selectablePageKeys = useMemo(() => {
+    const ks: (string | number)[] = []
+    paged.forEach((r, i) => { if (!canSelectRow || canSelectRow(r)) ks.push(getKey(r, i)) })
+    return ks
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paged, canSelectRow])
+  const allPageSelected = selectablePageKeys.length > 0 && selectablePageKeys.every((k) => selectedKeys.has(k))
+  const somePageSelected = !allPageSelected && selectablePageKeys.some((k) => selectedKeys.has(k))
+  const toggleSelectAllPage = () => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      if (allPageSelected) selectablePageKeys.forEach((k) => next.delete(k))
+      else selectablePageKeys.forEach((k) => next.add(k))
+      return next
+    })
+  }
+  const toggleSelectRow = (key: string | number) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+  const handleBatchDelete = async () => {
+    if (!deleteEndpoint || selectedKeys.size === 0) return
+    setBatchDeleting(true)
+    let ok = 0
+    let fail = 0
+    for (const key of selectedKeys) {
+      try {
+        const res = await fetch(`${deleteEndpoint}/${key}`, { method: 'DELETE' })
+        if (res.ok) ok++
+        else fail++
+      } catch {
+        fail++
+      }
+    }
+    setBatchDeleting(false)
+    setSelectedKeys(new Set())
+    if (fail === 0) toast.success(`已删除 ${ok} 条`)
+    else toast.error(`删除完成：成功 ${ok} 条、失败 ${fail} 条（可能无权限或被引用）`)
+    onRefresh?.()
+  }
+
   // 表头点击排序：把排序规则设为「仅该字段」并在 asc → desc → 无 间循环。
   // 与排序面板共享同一份 sortRules，不存在两套互相打架。
   const toggleSort = (key: string) => {
@@ -744,6 +804,14 @@ export function BoostTable<T extends Record<string, any>>({
             <Plus className="h-4 w-4" />
             {createText}
           </button>
+        )}
+        {selectable && selectedKeys.size > 0 && (
+          <Popconfirm title={`确认删除选中的 ${selectedKeys.size} 条记录？此操作不可恢复。`} onConfirm={handleBatchDelete}>
+            <button type="button" className="btn btn-error btn-sm gap-1.5" disabled={batchDeleting}>
+              {batchDeleting ? <span className="loading loading-spinner loading-xs" /> : <Trash2 className="h-4 w-4" />}
+              删除选中（{selectedKeys.size}）
+            </button>
+          </Popconfirm>
         )}
         {importResource ? (
           <button type="button" className={ICON_BTN} onClick={() => setImportOpen(true)}>
@@ -1263,6 +1331,18 @@ export function BoostTable<T extends Record<string, any>>({
           <table className="table table-zebra w-max min-w-full">
             <thead className="sticky top-0 z-10">
               <tr className="bg-base-200">
+                {selectable && (
+                  <th className="w-10 bg-base-200">
+                    <input
+                      type="checkbox"
+                      className="checkbox checkbox-sm align-middle"
+                      checked={allPageSelected}
+                      ref={(el) => { if (el) el.indeterminate = somePageSelected }}
+                      onChange={toggleSelectAllPage}
+                      aria-label="全选当前页"
+                    />
+                  </th>
+                )}
                 {visibleColumns.map((c) => {
                   // 该列在已生效排序规则中的方向（与排序面板共享同一份 sortRules）
                   const dir = sortDirByKey.get(c.key)
@@ -1309,6 +1389,19 @@ export function BoostTable<T extends Record<string, any>>({
             <tbody>
               {paged.map((r, i) => (
                 <tr key={getKey(r, i)} className="hover:bg-primary/5">
+                  {selectable && (
+                    <td className="w-10">
+                      {(!canSelectRow || canSelectRow(r)) && (
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-sm align-middle"
+                          checked={selectedKeys.has(getKey(r, i))}
+                          onChange={() => toggleSelectRow(getKey(r, i))}
+                          aria-label="选择该行"
+                        />
+                      )}
+                    </td>
+                  )}
                   {visibleColumns.map((c) => {
                     const value = accessorOf(c)(r)
                     return (

@@ -224,6 +224,8 @@ export default function ClientsPage() {
         createText="新增"
         importResource={can(RES, 'IMPORT') ? RES : undefined}
         onRefresh={() => fetchData(true)}
+        deleteEndpoint="/api/clients"
+        canSelectRow={(r) => can(RES, 'DELETE') && canEditRow(RES, r)}
         showExport={can(RES, 'EXPORT')}
         searchPlaceholder="搜索简称 / 行业 / 区域 / 地址…"
         actions={(r) => (

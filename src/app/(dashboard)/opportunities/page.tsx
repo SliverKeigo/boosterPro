@@ -211,6 +211,8 @@ export default function OpportunitiesPage() {
         createText="新增"
         importResource={can(RES, 'IMPORT') ? RES : undefined}
         onRefresh={() => fetchData(true)}
+        deleteEndpoint="/api/opportunities"
+        canSelectRow={(r) => can(RES, 'DELETE') && canEditRow(RES, r)}
         showExport={can(RES, 'EXPORT')}
         searchPlaceholder="搜索名称 / 区域 / 联系人 / 负责人…"
         actions={(r) => (

@@ -6,6 +6,10 @@ import userEvent from '@testing-library/user-event'
 vi.mock('@/lib/usePermissions', () => ({
   useMyPermissions: () => ({ perm: { userId: 7, isAdmin: true, permissions: {} }, loading: false, can: () => true }),
 }))
+// BoostTable 批量删除用 useToast；测试无 ToastProvider，mock 成 noop
+vi.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ success: () => {}, error: () => {}, info: () => {} }),
+}))
 
 import { BoostTable, type BoostColumn } from '@/components/ui/BoostTable'
 

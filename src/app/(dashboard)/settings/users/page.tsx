@@ -225,6 +225,8 @@ export default function UsersPage() {
         data={data}
         loading={loading}
         rowKey="id"
+        deleteEndpoint="/api/users"
+        canSelectRow={(r) => can('SYS_USER', 'DELETE') && !r.isAdmin}
         onCreate={can('SYS_USER', 'CREATE') ? openCreate : undefined}
         createText="新增用户"
         onImport={() => toast.info('导入功能开发中')}

@@ -155,6 +155,8 @@ export default function TalentPoolPage() {
         createText="新建人才"
         importResource={can(RES, 'IMPORT') ? RES : undefined}
         onRefresh={() => fetchData(true)}
+        deleteEndpoint="/api/talent-pool"
+        canSelectRow={(r) => can(RES, 'DELETE') && canEditRow(RES, r)}
         showExport={can(RES, 'EXPORT')}
         searchPlaceholder="搜索姓名 / 职位 / 标签…"
         actions={(r) => (

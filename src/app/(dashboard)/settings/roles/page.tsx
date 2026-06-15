@@ -169,6 +169,8 @@ export default function RolesPage() {
         data={data}
         loading={loading}
         rowKey="id"
+        deleteEndpoint="/api/roles"
+        canSelectRow={() => can('SYS_ROLE', 'DELETE')}
         onCreate={can('SYS_ROLE', 'CREATE') ? openCreate : undefined}
         createText="新增角色"
         onImport={() => toast.info('导入功能开发中')}

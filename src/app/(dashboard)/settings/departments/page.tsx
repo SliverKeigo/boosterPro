@@ -179,6 +179,8 @@ export default function DepartmentsPage() {
         data={data}
         loading={loading}
         rowKey="id"
+        deleteEndpoint="/api/departments"
+        canSelectRow={() => can('SYS_DEPARTMENT', 'DELETE')}
         onCreate={can('SYS_DEPARTMENT', 'CREATE') ? openCreate : undefined}
         createText="新增部门"
         onImport={() => toast.info('导入功能开发中')}

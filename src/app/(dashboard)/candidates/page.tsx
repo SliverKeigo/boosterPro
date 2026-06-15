@@ -281,6 +281,7 @@ export default function CandidatesPage() {
     // 流程字段：当前推荐状态下「显示」的流程字段均为必填
     const flowFields = STATUS_FIELDS[form.recommendationStatus] ?? []
     for (const f of flowFields) {
+      if (f === 'backgroundCheckReportUrl') continue // 背景调查报告：状态下仍显示，但不强制必填
       if (f === 'guaranteeCommunications') {
         const rows: any[] = Array.isArray(form.guaranteeCommunications) ? form.guaranteeCommunications : []
         const hasValid = rows.some((r) => (r?.date && String(r.date).trim()) || (r?.content && String(r.content).trim()))
@@ -425,6 +426,8 @@ export default function CandidatesPage() {
         createText="新增"
         importResource={can(RES, 'IMPORT') ? RES : undefined}
         onRefresh={() => fetchData(true)}
+        deleteEndpoint="/api/candidates"
+        canSelectRow={(r) => can(RES, 'DELETE') && canEditRow(RES, r)}
         showExport={can(RES, 'EXPORT')}
         searchPlaceholder="搜索姓名 / 客户 / 岗位 / 状态…"
         actions={(r) => (
@@ -605,7 +608,7 @@ export default function CandidatesPage() {
               </Field>
             )}
             {visible('backgroundCheckReportUrl') && (
-              <Field label="背景调查报告" required className="col-span-2">
+              <Field label="背景调查报告" className="col-span-2">
                 <MultiFileUpload value={form.backgroundCheckReportUrl} onChange={(urls) => setField('backgroundCheckReportUrl', urls)} />
               </Field>
             )}
