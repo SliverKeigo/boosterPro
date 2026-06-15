@@ -185,10 +185,15 @@ const CANDIDATE: JodooModule = {
     { header: '薪酬方案', field: 'salaryPlan' },
     { header: '推荐理由', field: 'recommendationReason' },
     { header: '推荐失败原因描述', field: 'failureReason' },
+    { header: '招聘渠道', field: 'recruitmentChannel' },
+    { header: 'offer日期', field: 'offerDate', transform: dateVal },
+    { header: 'offer到岗日期', field: 'offerOnboardDate', transform: dateVal },
+    { header: '实际到岗日期', field: 'actualOnboardDate', transform: dateVal },
   ],
   attachments: [
     { header: 'Offer', field: 'offerFileUrl' },
     { header: '背景调查报告', field: 'backgroundCheckReportUrl' },
+    { header: '推荐报告附件', field: 'recommendationReportUrl' }, // 多附件(String[])，引擎按数组落盘
   ],
   groupKeyHeaders: ['候选人姓名', '客户简称', '岗位名称', '创建时间'],
   subtables: [
@@ -229,7 +234,7 @@ const CANDIDATE: JodooModule = {
       const r = await prisma.requirement.findFirst({ where: { customerId: cid, positionName: pos }, select: { id: true } })
       if (r) scalars.requirementId = r.id
     }
-    scalars.recruitmentChannel = '其他'
+    if (!scalars.recruitmentChannel) scalars.recruitmentChannel = '其他' // 招聘渠道 NOT NULL：包有值则用包值，空才兜底「其他」
     if (!scalars.recommendationStatus) scalars.recommendationStatus = 'PENDING'
   },
   dedupe: (s) => ({ name: s.name, customerShortName: s.customerShortName ?? null, requirementId: s.requirementId ?? null, createdAt: s.createdAt }),
