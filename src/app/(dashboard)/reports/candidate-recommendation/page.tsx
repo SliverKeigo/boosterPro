@@ -79,11 +79,6 @@ function lastMonthRange(now = new Date()): [Date, Date] {
   const end = new Date(now.getFullYear(), now.getMonth(), 1)
   return [start, end]
 }
-/** 最近一个月 [now-1month, now]（滚动 30 天窗口的"最近1月"，按自然月回退） */
-function recentMonthRange(now = new Date()): [Date, Date] {
-  const start = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
-  return [start, now]
-}
 /** 本年度 [Jan 1, next Jan 1) */
 function thisYearRange(now = new Date()): [Date, Date] {
   return [new Date(now.getFullYear(), 0, 1), new Date(now.getFullYear() + 1, 0, 1)]
@@ -294,37 +289,37 @@ export default function CandidateRecommendationReportPage() {
     const now = new Date()
     const [tmStart, tmEnd] = thisMonthRange(now)
     const [lmStart, lmEnd] = lastMonthRange(now)
-    const [rmStart, rmEnd] = recentMonthRange(now)
     const [yStart, yEnd] = thisYearRange(now)
 
     const isMine = (c: any) => userId != null && c.submitterId === userId
 
-    // 1. 当月(个人)推荐简历数量
-    const myThisMonthRecommended = filtered.filter(
-      (c) => isMine(c) && inRange(c.recommendationTime, tmStart, tmEnd),
-    ).length
+    // 按【员工(推荐人 submitter)】分组计数；未指定推荐人归「未分配」
+    const byEmployee = (rows: any[]) => countBy(rows, (c) => c.submitter?.name ?? '未分配')
 
-    // 2. 最近1月(客户)推荐简历数量 —— 按客户分组、recommendationTime 在最近一个月
+    // 1. 当月推荐简历数量 —— 横坐标=员工，推荐时间在本月
+    const thisMonthByEmployee = byEmployee(
+      filtered.filter((c) => inRange(c.recommendationTime, tmStart, tmEnd)),
+    )
+
+    // 2. 当月(客户)推荐简历数量 —— 横坐标=客户，推荐时间 ≥ 本月1号(本月)
     const recentByCustomer = countBy(
-      filtered.filter((c) => inRange(c.recommendationTime, rmStart, rmEnd)),
+      filtered.filter((c) => inRange(c.recommendationTime, tmStart, tmEnd)),
       (c) => c.customer?.shortName ?? '未分配客户',
     )
 
-    // 3. 当月(个人)有效简历数量
-    const myThisMonthValid = filtered.filter(
-      (c) =>
-        isMine(c) &&
-        inRange(c.recommendationTime, tmStart, tmEnd) &&
-        isValidResume(c.recommendationStatus),
-    ).length
+    // 3. 当月有效简历数量 —— 横坐标=员工，本月 + 有效简历(排除 4 个无效状态)
+    const thisMonthValidByEmployee = byEmployee(
+      filtered.filter(
+        (c) => inRange(c.recommendationTime, tmStart, tmEnd) && isValidResume(c.recommendationStatus),
+      ),
+    )
 
-    // 4. 上月(个人)有效简历数量
-    const myLastMonthValid = filtered.filter(
-      (c) =>
-        isMine(c) &&
-        inRange(c.recommendationTime, lmStart, lmEnd) &&
-        isValidResume(c.recommendationStatus),
-    ).length
+    // 4. 上月有效简历数量 —— 横坐标=员工，上月 + 有效简历
+    const lastMonthValidByEmployee = byEmployee(
+      filtered.filter(
+        (c) => inRange(c.recommendationTime, lmStart, lmEnd) && isValidResume(c.recommendationStatus),
+      ),
+    )
 
     // 5. 个人流程中人数情况 —— 当前用户推荐、状态处于进行中，按状态分组
     const myInProgress = filtered.filter(
@@ -348,9 +343,9 @@ export default function CandidateRecommendationReportPage() {
     )
 
     return {
-      myThisMonthRecommended,
-      myThisMonthValid,
-      myLastMonthValid,
+      thisMonthByEmployee,
+      thisMonthValidByEmployee,
+      lastMonthValidByEmployee,
       recentByCustomer,
       myInProgressDist,
       yearContribution,
@@ -543,25 +538,25 @@ export default function CandidateRecommendationReportPage() {
         </h2>
       </div>
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard title="当月(个人)推荐简历数量" icon={BarChart3}>
+        <ChartCard title="当月(个人)推荐简历数量" icon={BarChart3} empty={metrics.thisMonthByEmployee.length === 0}>
           <ReactECharts
-            option={barOption([{ name: '当月推荐', value: metrics.myThisMonthRecommended }], BRAND)}
+            option={barOption(metrics.thisMonthByEmployee, BRAND, metrics.thisMonthByEmployee.length > 6 ? 30 : 0)}
             style={ECHART_STYLE}
             notMerge
           />
         </ChartCard>
 
-        <ChartCard title="当月(个人)有效简历数量" icon={BarChart3}>
+        <ChartCard title="当月(个人)有效简历数量" icon={BarChart3} empty={metrics.thisMonthValidByEmployee.length === 0}>
           <ReactECharts
-            option={barOption([{ name: '当月有效', value: metrics.myThisMonthValid }], '#16A34A')}
+            option={barOption(metrics.thisMonthValidByEmployee, '#16A34A', metrics.thisMonthValidByEmployee.length > 6 ? 30 : 0)}
             style={ECHART_STYLE}
             notMerge
           />
         </ChartCard>
 
-        <ChartCard title="上月(个人)有效简历数量" icon={BarChart3}>
+        <ChartCard title="上月(个人)有效简历数量" icon={BarChart3} empty={metrics.lastMonthValidByEmployee.length === 0}>
           <ReactECharts
-            option={barOption([{ name: '上月有效', value: metrics.myLastMonthValid }], '#16A34A')}
+            option={barOption(metrics.lastMonthValidByEmployee, '#16A34A', metrics.lastMonthValidByEmployee.length > 6 ? 30 : 0)}
             style={ECHART_STYLE}
             notMerge
           />
