@@ -90,8 +90,8 @@ export function buildContractData(body: any, mode: 'create' | 'update') {
         r.number ||
         r.code ||
         r.issueDate ||
-        r.sourceFileUrl ||
-        r.imageUrl,
+        r.sourceFileUrl?.length ||
+        r.imageUrl?.length,
     )
     .map((r) => ({
       invoiceType: r.invoiceType || null,
@@ -100,8 +100,8 @@ export function buildContractData(body: any, mode: 'create' | 'update') {
       number: r.number || null,
       code: r.code || null,
       issueDate: r.issueDate ? new Date(r.issueDate) : null,
-      sourceFileUrl: r.sourceFileUrl || null,
-      imageUrl: r.imageUrl || null,
+      sourceFileUrl: Array.isArray(r.sourceFileUrl) ? r.sourceFileUrl : [],
+      imageUrl: Array.isArray(r.imageUrl) ? r.imageUrl : [],
     }))
 
   // 白名单过滤掉多余键后，再附加子表嵌套写

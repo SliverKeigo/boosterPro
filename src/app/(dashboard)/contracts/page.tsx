@@ -115,8 +115,8 @@ export default function ContractsPage() {
         number: x.number ?? '',
         code: x.code ?? '',
         issueDate: x.issueDate ? String(x.issueDate).slice(0, 10) : '',
-        sourceFileUrl: x.sourceFileUrl ?? '',
-        imageUrl: x.imageUrl ?? '',
+        sourceFileUrl: x.sourceFileUrl ?? [],
+        imageUrl: x.imageUrl ?? [],
       })),
     })
     setOpen(true)
@@ -215,22 +215,34 @@ export default function ContractsPage() {
             {
               key: 'sourceFileUrl',
               title: '发票源文件',
-              render: (v) =>
-                v ? (
-                  <a href={v} className="link link-primary break-all" target="_blank" rel="noreferrer">
-                    {decodeURIComponent(String(v).split('/').pop() || '')}
-                  </a>
-                ) : null,
+              render: (v) => {
+                const arr = Array.isArray(v) ? v : v ? [v] : []
+                return arr.length ? (
+                  <div className="flex flex-col gap-0.5">
+                    {arr.map((u: string, i: number) => (
+                      <a key={i} href={u} className="link link-primary break-all" target="_blank" rel="noreferrer">
+                        {decodeURIComponent(String(u).split('/').pop() || '')}
+                      </a>
+                    ))}
+                  </div>
+                ) : null
+              },
             },
             {
               key: 'imageUrl',
               title: '发票图片',
-              render: (v) =>
-                v ? (
-                  <a href={v} className="link link-primary break-all" target="_blank" rel="noreferrer">
-                    {decodeURIComponent(String(v).split('/').pop() || '')}
-                  </a>
-                ) : null,
+              render: (v) => {
+                const arr = Array.isArray(v) ? v : v ? [v] : []
+                return arr.length ? (
+                  <div className="flex flex-col gap-0.5">
+                    {arr.map((u: string, i: number) => (
+                      <a key={i} href={u} className="link link-primary break-all" target="_blank" rel="noreferrer">
+                        {decodeURIComponent(String(u).split('/').pop() || '')}
+                      </a>
+                    ))}
+                  </div>
+                ) : null
+              },
             },
           ]}
         />
@@ -389,8 +401,8 @@ export default function ContractsPage() {
             { key: 'number', title: '发票号码' },
             { key: 'code', title: '发票代码' },
             { key: 'issueDate', title: '开票日期', type: 'date' },
-            { key: 'sourceFileUrl', title: '发票源文件', type: 'file', width: 220 },
-            { key: 'imageUrl', title: '发票图片', type: 'file', width: 220 },
+            { key: 'sourceFileUrl', title: '发票源文件', type: 'file-multi', width: 220 },
+            { key: 'imageUrl', title: '发票图片', type: 'file-multi', width: 220 },
           ]}
         />
       </Modal>

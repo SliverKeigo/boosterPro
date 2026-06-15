@@ -51,6 +51,8 @@ async function findCustomerId(name: string): Promise<number | null> {
   return byFormer?.id ?? null
 }
 const subDate = (s: string): Date | null => dateVal(s) ?? null
+// 子表附件 JSON 兼容：本系统新导出包是 URL 数组、旧包/简道云是单值字符串 → 统一成数组
+const toUrlArr = (x: any): string[] => (Array.isArray(x) ? x.filter(Boolean) : x ? [String(x)] : [])
 
 // ── 四模块配置 ────────────────────────────────────────────────────────────────
 const CUSTOMER: JodooModule = {
@@ -369,10 +371,10 @@ const CLIENT_SUPPLEMENT: JodooModule = {
       build: async (g, ctx) => {
         const sp = g('专项').trim(), ds = g('专项描述').trim(), att = g('附件').trim()
         if (!sp && !ds && !att) return null
-        return { specialty: sp || null, description: ds || null, attachmentUrl: att ? await ctx.resolveAttachment(att) : null }
+        return { specialty: sp || null, description: ds || null, attachmentUrl: await ctx.resolveAttachments(att) }
       },
       jsonHeader: '客户画像JSON',
-      fromJson: async (o: any) => ((o?.specialty || o?.description || o?.attachmentUrl) ? { specialty: o.specialty || null, description: o.description || null, attachmentUrl: o.attachmentUrl || null } : null),
+      fromJson: async (o: any) => ((o?.specialty || o?.description || o?.attachmentUrl?.length || (typeof o?.attachmentUrl === 'string' && o.attachmentUrl)) ? { specialty: o.specialty || null, description: o.description || null, attachmentUrl: toUrlArr(o.attachmentUrl) } : null),
     },
   ],
   dedupe: (s) => ({ customerId: s.customerId, createdAt: s.createdAt }),
@@ -473,10 +475,10 @@ const CONTRACT: JodooModule = {
     build: async (g, ctx) => {
       const it = g('发票类型').trim(), vr = g('查验结果').trim(), am = g('发票金额').trim(), nm = g('发票号码').trim(), cd = g('发票代码').trim(), idt = g('开票日期').trim(), sf = g('发票源文件').trim(), img = g('发票图片').trim()
       if (![it, vr, am, nm, cd, idt, sf, img].some((x) => x)) return null
-      return { invoiceType: it || null, verificationResult: vr || null, amount: am || null, number: nm || null, code: cd || null, issueDate: dateVal(idt) ?? null, sourceFileUrl: sf ? await ctx.resolveAttachment(sf) : null, imageUrl: img ? await ctx.resolveAttachment(img) : null }
+      return { invoiceType: it || null, verificationResult: vr || null, amount: am || null, number: nm || null, code: cd || null, issueDate: dateVal(idt) ?? null, sourceFileUrl: await ctx.resolveAttachments(sf), imageUrl: await ctx.resolveAttachments(img) }
     },
     jsonHeader: '发票JSON',
-    fromJson: async (o: any) => (([o?.invoiceType, o?.verificationResult, o?.amount, o?.number, o?.code, o?.issueDate, o?.sourceFileUrl, o?.imageUrl].some((x) => x)) ? { invoiceType: o.invoiceType || null, verificationResult: o.verificationResult || null, amount: o.amount || null, number: o.number || null, code: o.code || null, issueDate: dateVal(o.issueDate) ?? null, sourceFileUrl: o.sourceFileUrl || null, imageUrl: o.imageUrl || null } : null),
+    fromJson: async (o: any) => (([o?.invoiceType, o?.verificationResult, o?.amount, o?.number, o?.code, o?.issueDate, o?.sourceFileUrl, o?.imageUrl].some((x) => (Array.isArray(x) ? x.length : x))) ? { invoiceType: o.invoiceType || null, verificationResult: o.verificationResult || null, amount: o.amount || null, number: o.number || null, code: o.code || null, issueDate: dateVal(o.issueDate) ?? null, sourceFileUrl: toUrlArr(o.sourceFileUrl), imageUrl: toUrlArr(o.imageUrl) } : null),
   }],
   dedupe: (s) => ({ customerId: s.customerId, contractName: s.contractName, createdAt: s.createdAt }),
 }

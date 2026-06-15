@@ -82,7 +82,7 @@ describe('buildContractData - 字段映射与清洗', () => {
       {
         contractName: 'A',
         invoices: [
-          { invoiceType: '增值税专票', verificationResult: '通过', amount: '1000', number: 'N1', code: 'C1', sourceFileUrl: '/api/files/a.pdf', imageUrl: '/api/files/b.png' },
+          { invoiceType: '增值税专票', verificationResult: '通过', amount: '1000', number: 'N1', code: 'C1', sourceFileUrl: ['/api/files/a.pdf'], imageUrl: ['/api/files/b.png'] },
           { invoiceType: '', verificationResult: '' }, // 过滤
           { invoiceType: '普票' }, // verificationResult 缺失 → null
         ],
@@ -93,12 +93,12 @@ describe('buildContractData - 字段映射与清洗', () => {
     expect(out.invoices.create[0]).toEqual({
       invoiceType: '增值税专票',
       verificationResult: '通过',
-      amount: '1000', number: 'N1', code: 'C1', issueDate: null, sourceFileUrl: '/api/files/a.pdf', imageUrl: '/api/files/b.png',
+      amount: '1000', number: 'N1', code: 'C1', issueDate: null, sourceFileUrl: ['/api/files/a.pdf'], imageUrl: ['/api/files/b.png'],
     })
     expect(out.invoices.create[1]).toEqual({
       invoiceType: '普票',
       verificationResult: null,
-      amount: null, number: null, code: null, issueDate: null, sourceFileUrl: null, imageUrl: null,
+      amount: null, number: null, code: null, issueDate: null, sourceFileUrl: [], imageUrl: [],
     })
   })
 

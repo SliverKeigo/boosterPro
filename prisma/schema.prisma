@@ -253,7 +253,7 @@ model SupplementCustomerProfile {
   supplementId Int              @map("supplement_id")
   specialty    String?          @db.Text
   description  String?          @db.Text
-  attachmentUrl String?         @map("attachment_url") @db.Text
+  attachmentUrl  String[] @map("attachment_url")
   createdAt    DateTime         @default(now()) @map("created_at")
 
   @@map("supplement_customer_profiles")
@@ -553,8 +553,8 @@ model ContractInvoice {
   number             String?   @map("invoice_number") @db.Text
   code               String?   @map("invoice_code") @db.Text
   issueDate          DateTime? @map("issue_date") @db.Date
-  sourceFileUrl      String?   @map("source_file_url") @db.Text
-  imageUrl           String?   @map("image_url") @db.Text
+  sourceFileUrl  String[] @map("source_file_url")
+  imageUrl  String[] @map("image_url")
   createdAt          DateTime  @default(now()) @map("created_at")
 
   @@map("contract_invoices")

@@ -232,7 +232,7 @@ export const CONFIGS: Record<string, ImportResource> = {
     ],
     subtables: [
       { header: '需求更新（日期 | 内容）', relationField: 'demandUpdates', fields: [{ key: 'date', type: 'date' }, { key: 'content' }] },
-      { header: '客户特长画像（专长 | 描述 | 附件）', relationField: 'customerProfiles', fields: [{ key: 'specialty' }, { key: 'description' }, { key: 'attachmentUrl' }] },
+      { header: '客户特长画像（专长 | 描述 | 附件）', relationField: 'customerProfiles', fields: [{ key: 'specialty' }, { key: 'description' }, { key: 'attachmentUrl', type: 'urls-csv' }] },
     ],
   },
 
@@ -290,7 +290,7 @@ export const CONFIGS: Record<string, ImportResource> = {
       { header: '备注', field: 'notes' },
     ],
     subtables: [
-      { header: '发票（类型 | 核销结果 | 金额 | 号码 | 代码 | 开票日期 | 源文件 | 图片）', relationField: 'invoices', fields: [{ key: 'invoiceType' }, { key: 'verificationResult' }, { key: 'amount' }, { key: 'number' }, { key: 'code' }, { key: 'issueDate', type: 'date' }, { key: 'sourceFileUrl' }, { key: 'imageUrl' }] },
+      { header: '发票（类型 | 核销结果 | 金额 | 号码 | 代码 | 开票日期 | 源文件 | 图片）', relationField: 'invoices', fields: [{ key: 'invoiceType' }, { key: 'verificationResult' }, { key: 'amount' }, { key: 'number' }, { key: 'code' }, { key: 'issueDate', type: 'date' }, { key: 'sourceFileUrl', type: 'urls-csv' }, { key: 'imageUrl', type: 'urls-csv' }] },
     ],
   },
 

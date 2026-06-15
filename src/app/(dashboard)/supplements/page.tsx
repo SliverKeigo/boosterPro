@@ -107,7 +107,7 @@ export default function SupplementsPage() {
       ...EMPTY_FORM,
       ...r,
       customerId: r.customerId ?? '',
-      attachmentUrl: r.attachmentUrl ?? [], // 主表附件（多附件）；子表 customerProfiles[].attachmentUrl 仍是单文件
+      attachmentUrl: r.attachmentUrl ?? [], // 主表附件（多附件）；子表 customerProfiles[].attachmentUrl 也是多附件
       demandUpdates: (r.demandUpdates ?? []).map((x: any) => ({
         date: fmtDate(x.date),
         content: x.content ?? '',
@@ -115,7 +115,7 @@ export default function SupplementsPage() {
       customerProfiles: (r.customerProfiles ?? []).map((x: any) => ({
         specialty: x.specialty ?? '',
         description: x.description ?? '',
-        attachmentUrl: x.attachmentUrl ?? '',
+        attachmentUrl: x.attachmentUrl ?? [],
       })),
     })
     setOpen(true)
@@ -195,9 +195,16 @@ export default function SupplementsPage() {
           columns={[
             { key: 'specialty', title: '专长' },
             { key: 'description', title: '描述' },
-            { key: 'attachmentUrl', title: '附件', render: (v) => v
-              ? <a href={v} target="_blank" rel="noreferrer" className="text-primary hover:underline">{fileNameFromUrl(v)}</a>
-              : null },
+            { key: 'attachmentUrl', title: '附件', render: (v) => {
+              const arr = Array.isArray(v) ? v : v ? [v] : []
+              return arr.length ? (
+                <div className="flex flex-col gap-0.5">
+                  {arr.map((u: string, i: number) => (
+                    <a key={i} href={u} target="_blank" rel="noreferrer" className="text-primary hover:underline">{fileNameFromUrl(u)}</a>
+                  ))}
+                </div>
+              ) : null
+            } },
           ]}
         />
       ) },
@@ -311,7 +318,7 @@ export default function SupplementsPage() {
             columns={[
               { key: 'specialty', title: '特长', type: 'text', width: 200 },
               { key: 'description', title: '描述', type: 'textarea', width: 360 },
-              { key: 'attachmentUrl', title: '附件', type: 'file', width: 240 },
+              { key: 'attachmentUrl', title: '附件', type: 'file-multi', width: 240 },
             ]}
           />
         </div>

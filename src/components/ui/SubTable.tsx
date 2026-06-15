@@ -3,13 +3,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Plus, Trash2 } from 'lucide-react'
 import { FileUpload } from './FileUpload'
+import { MultiFileUpload } from './MultiFileUpload'
 
 export interface SubTableColumn {
   key: string
   title: string
-  type?: 'text' | 'textarea' | 'date' | 'number' | 'select' | 'file'
+  // file=单附件(值 string)；file-multi=多附件(值 string[])
+  type?: 'text' | 'textarea' | 'date' | 'number' | 'select' | 'file' | 'file-multi'
   options?: { label: string; value: string }[]
-  accept?: string // type='file' 时透传给 FileUpload
+  accept?: string // type='file'/'file-multi' 时透传给上传组件
   width?: number
   placeholder?: string
 }
@@ -79,6 +81,8 @@ function Field({
       )
     case 'file':
       return <FileUpload value={v || undefined} onChange={(url) => onChange(url)} accept={col.accept} />
+    case 'file-multi':
+      return <MultiFileUpload value={Array.isArray(v) ? v : []} onChange={(urls) => onChange(urls)} accept={col.accept} />
     default:
       return (
         <input
