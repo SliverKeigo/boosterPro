@@ -62,9 +62,11 @@ export const ALL_RESOURCE_KEYS: AnyResourceKey[] = [...RESOURCE_KEYS, ...SYSTEM_
 export const SYSTEM_ACTION_KEYS: ActionKey[] = ['VIEW', 'CREATE', 'EDIT', 'DELETE']
 
 // 系统子菜单路径(settings/xx) → 资源 key（菜单显隐用，两段路径）
-export const SYS_PATH_TO_RESOURCE: Record<string, SystemResourceKey> = Object.fromEntries(
-  SYSTEM_RESOURCES.map((r) => [r.path, r.key]),
-) as Record<string, SystemResourceKey>
+export const SYS_PATH_TO_RESOURCE: Record<string, SystemResourceKey> = {
+  ...(Object.fromEntries(SYSTEM_RESOURCES.map((r) => [r.path, r.key])) as Record<string, SystemResourceKey>),
+  // 移交日志页归「用户管理」查看权限（移交本就是用户管理功能，不单设资源）
+  'settings/transfer-logs': 'SYS_USER',
+}
 
 export const RESOURCE_LABEL: Record<string, string> = Object.fromEntries(
   [...RESOURCES, ...SYSTEM_RESOURCES].map((r) => [r.key, r.label]),

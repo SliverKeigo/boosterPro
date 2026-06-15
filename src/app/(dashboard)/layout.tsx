@@ -29,6 +29,7 @@ import {
   Sparkles,
   BarChart3,
   Contact,
+  ArrowRightLeft,
   type LucideIcon,
 } from 'lucide-react'
 import { Modal, Field, useToast } from '@/components/ui'
@@ -102,6 +103,7 @@ const GROUPS: NavGroup[] = [
       { href: '/settings/data-grants', label: '数据共享', icon: Share2 },
       { href: '/settings/dictionaries', label: '字典管理', icon: BookMarked },
       { href: '/settings/ai-prompts', label: '提示词管理', icon: Sparkles },
+      { href: '/settings/transfer-logs', label: '移交日志', icon: ArrowRightLeft },
     ],
   },
 ]

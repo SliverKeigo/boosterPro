@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server'
 import { handleApiError, HttpError } from '@/lib/apiError'
 import { prisma } from '@/lib/prisma'
@@ -22,42 +23,31 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const fromUser = await prisma.user.findUnique({ where: { id: fromId } })
     if (!fromUser) throw new HttpError(400, '源用户不存在')
 
-    const [
-      candidate,
-      requirement,
-      clientSupplement,
-      customerContact,
-      talentPool,
-      opportunity,
-      customer,
-      contract,
-      knowledgeBase,
-    ] = await prisma.$transaction([
-      prisma.candidate.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
-      prisma.requirement.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
-      prisma.clientSupplement.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
-      prisma.customerContact.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
-      prisma.talentPool.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
-      prisma.opportunity.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
-      prisma.customer.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
-      prisma.contract.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
-      prisma.knowledgeBase.updateMany({ where: { createdById: fromId }, data: { createdById: toId } }),
-    ])
-
-    return NextResponse.json({
-      success: true,
-      moved: {
-        candidate: candidate.count,
-        requirement: requirement.count,
-        clientSupplement: clientSupplement.count,
-        customerContact: customerContact.count,
-        talentPool: talentPool.count,
-        opportunity: opportunity.count,
-        customer: customer.count,
-        contract: contract.count,
-        knowledgeBase: knowledgeBase.count,
-      },
+    // 交互式事务：9 表归属批量改 + 同一事务内写一条审计日志（含各表条数、操作人、用户名快照）
+    const moved = await prisma.$transaction(async (tx) => {
+      const upd = (m: any) => m.updateMany({ where: { createdById: fromId }, data: { createdById: toId } })
+      const [candidate, requirement, clientSupplement, customerContact, talentPool, opportunity, customer, contract, knowledgeBase] = await Promise.all([
+        upd(tx.candidate), upd(tx.requirement), upd(tx.clientSupplement), upd(tx.customerContact),
+        upd(tx.talentPool), upd(tx.opportunity), upd(tx.customer), upd(tx.contract), upd(tx.knowledgeBase),
+      ])
+      const counts = {
+        candidate: candidate.count, requirement: requirement.count, clientSupplement: clientSupplement.count,
+        customerContact: customerContact.count, talentPool: talentPool.count, opportunity: opportunity.count,
+        customer: customer.count, contract: contract.count, knowledgeBase: knowledgeBase.count,
+      }
+      const total = Object.values(counts).reduce((a, b) => a + b, 0)
+      await tx.transferLog.create({
+        data: {
+          fromUserId: fromId, fromUserName: fromUser.name,
+          toUserId: toId, toUserName: targetUser.name,
+          operatorId: admin.id, operatorName: admin.name,
+          moved: counts, totalCount: total,
+        },
+      })
+      return counts
     })
+
+    return NextResponse.json({ success: true, moved })
   } catch (e) {
     return handleApiError(e)
   }

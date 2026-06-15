@@ -746,3 +746,22 @@ model DataGrant {
   @@index([granteeType, granteeDeptId])
   @@map("data_grants")
 }
+
+// 权限移交审计日志：每次「用户权限移交」记一条。存用户名快照(from/to/operator)——
+// 即使用户日后被删，日志仍可读；moved 记各业务表移交条数。仅追加、不改不删。
+model TransferLog {
+  id           Int      @id @default(autoincrement())
+  fromUserId   Int      @map("from_user_id")
+  fromUserName String   @map("from_user_name") @db.Text
+  toUserId     Int      @map("to_user_id")
+  toUserName   String   @map("to_user_name") @db.Text
+  operatorId   Int      @map("operator_id")
+  operatorName String   @map("operator_name") @db.Text
+  moved        Json     @map("moved")
+  totalCount   Int      @map("total_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@map("transfer_logs")
+}
