@@ -11,8 +11,10 @@ interface ModalProps {
   okText?: string
   cancelText?: string
   confirmLoading?: boolean
-  /** 内容最大宽度，单位 px，默认 720 */
+  /** 内容最大宽度，单位 px，默认 720（size='full' 时忽略） */
   width?: number
+  /** 尺寸：'md'（默认，居中卡片）| 'full'（近全屏铺满，适合大表单/矩阵） */
+  size?: 'md' | 'full'
   /** 传 null 隐藏底部操作栏 */
   footer?: ReactNode | null
   /** 只读(详情)模式：禁用内部所有表单控件；底部默认显示「关闭 + 编辑」 */
@@ -31,6 +33,7 @@ export function Modal({
   cancelText = '取消',
   confirmLoading = false,
   width = 720,
+  size = 'md',
   footer,
   readOnly = false,
   onEdit,
@@ -55,7 +58,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto bg-black/45 p-4 py-10 backdrop-blur-[2px]"
+      className={`fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto bg-black/45 backdrop-blur-[2px] ${size === 'full' ? 'p-2 py-4' : 'p-4 py-10'}`}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
@@ -64,7 +67,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         className="relative w-full rounded-2xl bg-base-100 shadow-2xl animate-[fadeIn_.18s_ease]"
-        style={{ maxWidth: width }}
+        style={size === 'full' ? { maxWidth: '96vw', width: '96vw' } : { maxWidth: width }}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-base-300 px-6 py-4">
@@ -80,7 +83,7 @@ export function Modal({
         </div>
 
         {/* Body（只读模式：fieldset disabled 禁用原生控件 + pointer-events-none 拦截自定义控件点击） */}
-        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+        <div className={`overflow-y-auto px-6 py-5 ${size === 'full' ? 'max-h-[82vh]' : 'max-h-[70vh]'}`}>
           {readOnly ? (
             <fieldset
               disabled

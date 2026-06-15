@@ -9,6 +9,7 @@ import {
   SYSTEM_RESOURCES,
   SYSTEM_RESOURCE_KEYS,
   SYSTEM_ACTION_KEYS,
+  NO_IO_RESOURCES,
   ACTIONS,
   ACTION_LABEL,
   type AnyResourceKey,
@@ -425,8 +426,8 @@ export default function PermissionsPage() {
 
           <Field label="功能权限" required>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {/* 业务资源全六动作；系统管理资源无导入/导出，按 SYSTEM_ACTION_KEYS 裁剪 */}
-              {(SYSTEM_RESOURCE_KEYS.includes(activeResource as never)
+              {/* 业务资源全六动作；系统管理资源 + 无导入导出的业务资源(工作计划)按 SYSTEM_ACTION_KEYS 裁掉导入/导出 */}
+              {(SYSTEM_RESOURCE_KEYS.includes(activeResource as never) || NO_IO_RESOURCES.includes(activeResource as never)
                 ? ACTIONS.filter((a) => SYSTEM_ACTION_KEYS.includes(a.key))
                 : ACTIONS
               ).map((a) => (

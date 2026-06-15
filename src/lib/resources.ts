@@ -12,6 +12,7 @@ export const RESOURCES = [
   { key: 'CONTRACT', label: '销售合同', path: 'contracts' },
   { key: 'KNOWLEDGE', label: '公司知识库', path: 'knowledge' },
   { key: 'REPORT', label: '数据报表', path: 'reports' },
+  { key: 'WORK_PLAN', label: '工作计划', path: 'work-plans' },
 ] as const
 
 export type ResourceKey = (typeof RESOURCES)[number]['key']
@@ -30,6 +31,9 @@ export type ActionKey = (typeof ACTIONS)[number]['key']
 
 export const RESOURCE_KEYS = RESOURCES.map((r) => r.key) as ResourceKey[]
 export const ACTION_KEYS = ACTIONS.map((a) => a.key) as ActionKey[]
+
+// 无导入/导出动作的业务资源（权限矩阵据此裁剪 IMPORT/EXPORT 列；工作计划是主从-矩阵、不走通用导入引擎）
+export const NO_IO_RESOURCES: ResourceKey[] = ['WORK_PLAN']
 
 // API 路径段 → resource key（后端 route 用 path 反查自己的 resource）
 export const PATH_TO_RESOURCE: Record<string, ResourceKey> = Object.fromEntries(
