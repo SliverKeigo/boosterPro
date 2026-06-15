@@ -600,6 +600,11 @@ export function BoostTable<T extends Record<string, any>>({
   const toast = useToast()
   const [selectedKeys, setSelectedKeys] = useState<Set<string | number>>(() => new Set())
   const [batchDeleting, setBatchDeleting] = useState(false)
+  // 不支持跨页勾选：翻页 / 搜索 / 筛选 / 排序 / 数据刷新使可见行变化时清空已选（勾选仅限当前页）
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedKeys((prev) => (prev.size ? new Set() : prev))
+  }, [current, sorted])
   const selectable = !!deleteEndpoint
   // 当前页「可勾选」行的 key（受 canSelectRow 约束：无权删的行不可选）
   const selectablePageKeys = useMemo(() => {
