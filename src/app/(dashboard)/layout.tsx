@@ -135,17 +135,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     try {
       const res = await fetch('/api/auth/me')
       if (res.ok) setUser(await res.json())
-      else router.push('/login')
+      // 单点登录：401 = 被新设备顶下来(token 失效)。整页跳登录页（跨 layout 用 location.replace
+      // 比 router 更可靠，见登录跳转经验）；replace 不留历史，防后退回失效页。
+      else window.location.replace('/login')
     } catch {
-      /* ignore */
+      /* 网络错误静默：保留当前页，下次轮询 / 回前台再试 */
     }
-  }, [router])
+  }, [])
 
   useEffect(() => {
     // IIFE：effect 同步路径不直接含 setState（规避 react-hooks/set-state-in-effect）
     void (async () => {
       await fetchUser()
     })()
+    // 单点登录：定期 + 回到前台时复查登录态——被其它设备顶下线(token 失效)后，
+    // 即使停留在本页不操作，也能在一个轮询周期(30s)内自动跳登录页。
+    const id = setInterval(() => void fetchUser(), 30_000)
+    const onFocus = () => void fetchUser()
+    const onVisible = () => { if (document.visibilityState === 'visible') void fetchUser() }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(id)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [fetchUser])
 
   // 菜单按权限过滤：业务菜单按首段路径查资源 VIEW；系统管理子菜单按完整两段路径
