@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { HttpError } from '@/lib/apiError'
 
-// $transaction 接收一个 promise 数组并原样 resolve（路由按位置解构 count 结果）。
-vi.mock('@/lib/prisma', () => ({
-  prisma: {
+// 交互式事务：$transaction 把回调以 prisma 自身当 tx 调用（mock 的 tx 模型即这些 prisma 模型）。
+vi.mock('@/lib/prisma', () => {
+  const p: any = {
     user: { findUnique: vi.fn() },
     candidate: { updateMany: vi.fn() },
     requirement: { updateMany: vi.fn() },
@@ -14,9 +14,11 @@ vi.mock('@/lib/prisma', () => ({
     customer: { updateMany: vi.fn() },
     contract: { updateMany: vi.fn() },
     knowledgeBase: { updateMany: vi.fn() },
-    $transaction: vi.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
-  },
-}))
+    transferLog: { create: vi.fn() }, // 移交审计日志
+  }
+  p.$transaction = vi.fn(async (cb: any) => cb(p))
+  return { prisma: p }
+})
 vi.mock('@/lib/permissions', () => ({
   getCurrentUser: vi.fn(),
 }))
@@ -43,6 +45,7 @@ const setupModels = () => {
   mock(prisma.customer.updateMany).mockResolvedValue({ count: 6 })
   mock(prisma.contract.updateMany).mockResolvedValue({ count: 7 })
   mock(prisma.knowledgeBase.updateMany).mockResolvedValue({ count: 8 })
+  mock(prisma.transferLog.create).mockResolvedValue({ id: 1 })
 }
 
 beforeEach(() => {
@@ -53,8 +56,8 @@ beforeEach(() => {
 describe('POST /api/users/[id]/transfer', () => {
   it('管理员移交：九张业务表 updateMany 均把 fromId 的数据改为 toId，并经 $transaction 提交', async () => {
     mock(prisma.user.findUnique)
-      .mockResolvedValueOnce({ id: 9 }) // targetUser (toId)
-      .mockResolvedValueOnce({ id: 5 }) // fromUser (fromId)
+      .mockResolvedValueOnce({ id: 9, name: '李四' }) // targetUser (toId)
+      .mockResolvedValueOnce({ id: 5, name: '张三' }) // fromUser (fromId)
     setupModels()
     const res = await POST(makeReq({ toUserId: 9 }), ctx('5'))
     expect(res.status).toBe(200)
@@ -74,6 +77,12 @@ describe('POST /api/users/[id]/transfer', () => {
     })
     // 在一个事务中提交
     expect(prisma.$transaction).toHaveBeenCalledTimes(1)
+    // 同事务写一条审计日志：用户名快照 + 总条数(= 各表之和 1+2+3+9+4+5+6+7+8 = 45)
+    expect(prisma.transferLog.create).toHaveBeenCalledTimes(1)
+    expect(mock(prisma.transferLog.create).mock.calls[0][0].data).toMatchObject({
+      fromUserId: 5, fromUserName: '张三', toUserId: 9, toUserName: '李四',
+      operatorId: 1, operatorName: 'A', totalCount: 45,
+    })
     // 每张表都用 from→to 的归属改写
     const expectArgs = { where: { createdById: 5 }, data: { createdById: 9 } }
     expect(mock(prisma.candidate.updateMany).mock.calls[0][0]).toEqual(expectArgs)
