@@ -59,12 +59,20 @@ describe('GET /api/auth/me', () => {
   it('已登录 → 200 返回用户', async () => {
     setCookie('tok')
     mock(verifyToken).mockResolvedValue({ userId: 7 })
-    mock(prisma.user.findUnique).mockResolvedValue(user)
+    mock(prisma.user.findUnique).mockResolvedValue({ ...user, tokenVersion: 0 })
     const res = await GET()
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual(user)
     expect(prisma.user.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 7 } }),
     )
+  })
+
+  it('单点登录：token 版本号低于库当前值(被新登录顶下来) → 401', async () => {
+    setCookie('tok')
+    mock(verifyToken).mockResolvedValue({ userId: 7, tokenVersion: 1 })
+    mock(prisma.user.findUnique).mockResolvedValue({ ...user, tokenVersion: 2 }) // 库已 +1
+    const res = await GET()
+    expect(res.status).toBe(401)
   })
 })

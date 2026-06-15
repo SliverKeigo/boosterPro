@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@/lib/prisma', () => ({
-  prisma: { user: { findUnique: vi.fn() } },
+  prisma: { user: { findUnique: vi.fn(), update: vi.fn() } },
 }))
 // bcryptjs 在 route 内以 (await import('bcryptjs')).default 形式取用，需 mock default.compare
 vi.mock('bcryptjs', () => ({ default: { compare: vi.fn() } }))
@@ -61,6 +61,7 @@ describe('POST /api/auth/login', () => {
   it('校验通过 → 200 + success + 设置鉴权 cookie', async () => {
     mock(prisma.user.findUnique).mockResolvedValue(dbUser)
     mock(bcrypt.compare).mockResolvedValue(true)
+    mock(prisma.user.update).mockResolvedValue({ tokenVersion: 1 })
     const res = await post({ username: 'zhangsan', password: 'right' })
     expect(res.status).toBe(200)
     const body = await res.json()
@@ -75,14 +76,26 @@ describe('POST /api/auth/login', () => {
   it('remember:true → 持久 cookie（maxAge ~7 天）', async () => {
     mock(prisma.user.findUnique).mockResolvedValue(dbUser)
     mock(bcrypt.compare).mockResolvedValue(true)
+    mock(prisma.user.update).mockResolvedValue({ tokenVersion: 1 })
     const res = await post({ username: 'zhangsan', password: 'right', remember: true })
     const cookie = res.cookies.get('bp_token')
     expect(cookie?.maxAge).toBe(7 * 24 * 60 * 60)
   })
 
+  it('单点登录：登录使 tokenVersion +1（顶掉旧设备的 token）', async () => {
+    mock(prisma.user.findUnique).mockResolvedValue(dbUser)
+    mock(bcrypt.compare).mockResolvedValue(true)
+    mock(prisma.user.update).mockResolvedValue({ tokenVersion: 5 })
+    await post({ username: 'zhangsan', password: 'right' })
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { tokenVersion: { increment: 1 } } }),
+    )
+  })
+
   it('remember:false → 会话 cookie（不设 maxAge）', async () => {
     mock(prisma.user.findUnique).mockResolvedValue(dbUser)
     mock(bcrypt.compare).mockResolvedValue(true)
+    mock(prisma.user.update).mockResolvedValue({ tokenVersion: 1 })
     const res = await post({ username: 'zhangsan', password: 'right', remember: false })
     const cookie = res.cookies.get('bp_token')
     expect(cookie?.maxAge).toBeUndefined()

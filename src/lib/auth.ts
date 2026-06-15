@@ -9,6 +9,9 @@ export interface JwtPayload {
   userId: number
   name: string
   username: string
+  // 单点登录：签发时写入库中 user.tokenVersion，getCurrentUser 比对；新登录使该值 +1，
+  // 旧 token 版本号对不上即失效。可选——兼容升级前签发的旧 token（视为版本 0）。
+  tokenVersion?: number
 }
 
 export async function signToken(payload: JwtPayload): Promise<string> {

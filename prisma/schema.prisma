@@ -144,6 +144,7 @@ model User {
   knowledgeRecords     KnowledgeManagementRecord[]
   knowledgeInternalLectures KnowledgeBase[]        @relation("KnowledgeInternalLecturer")
   isAdmin              Boolean                     @default(false) @map("is_admin")
+  tokenVersion         Int                         @default(0) @map("token_version")
   createdCandidates    Candidate[]                 @relation("CandidateCreatedBy")
   createdRequirements  Requirement[]               @relation("RequirementCreatedBy")
   createdSupplements   ClientSupplement[]          @relation("ClientSupplementCreatedBy")

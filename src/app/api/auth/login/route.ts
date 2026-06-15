@@ -32,10 +32,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '账号或密码错误' }, { status: 401 })
     }
 
+    // 单点登录：登录成功即 tokenVersion +1，使该用户此前在其它设备签发的 token 全部失效（新踢旧）
+    const { tokenVersion } = await prisma.user.update({
+      where: { id: user.id },
+      data: { tokenVersion: { increment: 1 } },
+      select: { tokenVersion: true },
+    })
     const token = await signToken({
       userId: user.id,
       name: user.name,
       username: user.username,
+      tokenVersion,
     })
 
     const response = NextResponse.json({

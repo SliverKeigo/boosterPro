@@ -24,10 +24,15 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   if (!token) return null
   const payload = await verifyToken(token)
   if (!payload) return null
-  return prisma.user.findUnique({
+  const row = await prisma.user.findUnique({
     where: { id: payload.userId },
-    select: { id: true, name: true, email: true, isAdmin: true, departmentId: true, groupId: true, roleId: true },
+    select: { id: true, name: true, email: true, isAdmin: true, departmentId: true, groupId: true, roleId: true, tokenVersion: true },
   })
+  // 单点登录：token 里的版本号须与库中当前 tokenVersion 一致，否则是被新登录顶下来的旧 token → 视为未登录。
+  // payload.tokenVersion 缺省(升级前的旧 token)按 0 比对——与新建用户默认 0 一致，直到该用户重新登录才会 +1 顶掉。
+  if (!row || row.tokenVersion !== (payload.tokenVersion ?? 0)) return null
+  const { tokenVersion: _v, ...user } = row
+  return user
 })
 
 // 轻量登录校验：仅验 JWT cookie（不查库），用于「只需已登录、无需用户对象」的接口（文件上传/下载等热路径）。

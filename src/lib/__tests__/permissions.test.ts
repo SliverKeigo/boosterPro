@@ -24,8 +24,8 @@ import {
 } from '@/lib/permissions'
 import { HttpError } from '@/lib/apiError'
 
-const admin = { id: 1, name: 'A', email: null, isAdmin: true, departmentId: null, roleId: null }
-const normal = { id: 2, name: 'B', email: null, isAdmin: false, departmentId: 9, roleId: 5 }
+const admin = { id: 1, name: 'A', email: null, isAdmin: true, departmentId: null, roleId: null, tokenVersion: 0 }
+const normal = { id: 2, name: 'B', email: null, isAdmin: false, departmentId: 9, roleId: 5, tokenVersion: 0 }
 
 const setCookie = (token?: string) =>
   (cookies as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
