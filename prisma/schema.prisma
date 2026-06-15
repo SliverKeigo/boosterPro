@@ -181,7 +181,7 @@ model Customer {
   benchmarkCompanies String?                 @map("benchmark_companies") @db.Text
   // 简道云「定位」是移动端定位组件(存位置文字)，非经纬度数字——原 locationLat/Lng 系臆测建模、三库从未有数据，已废弃(库中旧列保留不删)
   location           String?                 @db.Text
-  attachmentUrl      String?                 @map("attachment_url") @db.Text
+  attachmentUrl  String[] @map("attachment_url")
   officeAddresses    CustomerOfficeAddress[]
   supplements        ClientSupplement[]
   customerContacts   CustomerContact[]
@@ -220,7 +220,7 @@ model ClientSupplement {
   openingSpeech         String?                     @map("opening_speech") @db.Text
   companyCultureWelfare String?                     @map("company_culture_welfare") @db.Text
   notes                 String?                     @db.Text
-  attachmentUrl         String?                     @map("attachment_url") @db.Text
+  attachmentUrl  String[] @map("attachment_url")
   demandUpdates         SupplementDemandUpdate[]
   customerProfiles      SupplementCustomerProfile[]
   createdAt             DateTime                    @default(now()) @map("created_at")
@@ -318,7 +318,7 @@ model Requirement {
   projectExperience    String?                      @map("project_experience") @db.Text
   closeReason          String?                      @map("close_reason") @db.Text
   notes                String?                      @db.Text
-  attachmentUrl        String?                      @map("attachment_url") @db.Text
+  attachmentUrl  String[] @map("attachment_url")
   latestUpdate         String?                      @map("latest_update") @db.Text
   industry             String?                      @db.Text
   bonusPoints          String?                      @map("bonus_points") @db.Text
@@ -383,14 +383,14 @@ model Candidate {
   recruitmentChannel       String                            @map("recruitment_channel") @db.Text
   recommendationTime       DateTime?                         @map("recommendation_time")
   recommendationStatus     RecommendationStatus              @default(PENDING) @map("recommendation_status")
-  recommendationReportUrl  String?                           @map("recommendation_report_url") @db.Text
+  recommendationReportUrl  String[] @map("recommendation_report_url")
   recommendationReason     String?                           @map("recommendation_reason") @db.Text
   interviewProgress        String?                           @map("interview_progress") @db.Text
   failureReason            String?                           @map("failure_reason") @db.Text
   offerDate                DateTime?                         @map("offer_date") @db.Date
   offerOnboardDate         DateTime?                         @map("offer_onboard_date") @db.Date
-  offerFileUrl             String?                           @map("offer_file_url") @db.Text
-  backgroundCheckReportUrl String?                           @map("background_check_report_url") @db.Text
+  offerFileUrl  String[] @map("offer_file_url")
+  backgroundCheckReportUrl  String[] @map("background_check_report_url")
   actualOnboardDate        DateTime?                         @map("actual_onboard_date") @db.Date
   salaryPlan               String?                           @map("salary_plan") @db.Text
   guaranteePeriodEnd       DateTime?                         @map("guarantee_period_end") @db.Date
@@ -452,7 +452,7 @@ model TalentPool {
   positionLevel   String?     @map("position_level") @db.Text
   age             Int?
   tags            String[]
-  resumeUrl       String      @map("resume_url") @db.Text
+  resumeUrl  String[] @map("resume_url")
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
@@ -481,7 +481,7 @@ model Opportunity {
   decisionMakerDescription String                @map("decision_maker_description") @db.Text
   salesOwner               User?                 @relation("OpportunitySalesOwner", fields: [salesOwnerId], references: [id])
   salesOwnerId             Int?                  @map("sales_owner_id")
-  attachmentUrl            String?               @map("attachment_url") @db.Text
+  attachmentUrl  String[] @map("attachment_url")
   progressRecords          OpportunityProgress[]
   createdAt                DateTime              @default(now()) @map("created_at")
   updatedAt                DateTime              @updatedAt @map("updated_at")
@@ -524,9 +524,9 @@ model Contract {
   salesOwnerId       Int?              @map("sales_owner_id")
   deliveryOwner      User?             @relation("ContractDeliveryOwner", fields: [deliveryOwnerId], references: [id])
   deliveryOwnerId    Int?              @map("delivery_owner_id")
-  contractFileUrl    String            @map("contract_file_url") @db.Text
+  contractFileUrl  String[] @map("contract_file_url")
   invoiceInfoText    String?           @map("invoice_info_text") @db.Text
-  invoiceInfoFileUrl String?           @map("invoice_info_file_url") @db.Text
+  invoiceInfoFileUrl  String[] @map("invoice_info_file_url")
   notes              String?           @db.Text
   invoices           ContractInvoice[]
   createdAt          DateTime          @default(now()) @map("created_at")
@@ -565,7 +565,7 @@ model KnowledgeBase {
   category           String                      @db.Text
   tags               String[]
   keywords           String                      @db.Text
-  fileUrl            String?                     @map("file_url") @db.Text
+  fileUrl  String[] @map("file_url")
   notes              String?                     @db.Text
   trainingOutline    String?                     @map("training_outline") @db.Text
   internalLecturer   User?                       @relation("KnowledgeInternalLecturer", fields: [internalLecturerId], references: [id])

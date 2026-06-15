@@ -12,7 +12,7 @@ import {
   Modal,
   Popconfirm,
   Field,
-  FileUpload,
+  MultiFileUpload,
   RichText,
   SearchSelect,
   searchFetch,
@@ -32,7 +32,7 @@ const fileNameFromUrl = (url?: string | null) =>
 
 const EMPTY_FORM: any = {
   customerId: '', demandCustomer: '', openingSpeech: '',
-  companyCultureWelfare: '', notes: '', attachmentUrl: '',
+  companyCultureWelfare: '', notes: '', attachmentUrl: [],
   demandUpdates: [], customerProfiles: [],
 }
 
@@ -107,6 +107,7 @@ export default function SupplementsPage() {
       ...EMPTY_FORM,
       ...r,
       customerId: r.customerId ?? '',
+      attachmentUrl: r.attachmentUrl ?? [], // 主表附件（多附件）；子表 customerProfiles[].attachmentUrl 仍是单文件
       demandUpdates: (r.demandUpdates ?? []).map((x: any) => ({
         date: fmtDate(x.date),
         content: x.content ?? '',
@@ -164,7 +165,7 @@ export default function SupplementsPage() {
     // 以下默认隐藏，可在“显示列”开启
     { key: 'customerId', title: '客户 ID', defaultVisible: false, filterType: 'number' },
     { key: 'notes', title: '备注', defaultVisible: false },
-    { key: 'attachmentUrl', title: '附件', defaultVisible: false, sortable: false, render: (v) => v ? '已上传' : '—' },
+    { key: 'attachmentUrl', title: '附件', defaultVisible: false, sortable: false, render: (v) => (v?.length ? `${v.length} 份` : '—') },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => fmtDateTime(v) },
     { key: 'updatedByName', title: '修改人', accessor: (r) => r.updatedBy?.name ?? '—', filterType: 'text', defaultVisible: false },
     { key: 'demandUpdates', title: '需求更新', defaultVisible: false, sortable: false,
@@ -286,7 +287,7 @@ export default function SupplementsPage() {
             <textarea className="textarea textarea-bordered w-full" rows={2} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="其他备注信息" />
           </Field>
           <Field label="附件">
-            <FileUpload value={form.attachmentUrl} onChange={(url) => setField('attachmentUrl', url)} />
+            <MultiFileUpload value={form.attachmentUrl} onChange={(urls) => setField('attachmentUrl', urls)} />
           </Field>
         </div>
 

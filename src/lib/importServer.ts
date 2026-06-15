@@ -4,7 +4,8 @@
 import { prisma } from '@/lib/prisma'
 import { assertRowWritable, type CurrentUser } from '@/lib/permissions'
 
-type FieldType = 'string' | 'number' | 'int' | 'date' | 'boolean' | 'string[]'
+// 'urls'：附件多值，只按换行拆（URL 可能含逗号/分号，不能用 string[] 的多分隔符，会错拆）
+type FieldType = 'string' | 'number' | 'int' | 'date' | 'boolean' | 'string[]' | 'urls'
 
 export interface ImportField {
   header: string // Excel 列头
@@ -93,6 +94,8 @@ function cellText(v: any): any {
 }
 
 function coerce(type: FieldType | undefined, raw: any): any {
+  // 'urls'(附件多值)空也返回 []（而非 null）——字段是 NOT NULL text[] default []，写 null 会违反约束
+  if (type === 'urls') return String(raw ?? '').split(/[\r\n]+/).map((s) => s.trim()).filter(Boolean)
   if (raw == null || raw === '') return null
   switch (type) {
     case 'int':

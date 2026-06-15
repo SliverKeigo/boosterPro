@@ -11,7 +11,7 @@ import {
   Modal,
   Popconfirm,
   Field,
-  FileUpload,
+  MultiFileUpload,
   RichText,
   SearchSelect,
   useToast,
@@ -35,7 +35,7 @@ const EMPTY_FORM: any = {
   openingSpeech: '',
   benchmarkCompanies: '',
   location: '',
-  attachmentUrl: '',
+  attachmentUrl: [],
   officeAddresses: [],
 }
 
@@ -124,6 +124,7 @@ export default function ClientsPage() {
       openingSpeech: r.openingSpeech ?? '',
       benchmarkCompanies: r.benchmarkCompanies ?? '',
       location: r.location ?? '',
+      attachmentUrl: r.attachmentUrl ?? [],
       officeAddresses: (r.officeAddresses ?? []).map((x: any) => ({
         address: x.address ?? '',
       })),
@@ -203,7 +204,7 @@ export default function ClientsPage() {
     { key: 'openingSpeech', title: '开聊话术', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{v}</span> : '—' },
     { key: 'benchmarkCompanies', title: '对标企业', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{v}</span> : '—' },
     { key: 'location', title: '定位', defaultVisible: false, render: (v) => v || '—' },
-    { key: 'attachmentUrl', title: '客户附件资料', defaultVisible: false, sortable: false, render: (v) => v ? '已上传' : '—' },
+    { key: 'attachmentUrl', title: '客户附件资料', defaultVisible: false, sortable: false, render: (v) => (v?.length ? `${v.length} 份` : '—') },
   ]
 
   return (
@@ -312,7 +313,7 @@ export default function ClientsPage() {
             <textarea className="textarea textarea-bordered w-full" rows={2} value={form.benchmarkCompanies} onChange={(e) => setField('benchmarkCompanies', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="客户附件资料">
-            <FileUpload value={form.attachmentUrl} onChange={(url) => setField('attachmentUrl', url)} />
+            <MultiFileUpload value={form.attachmentUrl} onChange={(urls) => setField('attachmentUrl', urls)} />
           </Field>
         </div>
 

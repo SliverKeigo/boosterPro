@@ -320,8 +320,12 @@ export async function runFengcunImport(cfg: JodooModule, buf: ArrayBuffer, user:
       const submitterName = getVal(op.lead, cfg.submitterHeader).trim()
       const ownerId = submitterName ? await ensureUser(submitterName) : user.id
       for (const a of cfg.attachments ?? []) {
-        const url = await resolveAttachment(getVal(op.lead, a.header))
-        if (url) data[a.field] = url
+        // 附件字段为 String[]：一个单元格可能含多个 FINST(多文件)，按换行拆分逐个落盘 → URL 数组
+        const cell = getVal(op.lead, a.header)
+        const finsts = String(cell || '').split(/[\r\n]+/).map((s) => s.trim()).filter(Boolean)
+        const urls: string[] = []
+        for (const fi of finsts) { const u = await resolveAttachment(fi); if (u) urls.push(u) }
+        data[a.field] = urls
       }
       for (const uf of cfg.userFields ?? []) {
         const nm = getVal(op.lead, uf.header).trim()

@@ -11,7 +11,7 @@ import {
   Modal,
   Popconfirm,
   Field,
-  FileUpload,
+  MultiFileUpload,
   RegionCascade,
   SearchSelect,
   searchFetch,
@@ -49,7 +49,7 @@ const EMPTY_FORM: any = {
   customerDecisionMaker: '',
   decisionMakerDescription: '',
   salesOwnerId: '',
-  attachmentUrl: '',
+  attachmentUrl: [],
   progressRecords: [],
 }
 
@@ -107,6 +107,7 @@ export default function OpportunitiesPage() {
       contactTitle: r.contactTitle ?? '',
       contactInfo: r.contactInfo ?? '',
       salesOwnerId: r.salesOwnerId ?? '',
+      attachmentUrl: r.attachmentUrl ?? [],
       progressRecords: (r.progressRecords ?? []).map((x: any) => ({
         date: fmtDate(x.date),
         description: x.description ?? '',
@@ -188,7 +189,7 @@ export default function OpportunitiesPage() {
             { key: 'description', title: '进展描述' },
           ]} />
       ) },
-    { key: 'attachmentUrl', title: '附件', defaultVisible: false, render: (v) => (v ? '有' : '—') },
+    { key: 'attachmentUrl', title: '附件', defaultVisible: false, render: (v) => (v?.length ? `${v.length} 份` : '—') },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
     { key: 'updatedByName', title: '修改人', accessor: (r) => r.updatedBy?.name ?? '—', filterType: 'text', defaultVisible: false },
   ]
@@ -310,7 +311,7 @@ export default function OpportunitiesPage() {
 
         {/* 附件1 */}
         <Field label="附件1">
-          <FileUpload value={form.attachmentUrl} onChange={(url) => setField('attachmentUrl', url)} />
+          <MultiFileUpload value={form.attachmentUrl} onChange={(urls) => setField('attachmentUrl', urls)} />
         </Field>
       </Modal>
     </div>

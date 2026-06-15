@@ -12,7 +12,7 @@ import {
   Modal,
   Popconfirm,
   Field,
-  FileUpload,
+  MultiFileUpload,
   SearchSelect,
   YearSelect,
   yearOptions,
@@ -133,9 +133,9 @@ const EMPTY_FORM: any = {
   education: '', schoolTier: [], customerId: '', customerShortName: '', requirementId: '',
   recruitmentParty: '', recruitmentChannel: '', recommendationTime: '',
   recommendationStatus: 'PENDING',
-  recommendationReportUrl: '', recommendationReason: '', interviewProgress: '',
-  failureReason: '', offerDate: '', offerOnboardDate: '', offerFileUrl: '',
-  backgroundCheckReportUrl: '', actualOnboardDate: '', salaryPlan: '',
+  recommendationReportUrl: [], recommendationReason: '', interviewProgress: '',
+  failureReason: '', offerDate: '', offerOnboardDate: '', offerFileUrl: [],
+  backgroundCheckReportUrl: [], actualOnboardDate: '', salaryPlan: '',
   guaranteePeriodEnd: '', guaranteePeriodMonths: '',
   tags: '', notes: '', submitDepartmentId: '', submitterId: '',
   guaranteeCommunications: [], riskEvents: [],
@@ -230,6 +230,9 @@ export default function CandidatesPage() {
       submitDepartmentId: r.submitDepartmentId ?? '',
       submitterId: r.submitterId ?? '',
       guaranteePeriodMonths: r.guaranteePeriodMonths ?? '',
+      recommendationReportUrl: r.recommendationReportUrl ?? [],
+      offerFileUrl: r.offerFileUrl ?? [],
+      backgroundCheckReportUrl: r.backgroundCheckReportUrl ?? [],
       recommendationTime: fmtDateTime(r.recommendationTime),
       offerDate: fmtDate(r.offerDate),
       offerOnboardDate: fmtDate(r.offerOnboardDate),
@@ -273,7 +276,7 @@ export default function CandidatesPage() {
     if (!form.requirementId) return toast.error('请选择岗位名称')
     if (!form.recommendationTime) return toast.error('请选择推荐时间')
     if (!form.recruitmentChannel?.trim()) return toast.error('请选择招聘渠道')
-    if (!form.recommendationReportUrl) return toast.error('请上传推荐报告')
+    if (!form.recommendationReportUrl?.length) return toast.error('请上传推荐报告')
     if (!form.recommendationReason?.trim()) return toast.error('请填写推荐理由')
     // 流程字段：当前推荐状态下「显示」的流程字段均为必填
     const flowFields = STATUS_FIELDS[form.recommendationStatus] ?? []
@@ -298,10 +301,12 @@ export default function CandidatesPage() {
           .filter(Boolean),
       }
       // 清除当前推荐状态下不显示的流程字段，避免与最终状态矛盾的脏数据入库
-      // 子表（guaranteeCommunications）是数组，隐藏时不在此清空（避免误清子表数据），仅清字符串型流程字段
+      // 子表（guaranteeCommunications）是数组，隐藏时不在此清空（避免误清子表数据）。
+      // 多附件流程字段（offerFileUrl / backgroundCheckReportUrl）是 String[]，清成 []；其余字符串型清成 ''
+      const ARRAY_FLOW_FIELDS = new Set(['offerFileUrl', 'backgroundCheckReportUrl'])
       for (const f of ALL_FLOW_FIELDS) {
         if (f === 'guaranteeCommunications') continue
-        if (!visibleFlow.has(f)) payload[f] = ''
+        if (!visibleFlow.has(f)) payload[f] = ARRAY_FLOW_FIELDS.has(f) ? [] : ''
       }
       const url = editing ? `/api/candidates/${editing.id}` : '/api/candidates'
       const res = await fetch(url, {
@@ -373,9 +378,9 @@ export default function CandidatesPage() {
       ) },
     { key: 'notes', title: '备注', defaultVisible: false },
     { key: 'customerShortName', title: '客户简称(填写)', defaultVisible: false },
-    { key: 'recommendationReportUrl', title: '推荐报告', defaultVisible: false, render: (v) => (v ? '有' : '—') },
-    { key: 'offerFileUrl', title: 'Offer 文件', defaultVisible: false, render: (v) => (v ? '有' : '—') },
-    { key: 'backgroundCheckReportUrl', title: '背景调查报告', defaultVisible: false, render: (v) => (v ? '有' : '—') },
+    { key: 'recommendationReportUrl', title: '推荐报告', defaultVisible: false, render: (v) => (v?.length ? `${v.length} 份` : '—') },
+    { key: 'offerFileUrl', title: 'Offer 文件', defaultVisible: false, render: (v) => (v?.length ? `${v.length} 份` : '—') },
+    { key: 'backgroundCheckReportUrl', title: '背景调查报告', defaultVisible: false, render: (v) => (v?.length ? `${v.length} 份` : '—') },
     { key: 'guaranteeCommunications', title: '保证期沟通', defaultVisible: false, sortable: false,
       accessor: (r) => (r.guaranteeCommunications ?? []).map((x: any) => x.content).filter(Boolean).join('；'),
       render: (_v, r) => (
@@ -556,7 +561,7 @@ export default function CandidatesPage() {
             <SearchSelect value={form.recruitmentChannel} onChange={(v) => setField('recruitmentChannel', v)} options={channelOptions} placeholder="请选择" />
           </Field>
           <Field label="推荐报告" required>
-            <FileUpload value={form.recommendationReportUrl} onChange={(url) => setField('recommendationReportUrl', url)} />
+            <MultiFileUpload value={form.recommendationReportUrl} onChange={(urls) => setField('recommendationReportUrl', urls)} />
           </Field>
           <Field label="推荐状态" required>
             <SearchSelect value={form.recommendationStatus} onChange={(v) => setField('recommendationStatus', v)} options={opts(STATUS_LABELS)} placeholder="请选择" />
@@ -596,12 +601,12 @@ export default function CandidatesPage() {
             )}
             {visible('offerFileUrl') && (
               <Field label="Offer（上传文件）" required className="col-span-2">
-                <FileUpload value={form.offerFileUrl} onChange={(url) => setField('offerFileUrl', url)} />
+                <MultiFileUpload value={form.offerFileUrl} onChange={(urls) => setField('offerFileUrl', urls)} />
               </Field>
             )}
             {visible('backgroundCheckReportUrl') && (
               <Field label="背景调查报告" required className="col-span-2">
-                <FileUpload value={form.backgroundCheckReportUrl} onChange={(url) => setField('backgroundCheckReportUrl', url)} />
+                <MultiFileUpload value={form.backgroundCheckReportUrl} onChange={(urls) => setField('backgroundCheckReportUrl', urls)} />
               </Field>
             )}
             {visible('actualOnboardDate') && (

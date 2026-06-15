@@ -13,7 +13,7 @@ import {
   Popconfirm,
   Dropdown,
   Field,
-  FileUpload,
+  MultiFileUpload,
   SearchSelect,
   searchFetch,
   useToast,
@@ -54,7 +54,7 @@ const EMPTY_FORM: any = {
   languageRequirement: '', status: [], deadline: '', baseCity: '',
   jobDescription: '', talentProfile: '', projectExperience: '',
   closeReason: '', notes: '', industry: '',
-  followDate: '', latestUpdate: '', attachmentUrl: '',
+  followDate: '', latestUpdate: '', attachmentUrl: [],
   bonusPoints: '', industryResources: '',
   positionProfiles: [], urgentRecords: [],
 }
@@ -156,6 +156,7 @@ export default function RequirementsPage() {
       genderRequirement: r.genderRequirement ?? '',
       deadline: fmtDate(r.deadline),
       followDate: fmtDate(r.followDate),
+      attachmentUrl: r.attachmentUrl ?? [],
       positionProfiles: (r.positionProfiles ?? []).map((x: any) => ({
         knowledgeCategory: x.knowledgeCategory ?? '',
         knowledgeAmount: x.knowledgeAmount ?? '',
@@ -254,7 +255,7 @@ export default function RequirementsPage() {
     { key: 'notes', title: '其他备注', defaultVisible: false },
     { key: 'talentProfile', title: '人才画像', defaultVisible: false },
     { key: 'projectExperience', title: '项目经验', defaultVisible: false },
-    { key: 'attachmentUrl', title: '附件', defaultVisible: false, render: (v) => (v ? '有' : '—') },
+    { key: 'attachmentUrl', title: '附件', defaultVisible: false, render: (v) => (v?.length ? `${v.length} 份` : '—') },
     {
       key: 'positionProfiles',
       title: '岗位画像',
@@ -489,7 +490,7 @@ export default function RequirementsPage() {
           </Field>
           {/* 附件 / 关闭、暂停原因 */}
           <Field label="附件">
-            <FileUpload value={form.attachmentUrl} onChange={(url) => setField('attachmentUrl', url)} />
+            <MultiFileUpload value={form.attachmentUrl} onChange={(urls) => setField('attachmentUrl', urls)} />
           </Field>
           <Field label="关闭/暂停原因" required={Array.isArray(form.status) && (form.status.includes('关闭') || form.status.includes('暂停'))}>
             <textarea className="textarea textarea-bordered w-full" rows={3} value={form.closeReason} onChange={(e) => setField('closeReason', e.target.value)} placeholder="请输入" />

@@ -11,7 +11,7 @@ import {
   Modal,
   Popconfirm,
   Field,
-  FileUpload,
+  MultiFileUpload,
   YearSelect,
   yearOptions,
   SearchSelect,
@@ -38,9 +38,9 @@ const EMPTY_FORM: any = {
   ropFeeRate: '',
   salesOwnerId: '',
   deliveryOwnerId: '',
-  contractFileUrl: '',
+  contractFileUrl: [],
   invoiceInfoText: '',
-  invoiceInfoFileUrl: '',
+  invoiceInfoFileUrl: [],
   notes: '',
   invoices: [],
 }
@@ -106,6 +106,8 @@ export default function ContractsPage() {
       effectiveStart: fmtDate(r.effectiveStart),
       effectiveEnd: fmtDate(r.effectiveEnd),
       expiryDate: fmtDate(r.expiryDate),
+      contractFileUrl: r.contractFileUrl ?? [],
+      invoiceInfoFileUrl: r.invoiceInfoFileUrl ?? [],
       invoices: (r.invoices ?? []).map((x: any) => ({
         invoiceType: x.invoiceType ?? '',
         verificationResult: x.verificationResult ?? '',
@@ -139,7 +141,7 @@ export default function ContractsPage() {
     if (!form.effectiveEnd) return toast.error('请选择合同结束日期')
     if (!form.expiryDate) return toast.error('请选择合同到期日期')
     if (!form.serviceType?.trim()) return toast.error('请选择服务类型')
-    if (!form.contractFileUrl?.trim()) return toast.error('请上传合同附件')
+    if (!form.contractFileUrl?.length) return toast.error('请上传合同附件')
     setSubmitting(true)
     try {
       const url = editing ? `/api/contracts/${editing.id}` : '/api/contracts'
@@ -250,9 +252,9 @@ export default function ContractsPage() {
     { key: 'ropFeeRate', title: 'ROP 服务费率', defaultVisible: false, filterType: 'number', render: (v) => (v ?? '') === '' ? '—' : String(v) },
     { key: 'salesOwnerId', title: '销售负责人 ID', defaultVisible: false, filterType: 'number' },
     { key: 'deliveryOwnerId', title: '交付负责人 ID', defaultVisible: false, filterType: 'number' },
-    { key: 'contractFileUrl', title: '合同附件 URL', defaultVisible: false },
+    { key: 'contractFileUrl', title: '合同附件', defaultVisible: false, sortable: false, render: (v) => (v?.length ? `${v.length} 份` : '—') },
     { key: 'invoiceInfoText', title: '开票信息', defaultVisible: false },
-    { key: 'invoiceInfoFileUrl', title: '开票信息（文件）', defaultVisible: false, sortable: false, render: (v) => v ? '已上传' : '—' },
+    { key: 'invoiceInfoFileUrl', title: '开票信息（文件）', defaultVisible: false, sortable: false, render: (v) => (v?.length ? `${v.length} 份` : '—') },
     { key: 'notes', title: '备注', defaultVisible: false },
   ]
 
@@ -361,13 +363,13 @@ export default function ContractsPage() {
             />
           </Field>
           <Field label="合同附件" required className="col-span-2">
-            <FileUpload value={form.contractFileUrl} onChange={(url) => setField('contractFileUrl', url)} />
+            <MultiFileUpload value={form.contractFileUrl} onChange={(urls) => setField('contractFileUrl', urls)} />
           </Field>
           <Field label="开票信息" className="col-span-2">
             <textarea className="textarea textarea-bordered w-full" rows={2} value={form.invoiceInfoText} onChange={(e) => setField('invoiceInfoText', e.target.value)} placeholder="开票相关信息" />
           </Field>
           <Field label="开票信息（文件）" className="col-span-2">
-            <FileUpload value={form.invoiceInfoFileUrl} onChange={(url) => setField('invoiceInfoFileUrl', url)} />
+            <MultiFileUpload value={form.invoiceInfoFileUrl} onChange={(urls) => setField('invoiceInfoFileUrl', urls)} />
           </Field>
           <Field label="备注" className="col-span-2">
             <textarea className="textarea textarea-bordered w-full" rows={2} value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="其他备注信息" />

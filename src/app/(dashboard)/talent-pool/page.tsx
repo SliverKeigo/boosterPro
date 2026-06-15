@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
 import { Eye, Trash2 } from 'lucide-react'
-import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, FileUpload, SearchSelect, YearSelect, yearOptions, useToast } from '@/components/ui'
+import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, MultiFileUpload, SearchSelect, YearSelect, yearOptions, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
 
@@ -14,7 +14,7 @@ const GENDER_LABELS: Record<string, string> = { MALE: '男', FEMALE: '女', ANY:
 const EMPTY_FORM: any = {
   name: '', gender: '', birthYear: '', education: '', phone: '',
   currentPosition: '', targetPosition: '', positionType: '', positionLevel: '',
-  tags: '', resumeUrl: '',
+  tags: '', resumeUrl: [],
 }
 
 export default function TalentPoolPage() {
@@ -68,6 +68,7 @@ export default function TalentPoolPage() {
       ...r,
       gender: r.gender ?? '',
       birthYear: r.birthYear ?? '',
+      resumeUrl: r.resumeUrl ?? [],
       tags: Array.isArray(r.tags) ? r.tags.join(' ') : '',
     })
     setOpen(true)
@@ -87,7 +88,7 @@ export default function TalentPoolPage() {
   const handleSubmit = async () => {
     if (!form.name?.trim()) return toast.error('请填写人才姓名')
     if (!form.currentPosition?.trim()) return toast.error('请填写当前职位')
-    if (!form.resumeUrl?.trim()) return toast.error('请上传简历及相关资料')
+    if (!form.resumeUrl?.length) return toast.error('请上传简历及相关资料')
     setSubmitting(true)
     try {
       const payload = {
@@ -127,8 +128,8 @@ export default function TalentPoolPage() {
     { key: 'phone', title: '电话' },
     { key: 'birthYear', title: '出生年份', defaultVisible: false, filterType: 'select', filterOptions: yearOptions(),
       render: (v) => v != null ? v : <span className="text-base-content/30">—</span> },
-    { key: 'resumeUrl', title: '简历URL', defaultVisible: false,
-      render: (v) => v ? <a href={v} target="_blank" rel="noreferrer" className="link link-primary line-clamp-1 max-w-[200px]">{v}</a> : <span className="text-base-content/30">—</span> },
+    { key: 'resumeUrl', title: '简历', defaultVisible: false, sortable: false,
+      render: (v) => (v?.length ? `${v.length} 份` : <span className="text-base-content/30">—</span>) },
     { key: 'tags', title: '人才标签', sortable: false,
       accessor: (r) => (Array.isArray(r.tags) ? r.tags.join(' ') : (r.tags ?? '')),
       render: (v) => v ? <span className="line-clamp-1 max-w-[220px]">{v}</span> : <span className="text-base-content/30">—</span> },
@@ -239,7 +240,7 @@ export default function TalentPoolPage() {
             />
           </Field>
           <Field label="简历及相关资料" required>
-            <FileUpload value={form.resumeUrl} onChange={(url) => setField('resumeUrl', url)} />
+            <MultiFileUpload value={form.resumeUrl} onChange={(urls) => setField('resumeUrl', urls)} />
           </Field>
           {/* 人才标签：自由文本(不按逗号分隔)。出生年份已能推算年龄，故无单独「年龄」字段。 */}
           <Field label="人才标签" className="col-span-2">

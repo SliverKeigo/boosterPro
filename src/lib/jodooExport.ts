@@ -35,7 +35,7 @@ const tiersOut = (a: any) => (Array.isArray(a) ? a.map((k: string) => TIER_OUT[k
 
 interface ExportCol { header: string; get: (r: any) => any }
 interface ExportSub { jsonHeader: string; toJson: (r: any) => any[] }
-interface ExportAttach { header: string; get: (r: any) => string | null } // 返回附件 URL（/api/files/xxx）或 null
+interface ExportAttach { header: string; get: (r: any) => string[] | string | null } // 附件字段值：String[](多附件)/单值(兼容)/null
 interface ExportDef { model: string; tag: string; include: any; columns: ExportCol[]; subs: ExportSub[]; attachments: ExportAttach[] }
 
 const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
@@ -262,18 +262,21 @@ export async function runExport(resource: string): Promise<{ buffer: Buffer; fil
     for (const c of def.columns) row.push(c.get(r) ?? '')
     for (const s of def.subs) { const arr = s.toJson(r).filter(Boolean); row.push(arr.length ? JSON.stringify(arr) : '') }
     for (const a of def.attachments) {
-      const url = a.get(r)
-      if (!url) { row.push(''); continue }
-      const fname = decodeURIComponent(path.basename(url)) // 真实文件名(URL 里是编码态)
-      const fp = path.join(UPLOAD_DIR, fname)
-      try {
-        const buf = await fs.readFile(fp)
-        const finst = `FINST-EXP${r.id}N${seq++}`
-        resZip.file(`${finst}/${fname}`, buf)
-        row.push(`${finst}/${fname}`)
-      } catch {
-        row.push('') // 附件文件缺失 → 列空
+      const raw = a.get(r)
+      const urls = Array.isArray(raw) ? raw : raw ? [raw] : [] // 数组字段；兼容旧单值
+      const refs: string[] = []
+      for (const url of urls) {
+        const fname = decodeURIComponent(path.basename(url)) // 真实文件名(URL 里是编码态)
+        try {
+          const buf = await fs.readFile(path.join(UPLOAD_DIR, fname))
+          const finst = `FINST-EXP${r.id}N${seq++}`
+          resZip.file(`${finst}/${fname}`, buf)
+          refs.push(`${finst}/${fname}`)
+        } catch {
+          /* 附件文件缺失 → 跳过该份 */
+        }
       }
+      row.push(refs.join('\n')) // 多附件单元格内换行分隔；与导入端 split(/[\r\n]+/) 对称
     }
     ws.addRow(row)
   }

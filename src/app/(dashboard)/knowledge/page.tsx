@@ -11,7 +11,7 @@ import {
   Modal,
   Popconfirm,
   Field,
-  FileUpload,
+  MultiFileUpload,
   RichText,
   Dropdown,
   SearchSelect,
@@ -48,7 +48,7 @@ const EMPTY_FORM: any = {
   category: '',
   tags: '',
   keywords: '',
-  fileUrl: '',
+  fileUrl: [],
   notes: '',
   trainingOutline: '',
   internalLecturerId: '',
@@ -142,6 +142,7 @@ export default function KnowledgePage() {
       ...EMPTY_FORM,
       ...r,
       tags: Array.isArray(r.tags) ? r.tags.join(', ') : '',
+      fileUrl: r.fileUrl ?? [],
       trainingOutline: r.trainingOutline ?? '',
       internalLecturerId: r.internalLecturerId ?? '',
       internalLecturerName: r.internalLecturer?.name ?? '',
@@ -261,7 +262,7 @@ export default function KnowledgePage() {
       render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span>,
     },
     // 以下默认隐藏，可在“显示列”开启
-    { key: 'fileUrl', title: '知识文件 URL', defaultVisible: false },
+    { key: 'fileUrl', title: '知识文件', defaultVisible: false, sortable: false, render: (v) => (v?.length ? `${v.length} 份` : '—') },
     { key: 'notes', title: '知识便条', defaultVisible: false, render: (v) => stripHtml(v) },
     { key: 'trainingOutline', title: '培训提纲', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[260px]">{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'internalLecturer', title: '内部讲师', defaultVisible: false, sortable: false, accessor: (r) => r.internalLecturer?.name ?? '', render: (v) => v || <span className="text-base-content/30">—</span> },
@@ -381,7 +382,7 @@ export default function KnowledgePage() {
             <input className="input input-bordered w-full" value={form.keywords} onChange={(e) => setField('keywords', e.target.value)} placeholder="请输入" />
           </Field>
           <Field label="知识文件">
-            <FileUpload value={form.fileUrl} onChange={(url) => setField('fileUrl', url)} />
+            <MultiFileUpload value={form.fileUrl} onChange={(urls) => setField('fileUrl', urls)} />
           </Field>
 
           {/* 分类=培训资料：额外显示 培训提纲 / 内部讲师 / 外部讲师（均非必填） */}

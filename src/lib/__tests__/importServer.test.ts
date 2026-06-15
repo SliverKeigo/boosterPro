@@ -57,6 +57,20 @@ describe('importRows —— 人才储备库', () => {
     expect(prisma.talentPool.create).not.toHaveBeenCalled()
   })
 
+  it('附件字段(urls 类型)：换行分隔的多 URL → 数组（保留 URL 内逗号/分号，不错拆）', async () => {
+    mock(prisma.talentPool.create).mockResolvedValue({ id: 1 })
+    await run([{ __row: 2, 姓名: '王五', 当前职位: 'X', 简历及相关资料: '/api/files/a,b.pdf\n/api/files/c;d.docx' }])
+    const data = mock(prisma.talentPool.create).mock.calls[0][0].data
+    expect(data.resumeUrl).toEqual(['/api/files/a,b.pdf', '/api/files/c;d.docx'])
+  })
+
+  it('附件字段(urls 类型)：空单元格 → 空数组(非 null，适配 NOT NULL text[])', async () => {
+    mock(prisma.talentPool.create).mockResolvedValue({ id: 1 })
+    await run([{ __row: 2, 姓名: '王五', 当前职位: 'X', 简历及相关资料: '' }])
+    const data = mock(prisma.talentPool.create).mock.calls[0][0].data
+    expect(data.resumeUrl).toEqual([])
+  })
+
   it('一对一错 → 整文件事务全不写（含正确行）', async () => {
     const res = await run([
       { __row: 2, 姓名: '对的', 当前职位: 'A' },
