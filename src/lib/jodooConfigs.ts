@@ -193,7 +193,7 @@ const CANDIDATE: JodooModule = {
   attachments: [
     { header: 'Offer', field: 'offerFileUrl' },
     { header: '背景调查报告', field: 'backgroundCheckReportUrl' },
-    { header: '推荐报告附件', field: 'recommendationReportUrl' }, // 多附件(String[])，引擎按数组落盘
+    { header: '推荐报告', field: 'recommendationReportUrl' }, // 多附件(String[])；表头按客户实际命名「推荐报告」(原「推荐报告附件」客户已自行改名)
   ],
   // 封存包无独立「推荐人」列：录入候选人推荐的「提交人」即推荐顾问，同列也映射到推荐人(submitterId)
   userFields: [{ header: '提交人', field: 'submitterId' }],
