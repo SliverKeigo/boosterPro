@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // 导出引擎：把模块数据导成「封存包」zip（与导入对称，可再导回）。
 // 结构：外层 zip 含 <tag>_excel.zip（数据 xlsx）+ <tag>_resources_1.zip（附件）。
-// xlsx：双行表头(第1=2行，用列名让导入引擎认) + 第3行起数据；
-//   主表列＝字段反向(枚举→中文/数组→拼接/日期→串/关系→名称/提交人→姓名)；
-//   子表＝一个 JSON 列(jsonHeader，值为记录数组，导入端 fromJson 解回)；
-//   附件＝FINST 引用(FINST-EXP<记录id>N<序号>/<文件名>)，文件放进 resources.zip。
+// xlsx：**双行表头**（第1行=主表列名(A1:A2纵向合并)/子表组名(横向合并)；第2行=子表各子字段名）+ 第3行起数据；
+//   主表列＝字段反向(枚举→中文/数组→拼接/日期→串/关系→名称/提交人→姓名)，一条记录跨 N 行时纵向合并；
+//   子表＝**横向区间多行展开**（一条主记录有几条子记录就占几个 Excel 行；子字段名与导入端 build 的 g('名') 对齐）；
+//   附件＝FINST 引用(FINST-EXP<记录id>N<序号>/<文件名>)，文件放进 resources.zip；子表内附件同样落盘。
+// 与导入端 jodooImport 的「双行表头 + 横向合并区间圈子表 + groupKeyHeaders 归并」对称，导出包可直接导回。
 import { prisma } from '@/lib/prisma'
 import { HttpError } from '@/lib/apiError'
 import type { ResourceKey } from '@/lib/resources'
@@ -34,7 +35,10 @@ const fmtDateTime = (d: any) => (d ? bjStr(d, 19).replace('T', ' ') : '')
 const tiersOut = (a: any) => (Array.isArray(a) ? a.map((k: string) => TIER_OUT[k] ?? k).join('、') : '')
 
 interface ExportCol { header: string; get: (r: any) => any }
-interface ExportSub { jsonHeader: string; toJson: (r: any) => any[] }
+// 子表＝横向区间「列组」：groupHeader 第1行(横向合并)、fields[].header 第2行子字段名（须与导入端 build 的 g('名') 一致）。
+// 一条主记录有几条子记录(getRows)就占几个 Excel 行；attachment 字段值落盘成 FINST 引用。
+interface ExportSubField { header: string; get: (sub: any) => any; attachment?: boolean }
+interface ExportSub { groupHeader: string; getRows: (r: any) => any[]; fields: ExportSubField[] }
 interface ExportAttach { header: string; get: (r: any) => string[] | string | null } // 附件字段值：String[](多附件)/单值(兼容)/null
 interface ExportDef { model: string; tag: string; include: any; columns: ExportCol[]; subs: ExportSub[]; attachments: ExportAttach[] }
 
@@ -51,10 +55,12 @@ const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
       { header: '开聊话术', get: (r) => r.openingSpeech },
       { header: '客户曾用名', get: (r) => r.formerName },
       { header: '定位', get: (r) => r.location },
+      // 办公地址＝单列多值（导入端 splitSubtables 按换行/分号拆），非横向展开
+      { header: '多个办公地址', get: (r) => (r.officeAddresses ?? []).map((o: any) => o.address).filter(Boolean).join('\n') },
       { header: '提交人', get: (r) => r.createdBy?.name },
       { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
     ],
-    subs: [{ jsonHeader: '办公地址JSON', toJson: (r) => (r.officeAddresses ?? []).map((o: any) => ({ address: o.address })) }],
+    subs: [],
     attachments: [{ header: '客户附件资料', get: (r) => r.attachmentUrl }],
   },
   REQUIREMENT: {
@@ -87,8 +93,21 @@ const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
       { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
     ],
     subs: [
-      { jsonHeader: '岗位画像JSON', toJson: (r) => (r.positionProfiles ?? []).map((p: any) => ({ knowledgeCategory: p.knowledgeCategory, knowledgeAmount: p.knowledgeAmount, consensusRequirement: p.consensusRequirement })) },
-      { jsonHeader: '加急记录JSON', toJson: (r) => (r.urgentRecords ?? []).map((u: any) => ({ memberName: u.member?.name ?? null, date: fmtDate(u.date) })) },
+      {
+        groupHeader: '岗位画像', getRows: (r) => r.positionProfiles ?? [],
+        fields: [
+          { header: '知识分类', get: (p) => p.knowledgeCategory },
+          { header: '知识解读', get: (p) => p.knowledgeAmount },
+          { header: '形成的共识和管理要求', get: (p) => p.consensusRequirement },
+        ],
+      },
+      {
+        groupHeader: '加急记录', getRows: (r) => r.urgentRecords ?? [],
+        fields: [
+          { header: '成员', get: (u) => u.member?.name },
+          { header: '日期', get: (u) => fmtDate(u.date) },
+        ],
+      },
     ],
     attachments: [{ header: '附件', get: (r) => r.attachmentUrl }],
   },
@@ -118,8 +137,23 @@ const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
       { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
     ],
     subs: [
-      { jsonHeader: '保证期沟通JSON', toJson: (r) => (r.guaranteeCommunications ?? []).map((g: any) => ({ date: fmtDate(g.date), content: g.content })) },
-      { jsonHeader: '风险事件JSON', toJson: (r) => (r.riskEvents ?? []).map((e: any) => ({ date: fmtDate(e.date), riskDescription: e.riskDescription })) },
+      {
+        groupHeader: '保证期沟通记录', getRows: (r) => r.guaranteeCommunications ?? [],
+        fields: [
+          { header: '日期', get: (g) => fmtDate(g.date) },
+          { header: '沟通内容', get: (g) => g.content },
+        ],
+      },
+      {
+        // riskDescription 在库里是「风险识别 / 风险管控应对」合并存的单字段；导出只产「风险识别」列(=整段)、
+        // 「风险管控/应对」留空，导入 build 的 [id, mc].join(' / ') 仍还原同值，往返一致。
+        groupHeader: '风险管理', getRows: (r) => r.riskEvents ?? [],
+        fields: [
+          { header: '风险识别', get: (e) => e.riskDescription },
+          { header: '风险管控/应对', get: () => '' },
+          { header: '日期', get: (e) => fmtDate(e.date) },
+        ],
+      },
     ],
     attachments: [
       { header: 'Offer', get: (r) => r.offerFileUrl },
@@ -139,7 +173,17 @@ const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
       { header: '提交人', get: (r) => r.createdBy?.name },
       { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
     ],
-    subs: [{ jsonHeader: '管理细则JSON', toJson: (r) => (r.managementRecords ?? []).map((m: any) => ({ submitterName: m.submitter?.name ?? null, details: m.details, date: fmtDate(m.date), reviewParticipants: m.reviewParticipants })) }],
+    subs: [
+      {
+        groupHeader: '管理明细记录', getRows: (r) => r.managementRecords ?? [],
+        fields: [
+          { header: '提交人', get: (m) => m.submitter?.name },
+          { header: '管理明细', get: (m) => m.details },
+          { header: '日期', get: (m) => fmtDate(m.date) },
+          { header: '评审参与人', get: (m) => m.reviewParticipants },
+        ],
+      },
+    ],
     attachments: [{ header: '知识文件', get: (r) => r.fileUrl }],
   },
   TALENT_POOL: {
@@ -171,7 +215,18 @@ const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
       { header: '提交人', get: (r) => r.createdBy?.name },
       { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
     ],
-    subs: [{ jsonHeader: '联系人JSON', toJson: (r) => (r.contacts ?? []).map((c: any) => ({ contactName: c.contactName, contactTitle: c.contactTitle, contactPhone: c.contactPhone, contactEmail: c.contactEmail, contactHobby: c.contactHobby })) }],
+    subs: [
+      {
+        groupHeader: '客户联系人信息', getRows: (r) => r.contacts ?? [],
+        fields: [
+          { header: '联系人姓名', get: (c) => c.contactName },
+          { header: '联系人职务', get: (c) => c.contactTitle },
+          { header: '联系人电话', get: (c) => c.contactPhone },
+          { header: '联系人邮箱', get: (c) => c.contactEmail },
+          { header: '联系人爱好', get: (c) => c.contactHobby },
+        ],
+      },
+    ],
     attachments: [],
   },
   CLIENT_SUPPLEMENT: {
@@ -185,10 +240,24 @@ const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
       { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
     ],
     subs: [
-      { jsonHeader: '需求更新JSON', toJson: (r) => (r.demandUpdates ?? []).map((d: any) => ({ date: fmtDate(d.date), content: d.content })) },
-      { jsonHeader: '客户画像JSON', toJson: (r) => (r.customerProfiles ?? []).map((p: any) => ({ specialty: p.specialty, description: p.description, attachmentUrl: p.attachmentUrl })) },
+      {
+        groupHeader: '需求更新', getRows: (r) => r.demandUpdates ?? [],
+        fields: [
+          { header: '需求更新内容', get: (d) => d.content },
+          { header: '日期', get: (d) => fmtDate(d.date) },
+        ],
+      },
+      {
+        groupHeader: '客户专长画像', getRows: (r) => r.customerProfiles ?? [],
+        fields: [
+          { header: '专项', get: (p) => p.specialty },
+          { header: '专项描述', get: (p) => p.description },
+          { header: '附件', get: (p) => p.attachmentUrl, attachment: true },
+        ],
+      },
     ],
-    attachments: [{ header: '备注', get: (r) => r.attachmentUrl }], // 「备注」列＝附件
+    // 封存包「备注」列实为附件(FINST 引用)，落盘到主表 attachmentUrl
+    attachments: [{ header: '备注', get: (r) => r.attachmentUrl }],
   },
   OPPORTUNITY: {
     model: 'opportunity', tag: '商机信息',
@@ -209,7 +278,15 @@ const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
       { header: '提交人', get: (r) => r.createdBy?.name },
       { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
     ],
-    subs: [{ jsonHeader: '商机进展JSON', toJson: (r) => (r.progressRecords ?? []).map((p: any) => ({ date: fmtDate(p.date), description: p.description })) }],
+    subs: [
+      {
+        groupHeader: '商机进展', getRows: (r) => r.progressRecords ?? [],
+        fields: [
+          { header: '进展描述', get: (p) => p.description },
+          { header: '日期', get: (p) => fmtDate(p.date) },
+        ],
+      },
+    ],
     attachments: [{ header: '附件1', get: (r) => r.attachmentUrl }],
   },
   CONTRACT: {
@@ -232,7 +309,21 @@ const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
       { header: '提交人', get: (r) => r.createdBy?.name },
       { header: '创建时间', get: (r) => fmtDateTime(r.createdAt) },
     ],
-    subs: [{ jsonHeader: '发票JSON', toJson: (r) => (r.invoices ?? []).map((i: any) => ({ invoiceType: i.invoiceType, verificationResult: i.verificationResult, amount: i.amount, number: i.number, code: i.code, issueDate: fmtDate(i.issueDate), sourceFileUrl: i.sourceFileUrl, imageUrl: i.imageUrl })) }],
+    subs: [
+      {
+        groupHeader: '发票', getRows: (r) => r.invoices ?? [],
+        fields: [
+          { header: '发票类型', get: (i) => i.invoiceType },
+          { header: '查验结果', get: (i) => i.verificationResult },
+          { header: '发票金额', get: (i) => i.amount },
+          { header: '发票号码', get: (i) => i.number },
+          { header: '发票代码', get: (i) => i.code },
+          { header: '开票日期', get: (i) => fmtDate(i.issueDate) },
+          { header: '发票源文件', get: (i) => i.sourceFileUrl, attachment: true },
+          { header: '发票图片', get: (i) => i.imageUrl, attachment: true },
+        ],
+      },
+    ],
     attachments: [{ header: '合同附件', get: (r) => r.contractFileUrl }],
   },
 }
@@ -250,35 +341,84 @@ export async function runExport(resource: string): Promise<{ buffer: Buffer; fil
   const ExcelJS = ex.default ?? ex
   const wb = new ExcelJS.Workbook()
   const ws = wb.addWorksheet('数据')
-  const headers = [...def.columns.map((c) => c.header), ...def.subs.map((s) => s.jsonHeader), ...def.attachments.map((a) => a.header)]
-  ws.addRow(headers) // 单行表头：数据从第 2 行起。导入引擎据「表头含 JSON 子表列」识别本系统导出包、按单行解析
 
+  // ── 物理列布局：主表列(各1列) → 各子表组(各占 fields.length 列) → 主表附件列(各1列) ──
+  let cNext = 1
+  const scalarAt = def.columns.map(() => cNext++)
+  const subAt = def.subs.map((s) => { const c0 = cNext; cNext += s.fields.length; return { c0, c1: cNext - 1 } })
+  const attachAt = def.attachments.map(() => cNext++)
+
+  // ── 双行表头：主表列名(A1:A2 纵向合并) / 子表组名(横向合并)+子字段名 / 附件列名(纵向合并) ──
+  const HEADER_ROWS = 2
+  def.columns.forEach((col, i) => {
+    ws.getRow(1).getCell(scalarAt[i]).value = col.header
+    ws.mergeCells(1, scalarAt[i], HEADER_ROWS, scalarAt[i])
+  })
+  def.subs.forEach((s, gi) => {
+    const { c0, c1 } = subAt[gi]
+    ws.getRow(1).getCell(c0).value = s.groupHeader
+    if (c1 > c0) ws.mergeCells(1, c0, 1, c1) // 组名横向合并(单字段组不合并)
+    s.fields.forEach((f, i) => { ws.getRow(2).getCell(c0 + i).value = f.header })
+  })
+  def.attachments.forEach((a, i) => {
+    ws.getRow(1).getCell(attachAt[i]).value = a.header
+    ws.mergeCells(1, attachAt[i], HEADER_ROWS, attachAt[i])
+  })
+
+  // ── 附件落盘 helper：URL(数组/单值) → FINST 引用(换行连)，文件写进 resources.zip ──
   const jz: any = await import('jszip')
   const JSZip = jz.default ?? jz
   const resZip = new JSZip()
-  let seq = 0
+  const seq = { n: 0 }
+  const persist = async (raw: any, recordId: number): Promise<string> => {
+    const urls = Array.isArray(raw) ? raw : raw ? [raw] : []
+    const refs: string[] = []
+    for (const url of urls) {
+      const fname = decodeURIComponent(path.basename(String(url))) // 真实文件名(URL 里是编码态)
+      try {
+        const buf = await fs.readFile(path.join(UPLOAD_DIR, fname))
+        const finst = `FINST-EXP${recordId}N${seq.n++}`
+        resZip.file(`${finst}/${fname}`, buf)
+        refs.push(`${finst}/${fname}`)
+      } catch {
+        /* 附件文件缺失 → 跳过该份 */
+      }
+    }
+    return refs.join('\n') // 多附件单元格内换行分隔；与导入端 split(/[\r\n]+/) 对称
+  }
+
+  // ── 数据：每条记录展开 N=max(各子表条数,1) 行；主表列/附件列纵向合并跨 N 行，子表区间逐行填 ──
+  let rowCursor = HEADER_ROWS + 1 // 数据从第 3 行起
   for (const r of records) {
-    const row: any[] = []
-    for (const c of def.columns) row.push(c.get(r) ?? '')
-    for (const s of def.subs) { const arr = s.toJson(r).filter(Boolean); row.push(arr.length ? JSON.stringify(arr) : '') }
-    for (const a of def.attachments) {
-      const raw = a.get(r)
-      const urls = Array.isArray(raw) ? raw : raw ? [raw] : [] // 数组字段；兼容旧单值
-      const refs: string[] = []
-      for (const url of urls) {
-        const fname = decodeURIComponent(path.basename(url)) // 真实文件名(URL 里是编码态)
-        try {
-          const buf = await fs.readFile(path.join(UPLOAD_DIR, fname))
-          const finst = `FINST-EXP${r.id}N${seq++}`
-          resZip.file(`${finst}/${fname}`, buf)
-          refs.push(`${finst}/${fname}`)
-        } catch {
-          /* 附件文件缺失 → 跳过该份 */
+    const subRows = def.subs.map((s) => s.getRows(r) ?? [])
+    const N = Math.max(1, ...subRows.map((rows) => rows.length))
+    const rowStart = rowCursor
+    for (let k = 0; k < N; k++) {
+      const xlsRow = ws.getRow(rowStart + k)
+      if (k === 0) {
+        def.columns.forEach((col, i) => { xlsRow.getCell(scalarAt[i]).value = col.get(r) ?? '' })
+        for (let i = 0; i < def.attachments.length; i++) {
+          xlsRow.getCell(attachAt[i]).value = await persist(def.attachments[i].get(r), r.id)
         }
       }
-      row.push(refs.join('\n')) // 多附件单元格内换行分隔；与导入端 split(/[\r\n]+/) 对称
+      for (let gi = 0; gi < def.subs.length; gi++) {
+        const sub = subRows[gi][k]
+        if (sub === undefined) continue // 该子表第 k 条不存在 → 区间留空
+        const { c0 } = subAt[gi]
+        const fields = def.subs[gi].fields
+        for (let i = 0; i < fields.length; i++) {
+          const f = fields[i]
+          const cell = xlsRow.getCell(c0 + i)
+          cell.value = f.attachment ? await persist(f.get(sub), r.id) : (f.get(sub) ?? '')
+        }
+      }
     }
-    ws.addRow(row)
+    // 主表列 + 附件列纵向合并跨 N 行（导入端 exceljs 回读时填充 master 值，groupKeyHeaders 各行一致 → 归并）
+    if (N > 1) {
+      for (const ci of scalarAt) ws.mergeCells(rowStart, ci, rowStart + N - 1, ci)
+      for (const ci of attachAt) ws.mergeCells(rowStart, ci, rowStart + N - 1, ci)
+    }
+    rowCursor += N
   }
 
   const xlsxBuf = Buffer.from(await wb.xlsx.writeBuffer())
