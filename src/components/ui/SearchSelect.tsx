@@ -140,7 +140,7 @@ export function SearchSelect({
         <span className={`truncate ${selectedLabel ? '' : 'text-base-content/40'}`}>
           {selectedLabel || placeholder}
         </span>
-        <span className="flex shrink-0 items-center gap-1">
+        <span className="bp-ro-hide flex shrink-0 items-center gap-1">
           {allowClear && value && !disabled && (
             <X
               className="h-3.5 w-3.5 text-base-content/40 hover:text-base-content"

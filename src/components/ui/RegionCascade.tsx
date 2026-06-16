@@ -154,7 +154,7 @@ export default function RegionCascade({ value, onChange }: RegionCascadeProps) {
   const trigger = (
     <div className="input input-bordered flex w-full cursor-pointer items-center justify-between gap-2 font-normal">
       <span className={`truncate ${value ? '' : 'text-base-content/40'}`}>{value || '请选择地区'}</span>
-      <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+      <ChevronDown className="bp-ro-hide h-4 w-4 shrink-0 opacity-50" />
     </div>
   )
 

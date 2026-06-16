@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 
 interface ModalProps {
@@ -51,6 +51,19 @@ export function Modal({
     }
   }, [open, onClose])
 
+  // 只读模式：把每个 textarea 高度撑到内容实际高度，完整显示（不依赖 field-sizing 浏览器支持）
+  const roRef = useRef<HTMLFieldSetElement>(null)
+  useEffect(() => {
+    if (!open || !readOnly) return
+    const id = requestAnimationFrame(() => {
+      roRef.current?.querySelectorAll('textarea').forEach((ta) => {
+        ta.style.height = 'auto'
+        ta.style.height = `${ta.scrollHeight}px`
+      })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [open, readOnly])
+
   if (!open) return null
 
   return (
@@ -83,8 +96,9 @@ export function Modal({
         <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
           {readOnly ? (
             <fieldset
+              ref={roRef}
               disabled
-              className="m-0 min-w-0 select-text border-0 p-0 [&_.input]:!border-base-300 [&_.input]:!bg-transparent [&_.input]:!text-base-content [&_.input]:!opacity-100 [&_.select]:!border-base-300 [&_.select]:!bg-transparent [&_.select]:!text-base-content [&_.select]:!opacity-100 [&_.textarea]:!border-base-300 [&_.textarea]:!bg-transparent [&_.textarea]:!text-base-content [&_.textarea]:!opacity-100"
+              className="m-0 min-w-0 select-text border-0 p-0 [&_.input]:!h-auto [&_.input]:!min-h-0 [&_.input]:!cursor-text [&_.input]:!border-transparent [&_.input]:!bg-transparent [&_.input]:!px-0 [&_.input]:!text-base-content [&_.input]:!opacity-100 [&_.select]:!cursor-text [&_.select]:!border-transparent [&_.select]:!bg-transparent [&_.select]:!px-0 [&_.select]:![background-image:none] [&_.select]:!text-base-content [&_.select]:!opacity-100 [&_.textarea]:!cursor-text [&_.textarea]:!border-transparent [&_.textarea]:!bg-transparent [&_.textarea]:!px-0 [&_.textarea]:!resize-none [&_.textarea]:!text-base-content [&_.textarea]:!opacity-100 [&_.textarea]:[field-sizing:content] [&_.textarea]:!overflow-hidden [&_.bp-ro-hide]:!hidden [&_.ql-toolbar]:!hidden [&_.ql-container]:!border-0 [&_.ql-editor]:!px-0 [&_.ql-editor]:!py-0 [&_.ql-editor]:!text-base-content [&_.ql-editor]:!pointer-events-none [&_div.input]:!pointer-events-none"
             >
               {children}
             </fieldset>
@@ -95,7 +109,7 @@ export function Modal({
 
         {/* Footer */}
         {footer !== null && (
-          <div className="flex justify-end gap-3 border-t border-base-300 px-6 py-4">
+          <div className="sticky bottom-0 z-10 flex justify-end gap-3 rounded-b-2xl border-t border-base-300 bg-base-100 px-6 py-4">
             {footer ?? (readOnly ? (
               <>
                 <button type="button" className="btn btn-ghost" onClick={onClose}>

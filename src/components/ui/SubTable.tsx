@@ -129,7 +129,7 @@ export function SubTable({ title, columns, value, onChange, addText = '新增一
                   {c.title}
                 </th>
               ))}
-              <th className="w-16 text-xs text-base-content/60">操作</th>
+              <th className="bp-ro-hide w-16 text-xs text-base-content/60">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -151,7 +151,7 @@ export function SubTable({ title, columns, value, onChange, addText = '新增一
                     <Field col={c} value={row[c.key]} onChange={(v) => update(i, c.key, v)} />
                   </td>
                 ))}
-                <td>
+                <td className="bp-ro-hide">
                   <button
                     type="button"
                     aria-label="删除该行"
@@ -166,7 +166,7 @@ export function SubTable({ title, columns, value, onChange, addText = '新增一
           </tbody>
         </table>
       </div>
-      <button type="button" className="btn btn-ghost btn-sm mt-2 gap-1.5" onClick={addRow}>
+      <button type="button" className="bp-ro-hide btn btn-ghost btn-sm mt-2 gap-1.5" onClick={addRow}>
         <Plus className="h-4 w-4" />
         {addText}
       </button>

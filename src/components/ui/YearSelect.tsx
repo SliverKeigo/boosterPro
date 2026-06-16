@@ -74,7 +74,7 @@ export function YearSelect({
         <span className={selected == null ? 'text-base-content/40' : undefined}>
           {selected != null ? selected : placeholder}
         </span>
-        <Calendar className="h-4 w-4 opacity-50" />
+        <Calendar className="bp-ro-hide h-4 w-4 opacity-50" />
       </button>
 
       {open && (
