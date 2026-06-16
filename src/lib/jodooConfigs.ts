@@ -362,6 +362,8 @@ const CLIENT_SUPPLEMENT: JodooModule = {
     if (cid == null) throw new Error(`找不到客户「${cn}」，请先导入客户基本信息`)
     scalars.customerId = cid
   },
+  // 子表展开行归并 key：同「客户名称+创建时间」的多行＝一条补充 + 子表多行；缺此则每行独立、子表只导第一条
+  groupKeyHeaders: ['客户名称', '创建时间'],
   subtables: [
     {
       relationField: 'demandUpdates', match: '需求更新内容',
