@@ -11,6 +11,7 @@ import {
   ShieldAlert,
   Filter,
   RotateCcw,
+  Search,
 } from 'lucide-react'
 import { BoostTable, type BoostColumn, SearchSelect, searchFetch, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -225,10 +226,15 @@ export default function CandidateRecommendationReportPage() {
 
   const [loading, setLoading] = useState(true)
   const [candidates, setCandidates] = useState<any[]>([])
-  const [filters, setFilters] = useState({ ...EMPTY_FILTERS })
+  const [filters, setFilters] = useState({ ...EMPTY_FILTERS }) // 草稿：输入框暂存，点「搜索」才生效
+  const [applied, setApplied] = useState({ ...EMPTY_FILTERS }) // 已应用：下方统计 / 明细据此过滤
   const setFilter = (k: keyof typeof EMPTY_FILTERS, v: string) =>
     setFilters((f) => ({ ...f, [k]: v }))
-  const resetFilters = () => setFilters({ ...EMPTY_FILTERS })
+  const applyFilters = () => setApplied({ ...filters })
+  const resetFilters = () => {
+    setFilters({ ...EMPTY_FILTERS })
+    setApplied({ ...EMPTY_FILTERS })
+  }
 
   // 权限就绪且有权后再拉数据。IIFE 首句即 await，effect 同步路径不含 setState
   // （规避 react-hooks/set-state-in-effect，遵守 AGENTS.md）。
@@ -261,19 +267,19 @@ export default function CandidateRecommendationReportPage() {
   // ── 顶部筛选：作用于下方所有统计 / 明细 ──
   // 日期 input 是 yyyy-mm-dd；止日期用「次日 0 点」做半开区间上界（含当天）。
   const filtered = useMemo(() => {
-    const recStart = filters.recommendStart ? new Date(filters.recommendStart) : null
-    const recEnd = filters.recommendEnd
-      ? new Date(new Date(filters.recommendEnd).getTime() + 86_400_000)
+    const recStart = applied.recommendStart ? new Date(applied.recommendStart) : null
+    const recEnd = applied.recommendEnd
+      ? new Date(new Date(applied.recommendEnd).getTime() + 86_400_000)
       : null
     // 计划日期＝提交日期：单选一日，按记录提交时间 createdAt 的"当天"匹配
-    const planDay = filters.planDate ? new Date(filters.planDate) : null
+    const planDay = applied.planDate ? new Date(applied.planDate) : null
     const planNext = planDay ? new Date(planDay.getTime() + 86_400_000) : null
 
     return candidates.filter((c) => {
-      if (filters.status && c.recommendationStatus !== filters.status) return false
-      if (filters.submitterId && String(c.submitterId) !== filters.submitterId) return false
-      if (filters.customerId && String(c.customerId) !== filters.customerId) return false
-      if (filters.channel && c.recruitmentChannel !== filters.channel) return false
+      if (applied.status && c.recommendationStatus !== applied.status) return false
+      if (applied.submitterId && String(c.submitterId) !== applied.submitterId) return false
+      if (applied.customerId && String(c.customerId) !== applied.customerId) return false
+      if (applied.channel && c.recruitmentChannel !== applied.channel) return false
       // 推荐日期窗口（对应 recommendationTime）
       if (recStart && !inRange(c.recommendationTime, recStart, new Date(8.64e15)))
         return false
@@ -282,7 +288,7 @@ export default function CandidateRecommendationReportPage() {
       if (planDay && planNext && !inRange(c.createdAt, planDay, planNext)) return false
       return true
     })
-  }, [candidates, filters])
+  }, [candidates, applied])
 
   // ── 指标计算（均在 filtered 基础上；"个人"= 当前登录用户作为推荐人 submitterId） ──
   const metrics = useMemo(() => {
@@ -523,10 +529,16 @@ export default function CandidateRecommendationReportPage() {
           <p className="text-xs text-base-content/40">
             「计划日期」即提交日期（按记录提交时间筛选）
           </p>
-          <button className="btn btn-ghost btn-sm gap-1" onClick={resetFilters}>
-            <RotateCcw className="h-3.5 w-3.5" />
-            重置
-          </button>
+          <div className="flex items-center gap-2">
+            <button className="btn btn-ghost btn-sm gap-1" onClick={resetFilters}>
+              <RotateCcw className="h-3.5 w-3.5" />
+              重置
+            </button>
+            <button className="btn btn-primary btn-sm gap-1" onClick={applyFilters}>
+              <Search className="h-3.5 w-3.5" />
+              搜索
+            </button>
+          </div>
         </div>
       </div>
 
