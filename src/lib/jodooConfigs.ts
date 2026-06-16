@@ -328,6 +328,8 @@ const CUSTOMER_CONTACT: JodooModule = {
     scalars.customerId = cid
     if (!scalars.title) scalars.title = `${cn}联系人`
   },
+  // 子表展开行归并：同「客户名称+实例标题+创建时间」的多行＝一条记录 + 多个联系人；缺此则每行独立、联系人只导第一个
+  groupKeyHeaders: ['客户名称', '实例标题', '创建时间'],
   subtables: [{
     relationField: 'contacts', match: '联系人姓名',
     build: async (g) => {
