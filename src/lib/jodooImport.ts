@@ -28,8 +28,8 @@ export interface JodooAttachment {
 }
 export interface JodooCtx {
   ensureUser: (name: string) => Promise<number>
-  resolveAttachment: (cell: string) => Promise<string | null> // 单附件(FINST 单元格)落盘并返回 /api/files URL
-  resolveAttachments: (cell: string) => Promise<string[]> // 多附件：一个单元格可能含多个 FINST(换行/逗号分隔)，逐个落盘 → URL 数组
+  // 一个单元格可能含多个 FINST(换行/逗号分隔)，且每个 FINST 字段引用可能挂多个文件 → 全部落盘成 URL 数组
+  resolveAttachments: (cell: string) => Promise<string[]>
 }
 // 宽表展开子表：靠第 1 行横向合并区间圈定，match=区间第 2 行须含的独有字段名（认领该区间）；
 // build 用 getSub(第2行字段名)→该列值 构建一条记录（返回 null 跳过）。
@@ -171,7 +171,7 @@ async function parseSheet(buf: ArrayBuffer): Promise<{ header: string[]; header2
 
 // ── 附件：resources zip(可多卷) → finstId 索引 + FINST 单元格落盘 ──────────────
 const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || './uploads')
-function buildAttachmentResolver(attachZips: any[]) {
+export function buildAttachmentResolver(attachZips: any[]) {
   const index = new Map<string, { zip: any; entry: string }[]>()
   for (const z of attachZips) {
     for (const name of Object.keys(z.files)) {
@@ -183,15 +183,8 @@ function buildAttachmentResolver(attachZips: any[]) {
   }
   const cache = new Map<string, string>()
   const used = new Set<string>()
-  return async (cell: string): Promise<string | null> => {
-    const v = (cell || '').trim()
-    if (!v.startsWith('FINST-') || !attachZips.length) return null
-    const parts = v.split('/')
-    const finst = parts[0]
-    const entries = index.get(finst)
-    if (!entries || !entries.length) return null
-    const last = parts[parts.length - 1]
-    const hit = (last.includes('.') && entries.find((e) => e.entry.endsWith(last))) || entries[0]
+  // 落盘单个 entry → /api/files URL（缓存 + 同名去重）
+  const persist = async (finst: string, hit: { zip: any; entry: string }): Promise<string> => {
     const ckey = `${finst}/${hit.entry}`
     if (cache.has(ckey)) return cache.get(ckey)!
     // 物理落盘名＝附件真实文件名(去掉路径分隔/控制符)；同名冲突追加 (序号) 保证唯一。
@@ -209,6 +202,24 @@ function buildAttachmentResolver(attachZips: any[]) {
     const url = `/api/files/${encodeURIComponent(safe)}`
     cache.set(ckey, url)
     return url
+  }
+  // 一个 FINST 引用 → 该引用下所有文件 URL。
+  // 末段含扩展名(指向具体文件) → 仅该文件；末段为字段名(如「备注」无扩展名，指向整个附件字段)
+  //   → 落盘该 FINST 目录下全部文件。⚠️修复：简道云一个附件字段可传多文件，旧逻辑只取 entries[0]、丢其余。
+  return async (cell: string): Promise<string[]> => {
+    const v = (cell || '').trim()
+    if (!v.startsWith('FINST-') || !attachZips.length) return []
+    const parts = v.split('/')
+    const finst = parts[0]
+    const entries = index.get(finst)
+    if (!entries || !entries.length) return []
+    const last = parts[parts.length - 1]
+    const hits = last.includes('.')
+      ? [entries.find((e) => e.entry.endsWith(last)) ?? entries[0]]
+      : entries
+    const urls: string[] = []
+    for (const hit of hits) urls.push(await persist(finst, hit))
+    return urls
   }
 }
 
@@ -268,7 +279,7 @@ export async function runFengcunImport(cfg: JodooModule, buf: ArrayBuffer, user:
       }).filter(Boolean) as { sub: JodooSubtable; h2col: Map<string, number> }[]
     : []
 
-  const resolveAttachment = buildAttachmentResolver(attachZips)
+  const resolveRefAll = buildAttachmentResolver(attachZips)
 
   // 分组：封存包对一条主记录的主表单元格做纵向合并、子表展开成多行；exceljs 读出时把合并值
   // 填充进每个子表行，故同一记录各行的 groupKeyHeaders 取值都相同 → 拼 key 归并。
@@ -317,10 +328,10 @@ export async function runFengcunImport(cfg: JodooModule, buf: ArrayBuffer, user:
     const resolveAttachments = async (cell: string): Promise<string[]> => {
       const finsts = String(cell || '').split(/[\r\n,]+/).map((s) => s.trim()).filter(Boolean)
       const urls: string[] = []
-      for (const fi of finsts) { const u = await resolveAttachment(fi); if (u) urls.push(u) }
+      for (const fi of finsts) urls.push(...(await resolveRefAll(fi)))
       return urls
     }
-    const ctx: JodooCtx = { ensureUser, resolveAttachment, resolveAttachments }
+    const ctx: JodooCtx = { ensureUser, resolveAttachments }
     const m = tx[cfg.model]
     for (const op of ops) {
       const { updatedAt: impUpdatedAt, ...data } = op.scalars as any // updatedAt 抽出：@updatedAt 会挡 ORM 写入，下面用 raw SQL 直写
@@ -331,7 +342,7 @@ export async function runFengcunImport(cfg: JodooModule, buf: ArrayBuffer, user:
         const cell = getVal(op.lead, a.header)
         const finsts = String(cell || '').split(/[\r\n]+/).map((s) => s.trim()).filter(Boolean)
         const urls: string[] = []
-        for (const fi of finsts) { const u = await resolveAttachment(fi); if (u) urls.push(u) }
+        for (const fi of finsts) urls.push(...(await resolveRefAll(fi)))
         data[a.field] = urls
       }
       for (const uf of cfg.userFields ?? []) {
