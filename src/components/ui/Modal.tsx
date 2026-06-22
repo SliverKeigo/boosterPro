@@ -129,6 +129,9 @@ export function Modal({
                 <button
                   type="button"
                   className="btn btn-primary"
+                  // 点保存前先让当前输入框 blur：触发中文输入法 compositionend + onChange，
+                  // 确保未上屏的拼音 / 最后一段输入已提交进表单，避免「保存的是旧内容」竞态
+                  onMouseDown={() => (document.activeElement as HTMLElement | null)?.blur()}
                   onClick={onOk}
                   disabled={confirmLoading}
                 >

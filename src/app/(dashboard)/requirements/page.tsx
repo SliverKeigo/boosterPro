@@ -184,18 +184,22 @@ export default function RequirementsPage() {
 
   const handleSubmit = async () => {
     const statusList: string[] = Array.isArray(form.status) ? form.status : []
-    if (!form.customerId || String(form.customerId).trim() === '') return toast.error('请选择客户名称')
-    if (!form.positionName?.trim()) return toast.error('请填写岗位名称')
-    if (form.headcount === '' || form.headcount === null) return toast.error('请填写需求人数')
-    if (!form.monthlySalary || String(form.monthlySalary).trim() === '') return toast.error('请填写月薪范围')
-    if (!form.genderRequirement) return toast.error('请选择性别要求')
-    if (!form.educationRequirement?.trim()) return toast.error('请填写学历要求')
-    if (statusList.length === 0) return toast.error('请选择岗位状态')
-    if (!form.followDate) return toast.error('请选择登记日期')
-    if (statusList.includes('重启') && !form.deadline) return toast.error('请选择招聘重启日期')
-    if (!form.baseCity?.trim()) return toast.error('请填写 Base 城市')
+    // 一次性收集所有缺失的必填项（而非逐个拦下），避免「补一项又被拦下一项」的反复操作；
+    // 编辑封存导入的老数据时，某必填字段当初可能为空，这样能一次看清要补哪些。
+    const missing: string[] = []
+    if (!form.customerId || String(form.customerId).trim() === '') missing.push('客户名称')
+    if (!form.positionName?.trim()) missing.push('岗位名称')
+    if (form.headcount === '' || form.headcount === null) missing.push('需求人数')
+    if (!form.monthlySalary || String(form.monthlySalary).trim() === '') missing.push('月薪范围')
+    if (!form.genderRequirement) missing.push('性别要求')
+    if (!form.educationRequirement?.trim()) missing.push('学历要求')
+    if (statusList.length === 0) missing.push('岗位状态')
+    if (!form.followDate) missing.push('登记日期')
+    if (statusList.includes('重启') && !form.deadline) missing.push('招聘重启日期')
+    if (!form.baseCity?.trim()) missing.push('Base 城市')
     if ((statusList.includes('关闭') || statusList.includes('暂停')) && !form.closeReason?.trim())
-      return toast.error('请填写关闭/暂停原因')
+      missing.push('关闭/暂停原因')
+    if (missing.length) return toast.error(`请完善必填项：${missing.join('、')}`)
     setSubmitting(true)
     try {
       const url = editing ? `/api/requirements/${editing.id}` : '/api/requirements'
