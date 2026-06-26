@@ -13,7 +13,7 @@ import {
   RotateCcw,
   Search,
 } from 'lucide-react'
-import { BoostTable, type BoostColumn, SearchSelect, searchFetch, useToast } from '@/components/ui'
+import { BoostTable, type BoostColumn, SearchSelect, searchFetch, DatePicker, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
 // 推荐状态中文 label 复用 enums.ts 单一事实源（勿另写一份）
@@ -492,20 +492,18 @@ export default function CandidateRecommendationReportPage() {
 
           <label className="form-control w-full">
             <span className="label-text mb-1 text-xs text-base-content/60">推荐日期(起)</span>
-            <input
-              type="date"
+            <DatePicker
               className="input input-bordered input-sm w-full"
               value={filters.recommendStart}
-              onChange={(e) => setFilter('recommendStart', e.target.value)}
+              onChange={(v) => setFilter('recommendStart', v)}
             />
           </label>
           <label className="form-control w-full">
             <span className="label-text mb-1 text-xs text-base-content/60">推荐日期(止)</span>
-            <input
-              type="date"
+            <DatePicker
               className="input input-bordered input-sm w-full"
               value={filters.recommendEnd}
-              onChange={(e) => setFilter('recommendEnd', e.target.value)}
+              onChange={(v) => setFilter('recommendEnd', v)}
             />
           </label>
 
@@ -517,11 +515,10 @@ export default function CandidateRecommendationReportPage() {
                 ⓘ
               </span>
             </span>
-            <input
-              type="date"
+            <DatePicker
               className="input input-bordered input-sm w-full"
               value={filters.planDate}
-              onChange={(e) => setFilter('planDate', e.target.value)}
+              onChange={(v) => setFilter('planDate', v)}
             />
           </label>
         </div>

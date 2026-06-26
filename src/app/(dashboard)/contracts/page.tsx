@@ -16,6 +16,7 @@ import {
   yearOptions,
   SearchSelect,
   searchFetch,
+  DatePicker,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -338,13 +339,13 @@ export default function ContractsPage() {
           </Field>
           <Field label="合同有效期" required className="col-span-2">
             <div className="flex items-center gap-2">
-              <input type="date" className="input input-bordered w-full" value={form.effectiveStart} onChange={(e) => setField('effectiveStart', e.target.value)} placeholder="起始日期" />
+              <DatePicker className="input input-bordered w-full" value={form.effectiveStart} onChange={(v) => setField('effectiveStart', v)} placeholder="起始日期" />
               <span className="text-base-content/40">-</span>
-              <input type="date" className="input input-bordered w-full" value={form.effectiveEnd} onChange={(e) => setField('effectiveEnd', e.target.value)} placeholder="结束日期" />
+              <DatePicker className="input input-bordered w-full" value={form.effectiveEnd} onChange={(v) => setField('effectiveEnd', v)} placeholder="结束日期" />
             </div>
           </Field>
           <Field label="合同到期日期" required>
-            <input type="date" className="input input-bordered w-full" value={form.expiryDate} onChange={(e) => setField('expiryDate', e.target.value)} />
+            <DatePicker className="input input-bordered w-full" value={form.expiryDate} onChange={(v) => setField('expiryDate', v)} />
           </Field>
           <Field label="服务类型" required>
             <SearchSelect value={form.serviceType} onChange={(v) => setField('serviceType', v)} options={serviceTypeOptions} placeholder="请选择" />

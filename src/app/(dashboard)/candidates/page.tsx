@@ -16,6 +16,7 @@ import {
   SearchSelect,
   YearSelect,
   yearOptions,
+  DatePicker,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -594,12 +595,12 @@ export default function CandidatesPage() {
             )}
             {visible('offerDate') && (
               <Field label="Offer 日期" required>
-                <input type="date" className="input input-bordered w-full" value={form.offerDate} onChange={(e) => setField('offerDate', e.target.value)} />
+                <DatePicker className="input input-bordered w-full" value={form.offerDate} onChange={(v) => setField('offerDate', v)} />
               </Field>
             )}
             {visible('offerOnboardDate') && (
               <Field label="Offer 到岗日期" required>
-                <input type="date" className="input input-bordered w-full" value={form.offerOnboardDate} onChange={(e) => setField('offerOnboardDate', e.target.value)} />
+                <DatePicker className="input input-bordered w-full" value={form.offerOnboardDate} onChange={(v) => setField('offerOnboardDate', v)} />
               </Field>
             )}
             {visible('offerFileUrl') && (
@@ -614,12 +615,12 @@ export default function CandidatesPage() {
             )}
             {visible('actualOnboardDate') && (
               <Field label="实际到岗日期" required>
-                <input type="date" className="input input-bordered w-full" value={form.actualOnboardDate} onChange={(e) => setField('actualOnboardDate', e.target.value)} />
+                <DatePicker className="input input-bordered w-full" value={form.actualOnboardDate} onChange={(v) => setField('actualOnboardDate', v)} />
               </Field>
             )}
             {visible('guaranteePeriodEnd') && (
               <Field label="保证期结束日期" required>
-                <input type="date" className="input input-bordered w-full" value={form.guaranteePeriodEnd} onChange={(e) => setField('guaranteePeriodEnd', e.target.value)} />
+                <DatePicker className="input input-bordered w-full" value={form.guaranteePeriodEnd} onChange={(v) => setField('guaranteePeriodEnd', v)} />
               </Field>
             )}
             {visible('guaranteePeriodMonths') && (

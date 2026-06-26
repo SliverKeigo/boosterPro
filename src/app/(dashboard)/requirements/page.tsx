@@ -16,6 +16,7 @@ import {
   MultiFileUpload,
   SearchSelect,
   searchFetch,
+  DatePicker,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -455,7 +456,7 @@ export default function RequirementsPage() {
           </Field>
           {Array.isArray(form.status) && form.status.includes('重启') && (
             <Field label="招聘重启日期" required>
-              <input type="date" className="input input-bordered w-full" value={form.deadline} onChange={(e) => setField('deadline', e.target.value)} />
+              <DatePicker className="input input-bordered w-full" value={form.deadline} onChange={(v) => setField('deadline', v)} />
             </Field>
           )}
           {/* Base城市 / 岗位JD */}
@@ -548,7 +549,7 @@ export default function RequirementsPage() {
             <input className="input input-bordered w-full" value={form.industry} onChange={(e) => setField('industry', e.target.value)} placeholder="请选择" />
           </Field>
           <Field label="登记日期" required>
-            <input type="date" className="input input-bordered w-full" value={form.followDate} onChange={(e) => setField('followDate', e.target.value)} />
+            <DatePicker className="input input-bordered w-full" value={form.followDate} onChange={(v) => setField('followDate', v)} />
           </Field>
         </div>
       </Modal>

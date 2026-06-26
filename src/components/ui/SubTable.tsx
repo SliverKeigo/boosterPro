@@ -4,6 +4,7 @@
 import { Plus, Trash2 } from 'lucide-react'
 import { FileUpload } from './FileUpload'
 import { MultiFileUpload } from './MultiFileUpload'
+import { DatePicker } from './DatePicker'
 
 export interface SubTableColumn {
   key: string
@@ -46,14 +47,8 @@ function Field({
         />
       )
     case 'date':
-      return (
-        <input
-          type="date"
-          className="input input-bordered input-sm w-full"
-          value={v}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      )
+      return <DatePicker value={v} onChange={(val) => onChange(val)} className="input input-bordered input-sm w-full" />
+
     case 'number':
       return (
         <input

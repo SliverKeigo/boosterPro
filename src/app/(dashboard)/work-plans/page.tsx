@@ -11,6 +11,7 @@ import {
   Field,
   SearchSelect,
   searchFetch,
+  DatePicker,
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
@@ -355,10 +356,10 @@ export default function WorkPlansPage() {
             )}
           </Field>
           <Field label="本周开始" required>
-            <input type="date" className="input input-bordered w-full" value={weekStart} onChange={(e) => onWeekStart(e.target.value)} />
+            <DatePicker className="input input-bordered w-full" value={weekStart} onChange={(v) => onWeekStart(v)} />
           </Field>
           <Field label="本周结束" required>
-            <input type="date" className="input input-bordered w-full" value={weekEnd} onChange={(e) => setWeekEnd(e.target.value)} />
+            <DatePicker className="input input-bordered w-full" value={weekEnd} onChange={(v) => setWeekEnd(v)} />
           </Field>
           <Field label="本周交付策略" className="col-span-4">
             <textarea className="textarea textarea-bordered w-full" rows={2} value={strategy} onChange={(e) => setStrategy(e.target.value)} placeholder="如：第一梯队（画像清晰，薪资合适…）" />
@@ -406,7 +407,7 @@ export default function WorkPlansPage() {
                         placeholder="选岗位" />
                     </td>
                     <td><input className="input input-bordered input-xs w-full" value={it.progressNote} onChange={(e) => setItem(it._key, { progressNote: e.target.value })} placeholder="如：1人谈薪中" /></td>
-                    <td><input type="date" readOnly disabled className="input input-bordered input-xs w-full bg-base-200" value={it.positionOpenDate} title="岗位开放时间＝所选岗位的创建时间，自动填充" /></td>
+                    <td><span className="input input-bordered input-xs flex w-full items-center bg-base-200 text-base-content/70" title="岗位开放时间＝所选岗位的创建时间，自动填充">{it.positionOpenDate || '—'}</span></td>
                     <td>
                       <select className="select select-bordered select-xs w-full" value={it.routineHunting} onChange={(e) => setItem(it._key, { routineHunting: e.target.value })}>
                         <option value="">—</option><option value="是">是</option><option value="否">否</option>
