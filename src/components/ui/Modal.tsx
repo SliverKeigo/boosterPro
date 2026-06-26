@@ -67,12 +67,8 @@ export function Modal({
   if (!open) return null
 
   return (
-    <div
-      className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto bg-black/45 p-4 py-10 backdrop-blur-[2px]"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
+    // 点击遮罩(modal 外面)不关闭——必须点右上角 X / 底部「关闭/取消」按钮，避免误点丢数据
+    <div className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto bg-black/45 p-4 py-10 backdrop-blur-[2px]">
       <div
         role="dialog"
         aria-modal="true"
@@ -98,7 +94,7 @@ export function Modal({
             <fieldset
               ref={roRef}
               disabled
-              className="m-0 min-w-0 select-text border-0 p-0 [&_.input]:!h-auto [&_.input]:!min-h-0 [&_.input]:!cursor-text [&_.input]:!border-transparent [&_.input]:!bg-transparent [&_.input]:!px-0 [&_.input]:!text-base-content [&_.input]:!opacity-100 [&_.select]:!cursor-text [&_.select]:!border-transparent [&_.select]:!bg-transparent [&_.select]:!px-0 [&_.select]:![background-image:none] [&_.select]:!text-base-content [&_.select]:!opacity-100 [&_.textarea]:!cursor-text [&_.textarea]:!border-transparent [&_.textarea]:!bg-transparent [&_.textarea]:!px-0 [&_.textarea]:!resize-none [&_.textarea]:!text-base-content [&_.textarea]:!opacity-100 [&_.textarea]:[field-sizing:content] [&_.textarea]:!overflow-hidden [&_.bp-ro-hide]:!hidden [&_.ql-toolbar]:!hidden [&_.ql-container]:!border-0 [&_.ql-editor]:!px-0 [&_.ql-editor]:!py-0 [&_.ql-editor]:!text-base-content [&_.ql-editor]:!pointer-events-none [&_div.input]:!pointer-events-none"
+              className="m-0 min-w-0 select-text border-0 p-0 [&_.input]:!h-auto [&_.input]:!min-h-0 [&_.input]:!cursor-text [&_.input]:!border-transparent [&_.input]:!bg-transparent [&_.input]:!px-0 [&_.input]:!text-base-content [&_.input]:!opacity-100 [&_.select]:!cursor-text [&_.select]:!border-transparent [&_.select]:!bg-transparent [&_.select]:!px-0 [&_.select]:![background-image:none] [&_.select]:!text-base-content [&_.select]:!opacity-100 [&_.textarea]:!cursor-text [&_.textarea]:!border-transparent [&_.textarea]:!bg-transparent [&_.textarea]:!px-0 [&_.textarea]:!resize-none [&_.textarea]:!text-base-content [&_.textarea]:!opacity-100 [&_.textarea]:[field-sizing:content] [&_.textarea]:!overflow-hidden [&_.bp-ro-hide]:!hidden [&_.ql-toolbar]:!hidden [&_.ql-container]:!border-0 [&_.ql-editor]:!px-0 [&_.ql-editor]:!py-0 [&_.ql-editor]:!text-base-content [&_.ql-editor]:!pointer-events-none [&_div.input]:!pointer-events-none [&_.bp-ro-flat]:!border-transparent [&_.bp-ro-flat]:!bg-transparent"
             >
               {children}
             </fieldset>

@@ -578,7 +578,7 @@ export default function CandidatesPage() {
         <div className="divider my-3" />
 
         {/* 状态驱动流程字段 */}
-        <div className="rounded-xl border border-base-300 bg-base-200/40 p-4">
+        <div className="bp-ro-flat rounded-xl border border-base-300 bg-base-200/40 p-4">
           <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-base-content/50">
             流程字段（根据推荐状态显示）
           </div>
