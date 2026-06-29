@@ -132,7 +132,7 @@ export default function TalentPoolPage() {
       render: (v) => (v?.length ? `${v.length} 份` : <span className="text-base-content/30">—</span>) },
     { key: 'tags', title: '人才标签', sortable: false,
       accessor: (r) => (Array.isArray(r.tags) ? r.tags.join(' ') : (r.tags ?? '')),
-      render: (v) => v ? <span className="block max-w-[220px] whitespace-pre-wrap break-words">{v}</span> : <span className="text-base-content/30">—</span> },
+      render: (v) => v ? <span className="line-clamp-1 max-w-[220px]" title={v}>{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'createdAt', title: '创建时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },
     { key: 'updatedByName', title: '修改人', accessor: (r) => r.updatedBy?.name ?? '—', filterType: 'text', defaultVisible: false },

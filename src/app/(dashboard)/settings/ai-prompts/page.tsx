@@ -108,7 +108,7 @@ export default function AiPromptsPage() {
       filterType: 'select', filterOptions: [{ label: '已自定义', value: '已自定义' }, { label: '默认', value: '默认' }],
       render: (v) => <span className={`badge badge-sm ${v === '已自定义' ? 'badge-info' : 'badge-ghost'}`}>{v}</span> },
     { key: 'description', title: '说明', sortable: false, render: (v) => <span className="text-base-content/60">{clip(v)}</span> },
-    { key: 'content', title: '提示词预览', sortable: false, defaultVisible: false, render: (v) => <span className="block max-w-[320px] whitespace-pre-wrap break-words text-base-content/60">{clip(v)}</span> },
+    { key: 'content', title: '提示词预览', sortable: false, defaultVisible: false, render: (v) => <span className="line-clamp-1 max-w-[320px] text-base-content/60" title={v}>{clip(v)}</span> },
     { key: 'createdAt', title: '创建时间', filterType: 'date', render: (v) => (v ? String(v).slice(0, 10) : '—') },
     { key: 'updatedAt', title: '更新时间', filterType: 'date', render: (v) => (v ? String(v).slice(0, 10) : '—') },
   ]

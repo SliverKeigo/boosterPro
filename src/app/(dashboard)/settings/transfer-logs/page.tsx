@@ -79,7 +79,7 @@ export default function TransferLogsPage() {
     { key: 'toUserName', title: '移交给', filterType: 'text', render: (v) => <span className="font-medium text-primary">{v}</span> },
     { key: 'operatorName', title: '操作人', filterType: 'text' },
     { key: 'totalCount', title: '移交条数', filterType: 'number', render: (v) => <span className="badge badge-ghost badge-sm">{v}</span> },
-    { key: 'moved', title: '明细', sortable: false, render: (v) => <span className="block max-w-[360px] whitespace-pre-wrap break-words text-base-content/60">{movedSummary(v)}</span> },
+    { key: 'moved', title: '明细', sortable: false, render: (v) => <span className="line-clamp-1 max-w-[360px] text-base-content/60" title={movedSummary(v)}>{movedSummary(v)}</span> },
   ]
 
   return (
