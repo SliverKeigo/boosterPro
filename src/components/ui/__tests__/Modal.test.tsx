@@ -78,18 +78,18 @@ describe('Modal', () => {
     expect(screen.queryByRole('button', { name: '确定' })).toBeNull()
   })
 
-  it('点击遮罩层（背景）触发 onClose', () => {
+  it('点击遮罩层（背景）不关闭——必须点 X / 关闭按钮，避免误点丢数据', () => {
     const onClose = vi.fn()
     render(
       <Modal open onClose={onClose} title="标题">
         <div>正文</div>
       </Modal>,
     )
-    // 遮罩是 dialog 的父级；mousedown 在它本身（target===currentTarget）才关闭
+    // 点遮罩(modal 外面)不再触发 onClose（防止填表误点外面丢数据）
     const dialog = screen.getByRole('dialog')
     const overlay = dialog.parentElement as HTMLElement
     fireEvent.mouseDown(overlay)
-    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('按 ESC 触发 onClose', () => {
