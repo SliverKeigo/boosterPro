@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from 'react'
 import { Eye, Trash2, ShieldAlert } from 'lucide-react'
-import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, useToast } from '@/components/ui'
+import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, useToast, EllipsisTooltip } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 
 const EMPTY_FORM: any = { name: '', description: '' }
@@ -149,7 +149,7 @@ export default function RolesPage() {
     { key: 'id', title: 'ID', width: 70, filterType: 'number' },
     { key: 'name', title: '角色名称', render: (v) => <span className="font-medium">{v}</span> },
     { key: 'description', title: '描述',
-      render: (v) => v ? <span className="line-clamp-1 max-w-[280px]" title={v}>{v}</span> : <span className="text-base-content/30">—</span> },
+      render: (v) => v ? <EllipsisTooltip className="line-clamp-1 max-w-[280px]" content={v} /> : <span className="text-base-content/30">—</span> },
     { key: 'userCount', title: '用户数', accessor: (r) => r._count?.users ?? 0, filterType: 'number',
       render: (v, r) => <button type="button" onClick={() => openUsers(r)} className="cursor-pointer font-medium text-primary hover:underline" title="点击查看拥有该角色的用户">{v}</button> },
     { key: 'createdAt', title: '创建时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },

@@ -13,6 +13,7 @@ import {
   searchFetch,
   DatePicker,
   useToast,
+  EllipsisTooltip,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { exportToExcel } from '@/lib/exportExcel'
@@ -279,7 +280,7 @@ export default function WorkPlansPage() {
   const columns: BoostColumn<any>[] = [
     { key: 'group', title: '组', accessor: (r) => r.group?.name ?? '—', render: (v) => <span className="font-medium">{v}</span> },
     { key: 'week', title: '本周', accessor: (r) => `${fmtDate(r.weekStart)} ~ ${fmtDate(r.weekEnd)}` },
-    { key: 'deliveryStrategy', title: '交付策略', render: (v) => v ? <span className="line-clamp-1 max-w-[280px]" title={v}>{v}</span> : <span className="text-base-content/30">—</span> },
+    { key: 'deliveryStrategy', title: '交付策略', render: (v) => v ? <EllipsisTooltip className="line-clamp-1 max-w-[280px]" content={v} /> : <span className="text-base-content/30">—</span> },
     { key: 'itemCount', title: '明细行数', accessor: (r) => r.items?.length ?? 0, filterType: 'number',
       render: (v) => <span className="badge badge-ghost badge-sm">{v}</span> },
     { key: 'createdBy', title: '创建人', accessor: (r) => r.createdBy?.name ?? '—' },

@@ -16,6 +16,7 @@ import {
   SearchSelect,
   searchFetch,
   useToast,
+  EllipsisTooltip,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
@@ -173,12 +174,12 @@ export default function OpportunitiesPage() {
       render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'createdAt', title: '创建时间', filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
     // 以下默认隐藏，可在"显示列"开启
-    { key: 'description', title: '商机描述', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]" title={v}>{v}</span> : '—' },
+    { key: 'description', title: '商机描述', defaultVisible: false, render: (v) => v ? <EllipsisTooltip className="line-clamp-1 max-w-[240px]" content={v} /> : '—' },
     { key: 'contactTitle', title: '联系人职务', defaultVisible: false },
     { key: 'contactInfo', title: '联系人电话/EMAIL/微信', defaultVisible: false },
-    { key: 'salesDecisionInfo', title: '公司销售决策信息', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]" title={v}>{v}</span> : '—' },
+    { key: 'salesDecisionInfo', title: '公司销售决策信息', defaultVisible: false, render: (v) => v ? <EllipsisTooltip className="line-clamp-1 max-w-[240px]" content={v} /> : '—' },
     { key: 'customerDecisionMaker', title: '客户决策人', defaultVisible: false },
-    { key: 'decisionMakerDescription', title: '决策人信息描述', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]" title={v}>{v}</span> : '—' },
+    { key: 'decisionMakerDescription', title: '决策人信息描述', defaultVisible: false, render: (v) => v ? <EllipsisTooltip className="line-clamp-1 max-w-[240px]" content={v} /> : '—' },
     { key: 'salesOwnerId', title: '销售负责人ID', defaultVisible: false },
     { key: 'progressRecords', title: '商机进展', defaultVisible: false, sortable: false,
       accessor: (r) => (r.progressRecords ?? []).map((p: any) => p.description).filter(Boolean).join('；'),

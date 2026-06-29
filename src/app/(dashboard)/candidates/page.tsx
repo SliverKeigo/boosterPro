@@ -18,6 +18,7 @@ import {
   yearOptions,
   DatePicker,
   useToast,
+  EllipsisTooltip,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
@@ -339,7 +340,7 @@ export default function CandidatesPage() {
     { key: 'recommendationStatus', title: '推荐状态', filterType: 'select', filterOptions: opts(STATUS_LABELS),
       render: (v) => <span className={`badge ${STATUS_BADGE[v] ?? 'badge-ghost'} badge-sm`}>{STATUS_LABELS[v] ?? v}</span> },
     { key: 'submitterName', title: '推荐人', accessor: (r) => r.submitter?.name },
-    { key: 'interviewProgress', title: '面试进展', render: (v) => v ? <span className="line-clamp-1 max-w-[200px]" title={v}>{v}</span> : <span className="text-base-content/30">—</span> },
+    { key: 'interviewProgress', title: '面试进展', render: (v) => v ? <EllipsisTooltip className="line-clamp-1 max-w-[200px]" content={v} /> : <span className="text-base-content/30">—</span> },
     // 以下默认隐藏，可在"显示列"开启 —— 覆盖全部字段
     { key: 'recruitmentParty', title: '招聘需求方', defaultVisible: false },
     { key: 'recruitmentChannel', title: '招聘渠道', defaultVisible: false, filterType: 'select', filterOptions: channelOptions },
@@ -361,11 +362,11 @@ export default function CandidatesPage() {
           </div>
         ) : <span className="text-base-content/30">—</span>
       } },
-    { key: 'recommendationReason', title: '推荐理由', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[200px]" title={v}>{v}</span> : '—' },
+    { key: 'recommendationReason', title: '推荐理由', defaultVisible: false, render: (v) => v ? <EllipsisTooltip className="line-clamp-1 max-w-[200px]" content={v} /> : '—' },
     { key: 'offerDate', title: 'Offer日期', defaultVisible: false, filterType: 'date', render: (v) => fmtDate(v) || '—' },
     { key: 'offerOnboardDate', title: 'Offer到岗日期', defaultVisible: false, filterType: 'date', render: (v) => fmtDate(v) || '—' },
     { key: 'actualOnboardDate', title: '实际到岗日期', defaultVisible: false, filterType: 'date', render: (v) => fmtDate(v) || '—' },
-    { key: 'salaryPlan', title: '薪酬方案', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[200px]" title={v}>{v}</span> : '—' },
+    { key: 'salaryPlan', title: '薪酬方案', defaultVisible: false, render: (v) => v ? <EllipsisTooltip className="line-clamp-1 max-w-[200px]" content={v} /> : '—' },
     { key: 'guaranteePeriodEnd', title: '保证期结束日期', defaultVisible: false, filterType: 'date', render: (v) => fmtDate(v) || '—' },
     { key: 'guaranteePeriodMonths', title: '保证期时长(月)', defaultVisible: false, filterType: 'number' },
     { key: 'failureReason', title: '推荐失败原因', defaultVisible: false },
