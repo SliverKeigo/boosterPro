@@ -233,7 +233,7 @@ export default function KnowledgePage() {
       key: 'keywords',
       title: '关键词',
       render: (v) =>
-        v ? <span className="line-clamp-1 max-w-[260px]">{v}</span> : <span className="text-base-content/30">—</span>,
+        v ? <span className="block max-w-[260px] whitespace-pre-wrap break-words">{v}</span> : <span className="text-base-content/30">—</span>,
     },
     {
       key: 'managementRecords',
@@ -264,7 +264,7 @@ export default function KnowledgePage() {
     // 以下默认隐藏，可在“显示列”开启
     { key: 'fileUrl', title: '知识文件', defaultVisible: false, sortable: false, render: (v) => (v?.length ? `${v.length} 份` : '—') },
     { key: 'notes', title: '知识便条', defaultVisible: false, render: (v) => stripHtml(v) },
-    { key: 'trainingOutline', title: '培训提纲', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[260px]">{v}</span> : <span className="text-base-content/30">—</span> },
+    { key: 'trainingOutline', title: '培训提纲', defaultVisible: false, render: (v) => v ? <span className="block max-w-[260px] whitespace-pre-wrap break-words">{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'internalLecturer', title: '内部讲师', defaultVisible: false, sortable: false, accessor: (r) => r.internalLecturer?.name ?? '', render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'externalLecturer', title: '外部讲师', defaultVisible: false, render: (v) => v || <span className="text-base-content/30">—</span> },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDate(v)}</span> },

@@ -149,7 +149,7 @@ export default function RolesPage() {
     { key: 'id', title: 'ID', width: 70, filterType: 'number' },
     { key: 'name', title: '角色名称', render: (v) => <span className="font-medium">{v}</span> },
     { key: 'description', title: '描述',
-      render: (v) => v ? <span className="line-clamp-1 max-w-[280px]">{v}</span> : <span className="text-base-content/30">—</span> },
+      render: (v) => v ? <span className="block max-w-[280px] whitespace-pre-wrap break-words">{v}</span> : <span className="text-base-content/30">—</span> },
     { key: 'userCount', title: '用户数', accessor: (r) => r._count?.users ?? 0, filterType: 'number',
       render: (v, r) => <button type="button" onClick={() => openUsers(r)} className="cursor-pointer font-medium text-primary hover:underline" title="点击查看拥有该角色的用户">{v}</button> },
     { key: 'createdAt', title: '创建时间', defaultVisible: false, filterType: 'date', render: (v) => v?.slice(0, 10) },

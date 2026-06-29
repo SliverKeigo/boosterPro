@@ -200,9 +200,9 @@ export default function ClientsPage() {
     // 以下默认隐藏，可在"显示列"开启
     { key: 'formerName', title: '客户曾用名', defaultVisible: false },
     { key: 'detailedAddress', title: '详细地址', defaultVisible: false },
-    { key: 'companyCulture', title: '企业文化与福利', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{stripHtml(v)}</span> : '—' },
-    { key: 'openingSpeech', title: '开聊话术', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{v}</span> : '—' },
-    { key: 'benchmarkCompanies', title: '对标企业', defaultVisible: false, render: (v) => v ? <span className="line-clamp-1 max-w-[240px]">{v}</span> : '—' },
+    { key: 'companyCulture', title: '企业文化与福利', defaultVisible: false, render: (v) => v ? <span className="block max-w-[240px] whitespace-pre-wrap break-words">{stripHtml(v)}</span> : '—' },
+    { key: 'openingSpeech', title: '开聊话术', defaultVisible: false, render: (v) => v ? <span className="block max-w-[240px] whitespace-pre-wrap break-words">{v}</span> : '—' },
+    { key: 'benchmarkCompanies', title: '对标企业', defaultVisible: false, render: (v) => v ? <span className="block max-w-[240px] whitespace-pre-wrap break-words">{v}</span> : '—' },
     { key: 'location', title: '定位', defaultVisible: false, render: (v) => v || '—' },
     { key: 'attachmentUrl', title: '客户附件资料', defaultVisible: false, sortable: false, render: (v) => (v?.length ? `${v.length} 份` : '—') },
   ]
