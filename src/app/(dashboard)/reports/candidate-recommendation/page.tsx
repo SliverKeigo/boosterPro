@@ -297,6 +297,10 @@ export default function CandidateRecommendationReportPage() {
     const [tmStart, tmEnd] = thisMonthRange(now)
     const [lmStart, lmEnd] = lastMonthRange(now)
     const [yStart, yEnd] = thisYearRange(now)
+    // 「最近1月」类图用滚动 30 天窗口 [今天-30天 00:00, 明日 00:00)，区别于自然月：
+    // 月初(如每月1号)也含上月末数据、不会一跨月就归零。
+    const recent30End = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+    const recent30Start = new Date(recent30End.getTime() - 30 * 86_400_000)
 
     const isMine = (c: any) => userId != null && c.submitterId === userId
 
@@ -308,9 +312,11 @@ export default function CandidateRecommendationReportPage() {
       filtered.filter((c) => inRange(c.recommendationTime, tmStart, tmEnd)),
     )
 
-    // 2. 当月(客户)推荐简历数量 —— 横坐标=客户，推荐时间 ≥ 本月1号(本月)
+    // 2. 最近1月(滚动30天)各客户推荐简历数量 —— 横坐标=客户，推荐时间在最近30天窗口内。
+    //    刻意用滚动窗口而非自然月：月初也含上月末数据、不会因跨月而空
+    //    (此前误用 thisMonth 自然月口径，导致每月1号本月尚无推荐时整图空)。
     const recentByCustomer = countBy(
-      filtered.filter((c) => inRange(c.recommendationTime, tmStart, tmEnd)),
+      filtered.filter((c) => inRange(c.recommendationTime, recent30Start, recent30End)),
       (c) => c.customer?.shortName ?? '未分配客户',
     )
 
