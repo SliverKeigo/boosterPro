@@ -218,7 +218,7 @@ const EMPTY_FILTERS = {
 
 export default function CandidateRecommendationReportPage() {
   // 权限：仅 REPORT VIEW 可看报表（与现有 reports 页一致）
-  const { can, isAdmin, userId, loading: permLoading } = useMyPermissions()
+  const { can, isAdmin, loading: permLoading } = useMyPermissions()
   const allowed = isAdmin || can('REPORT', 'VIEW')
   const toast = useToast()
 
@@ -302,8 +302,6 @@ export default function CandidateRecommendationReportPage() {
     const recent30End = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
     const recent30Start = new Date(recent30End.getTime() - 30 * 86_400_000)
 
-    const isMine = (c: any) => userId != null && c.submitterId === userId
-
     // 按【员工(推荐人 submitter)】分组计数；未指定推荐人归「未分配」
     const byEmployee = (rows: any[]) => countBy(rows, (c) => c.submitter?.name ?? '未分配')
 
@@ -334,15 +332,11 @@ export default function CandidateRecommendationReportPage() {
       ),
     )
 
-    // 5. 个人流程中人数情况 —— 当前用户推荐、状态处于进行中，按状态分组
-    const myInProgress = filtered.filter(
-      (c) => isMine(c) && IN_PROGRESS_SET.has(c.recommendationStatus),
-    )
-    const myInProgressDist = countBy(
-      myInProgress,
-      (c) => c.recommendationStatus,
-      statusLabel,
-    )
+    // 5. 流程中各状态人数 —— 全公司(不限登录者)进行中的候选人按状态分组。
+    //    原限定 isMine(仅登录者本人推荐)，致管理/报表岗(自己不推荐候选人)看到空；
+    //    报表是全局分析视角，故改为全公司口径（仍受顶部筛选：选了某推荐人即看该人的）。
+    const inProgressAll = filtered.filter((c) => IN_PROGRESS_SET.has(c.recommendationStatus))
+    const inProgressDist = countBy(inProgressAll, (c) => c.recommendationStatus, statusLabel)
 
     // 6. 本年度候选人贡献度占比 —— 本年度各推荐人推荐数量占比
     const yearContribution = countBy(
@@ -360,11 +354,11 @@ export default function CandidateRecommendationReportPage() {
       thisMonthValidByEmployee,
       lastMonthValidByEmployee,
       recentByCustomer,
-      myInProgressDist,
+      inProgressDist,
       yearContribution,
       thisMonthDetail,
     }
-  }, [filtered, userId])
+  }, [filtered])
 
   // 明细表列（仅展示需求列出的字段）
   // 明细表列：严格按需求列出的 5 个字段（推荐日期 / 推荐人 / 客户简称 / 岗位名称 / 推荐状态）
@@ -595,12 +589,12 @@ export default function CandidateRecommendationReportPage() {
         </ChartCard>
 
         <ChartCard
-          title="个人流程中各状态人数"
+          title="流程中各状态人数"
           icon={BarChart3}
-          empty={metrics.myInProgressDist.length === 0}
+          empty={metrics.inProgressDist.length === 0}
         >
           <ReactECharts
-            option={barOption(metrics.myInProgressDist, '#D97706', 30)}
+            option={barOption(metrics.inProgressDist, '#D97706', 30)}
             style={ECHART_STYLE}
             notMerge
           />
