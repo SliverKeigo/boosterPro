@@ -44,7 +44,13 @@ describe('GET /api/reports', () => {
     expect(candSelect).toBeDefined()
     expect(candSelect.phone).toBeUndefined()
     expect(candSelect.email).toBeUndefined()
+    expect(candSelect.birthYear).toBeUndefined()
+    expect(candSelect.salaryPlan).toBeUndefined()
     expect(candSelect.recommendationStatus).toBe(true)
+    // 候选人推荐报表明细/统计所需的非敏感字段（回归保护：勿误删，否则报表少列/统计错）
+    expect(candSelect.recommendationTime).toBe(true)
+    expect(candSelect.recruitmentChannel).toBe(true)
+    expect(candSelect.requirement).toBeDefined()
     const reqSelect = mock(prisma.requirement.findMany).mock.calls[0][0].select
     expect(reqSelect).toBeDefined()
     expect(reqSelect.status).toBe(true)

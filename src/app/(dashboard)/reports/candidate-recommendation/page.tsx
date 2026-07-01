@@ -243,16 +243,17 @@ export default function CandidateRecommendationReportPage() {
     let alive = true
     void (async () => {
       try {
-        // 全量候选人在前端按筛选 + 时间窗聚合（与现有报表一致）；
-        // 推荐人 / 客户筛选下拉改用可搜索 SearchSelect，按需走轻量 options 接口（?q= 后端过滤），无需在此预拉。
-        const candRes = await fetch('/api/candidates')
+        // 走报表专用接口 /api/reports（按 REPORT VIEW 鉴权、服务端只 select 报表所需的非敏感字段）——
+        // 不复用 /api/candidates（那卡 CANDIDATE VIEW，仅有「查看报表」权限的账号会被 403）。
+        // 全量候选人在前端按筛选 + 时间窗聚合；推荐人 / 客户筛选下拉另走轻量 options 接口（?q= 后端过滤）。
+        const candRes = await fetch('/api/reports')
         if (!candRes.ok)
           throw new Error(
             (await candRes.clone().json().catch(() => ({}))).error || '',
           )
         const candJson = await candRes.json()
         if (!alive) return
-        setCandidates(candJson.data ?? [])
+        setCandidates(candJson.candidates ?? [])
       } catch (e) {
         if (alive) toast.error(e instanceof Error && e.message ? e.message : '加载失败')
       } finally {

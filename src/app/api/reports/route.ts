@@ -16,10 +16,15 @@ export async function GET() {
         select: {
           id: true,
           recommendationStatus: true,
+          recommendationTime: true, // 明细「推荐日期」+ 本月推荐/有效简历统计
+          recruitmentChannel: true, // 推荐渠道筛选
           createdAt: true,
-          // 报表按 customer.shortName / submitter.name 聚合
+          submitterId: true, // 推荐人筛选（前端按 submitterId 过滤 + 判「个人」）
+          customerId: true, // 客户筛选
+          // 报表按 customer.shortName / submitter.name 聚合、按 requirement.positionName 出明细
           customer: { select: { id: true, shortName: true } },
           submitter: { select: { id: true, name: true } },
+          requirement: { select: { id: true, positionName: true } },
         },
       }),
       // 同理：需求仅取报表用到的非敏感字段
