@@ -7,8 +7,8 @@ import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, useToast } from
 import { useMyPermissions } from '@/lib/usePermissions'
 import { RESOURCES } from '@/lib/resources'
 
-// 部门「数据可见范围」按模块配置（报表无行数据，不参与）
-const VISIBILITY_RESOURCES = RESOURCES.filter((r) => r.key !== 'REPORT')
+// 部门「数据可见范围」按模块配置（报表无行数据；工作计划全公司一周一条、有 VIEW 看全部，均不参与部门可见性）
+const VISIBILITY_RESOURCES = RESOURCES.filter((r) => r.key !== 'REPORT' && r.key !== 'WORK_PLAN')
 // blocks：本部门(源)对各目标部门「定向隐藏」的组合（即被取消勾选的）
 type Block = { resource: string; hiddenFromDeptId: number }
 const EMPTY_FORM: any = { name: '', blocks: [] as Block[] }

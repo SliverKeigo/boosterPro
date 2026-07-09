@@ -1,29 +1,41 @@
 'use client'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Eye, Trash2, Plus, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Eye, Trash2 } from 'lucide-react'
 import {
   BoostTable,
   type BoostColumn,
   Modal,
   Popconfirm,
   Field,
-  SearchSelect,
-  searchFetch,
-  DatePicker,
+  MultiDatePicker,
   useToast,
-  EllipsisTooltip,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
-import { exportToExcel } from '@/lib/exportExcel'
 
 const fmtDate = (s?: string | null) => (s ? String(s).slice(0, 10) : '')
 let _keySeq = 1
 const newKey = () => _keySeq++
 
+// 存库的 planDates（JSON 日期数组字符串）→ string[]；兼容历史自由文本（顿号/逗号分隔）。
+function parseDates(v: any): string[] {
+  if (Array.isArray(v)) return v.map(String)
+  if (typeof v === 'string' && v.trim()) {
+    try {
+      const p = JSON.parse(v)
+      return Array.isArray(p) ? p.map(String) : [v]
+    } catch {
+      return v.split(/[,、，]/).map((s) => s.trim()).filter(Boolean)
+    }
+  }
+  return []
+}
+
 interface ItemRow {
   _key: number
+  groupId: number // 明细来源组（按组分页）
+  groupName: string
   customerId: string
   customerName: string
   requirementId: string
@@ -31,20 +43,17 @@ interface ItemRow {
   progressNote: string
   positionOpenDate: string
   routineHunting: string // '是' | '否' | ''
-  participation: string
-  assignments: Record<string, string> // memberId → 计划日期文本
+  assignments: Record<string, string[]> // memberId → 计划日期数组
 }
-const emptyItem = (): ItemRow => ({
-  _key: newKey(), customerId: '', customerName: '', requirementId: '', requirementName: '',
-  progressNote: '', positionOpenDate: '', routineHunting: '', participation: '', assignments: {},
-})
 // 本周参与度 = 该行「填了计划日期的组员数」，自动计算（不手填）
-const partCount = (it: ItemRow) => Object.values(it.assignments).filter((v) => String(v ?? '').trim()).length
+const partCount = (it: ItemRow) => Object.values(it.assignments).filter((v) => Array.isArray(v) && v.length > 0).length
 
 export default function WorkPlansPage() {
   const toast = useToast()
-  const { isAdmin, ledGroupId, loading: permLoading } = useMyPermissions()
-  const canCreate = isAdmin || ledGroupId != null
+  const { can, loading: permLoading } = useMyPermissions()
+  const canCreate = can('WORK_PLAN', 'CREATE')
+  const canEdit = can('WORK_PLAN', 'EDIT')
+  const canDelete = can('WORK_PLAN', 'DELETE')
 
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -54,13 +63,12 @@ export default function WorkPlansPage() {
   const [submitting, setSubmitting] = useState(false)
 
   // 编辑器表单
-  const [groupId, setGroupId] = useState('')
-  const [groupName, setGroupName] = useState('')
   const [weekStart, setWeekStart] = useState('')
   const [weekEnd, setWeekEnd] = useState('')
   const [strategy, setStrategy] = useState('')
-  const [members, setMembers] = useState<{ id: number; name: string }[]>([])
+  const [allMembers, setAllMembers] = useState<{ id: number; name: string }[]>([]) // 全部人员（矩阵列）
   const [items, setItems] = useState<ItemRow[]>([])
+  const [activeTab, setActiveTab] = useState<number | null>(null) // 当前组 tab 的 groupId
 
   const fetchData = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true)
@@ -79,87 +87,77 @@ export default function WorkPlansPage() {
     void (async () => { await fetchData() })()
   }, [fetchData])
 
-  // 选组初始化：拉组员(矩阵列)+组名；regenItems 时按「组员录入的在招需求」每岗位生成一行明细，
-  // 并对同客户同岗位带入该组上一份周计划的交付进展简述。
-  const applyGroupSetup = useCallback(async (gid: string | number, regenItems: boolean) => {
-    try {
-      const res = await fetch(`/api/work-plans/group-setup?groupId=${gid}`)
-      if (!res.ok) return
-      const setup = await res.json()
-      setGroupName(setup.groupName ?? '')
-      setMembers(Array.isArray(setup.members) ? setup.members.map((m: any) => ({ id: m.id, name: m.name })) : [])
-      if (regenItems) {
-        const reqs: any[] = Array.isArray(setup.requirements) ? setup.requirements : []
-        const last: Record<string, string> = setup.lastProgress ?? {}
-        setItems(
-          reqs.length
-            ? reqs.map((r): ItemRow => ({
-                _key: newKey(),
-                customerId: r.customerId != null ? String(r.customerId) : '',
-                customerName: r.customerShortName ?? '',
-                requirementId: String(r.requirementId),
-                requirementName: r.positionName ?? '',
-                progressNote: last[`${r.customerId}:${r.requirementId}`] ?? '',
-                positionOpenDate: fmtDate(r.positionOpenDate),
-                routineHunting: '',
-                participation: '',
-                assignments: {},
-              }))
-            : [emptyItem()],
-        )
-      }
-    } catch {
-      /* 忽略：矩阵列为空时仍可手动维护明细，不阻断 */
-    }
+  // 拉「新增初始化」：全部人员(矩阵列) + 各组在招需求(按组生成明细) + 上周进展(同客户同岗位带入)。
+  const fetchSetup = useCallback(async () => {
+    const res = await fetch('/api/work-plans/all-setup')
+    if (!res.ok) throw new Error((await res.clone().json().catch(() => ({}))).error || '初始化失败')
+    return res.json()
   }, [])
 
-  const resetForm = () => {
-    setGroupId(''); setGroupName(''); setWeekStart(''); setWeekEnd(''); setStrategy('')
-    setMembers([]); setItems([emptyItem()])
-  }
-
-  const openCreate = () => {
-    setEditing(null)
-    setMode('edit')
-    resetForm()
-    // 组长：默认本组并锁定；管理员：留空待选
-    if (!isAdmin && ledGroupId != null) {
-      setGroupId(String(ledGroupId))
-      void applyGroupSetup(ledGroupId, true)
+  const openCreate = async () => {
+    try {
+      const setup = await fetchSetup()
+      setAllMembers(Array.isArray(setup.members) ? setup.members.map((m: any) => ({ id: m.id, name: m.name })) : [])
+      const last: Record<string, string> = setup.lastProgress ?? {}
+      const rows: ItemRow[] = []
+      for (const g of setup.groups ?? []) {
+        for (const r of g.requirements ?? []) {
+          rows.push({
+            _key: newKey(),
+            groupId: g.groupId,
+            groupName: g.groupName,
+            customerId: r.customerId != null ? String(r.customerId) : '',
+            customerName: r.customerShortName ?? '',
+            requirementId: String(r.requirementId),
+            requirementName: r.positionName ?? '',
+            progressNote: last[`${r.customerId}:${r.requirementId}`] ?? '',
+            positionOpenDate: fmtDate(r.positionOpenDate),
+            routineHunting: '',
+            assignments: {},
+          })
+        }
+      }
+      setEditing(null)
+      setMode('edit')
+      setWeekStart(''); setWeekEnd(''); setStrategy('')
+      setItems(rows)
+      setOpen(true)
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : '初始化失败')
     }
-    setOpen(true)
   }
 
-  const openDetail = (r: any) => {
-    setEditing(r)
-    setMode('view')
-    setGroupId(String(r.groupId))
-    setGroupName(r.group?.name ?? '')
-    setWeekStart(fmtDate(r.weekStart))
-    setWeekEnd(fmtDate(r.weekEnd))
-    setStrategy(r.deliveryStrategy ?? '')
-    void applyGroupSetup(r.groupId, false)
-    setItems(
-      (r.items ?? []).map((it: any): ItemRow => ({
-        _key: newKey(),
-        customerId: it.customerId != null ? String(it.customerId) : '',
-        customerName: it.customer?.shortName ?? '',
-        requirementId: it.requirementId != null ? String(it.requirementId) : '',
-        requirementName: it.requirement?.positionName ?? '',
-        progressNote: it.progressNote ?? '',
-        positionOpenDate: fmtDate(it.positionOpenDate),
-        routineHunting: it.routineHunting === true ? '是' : it.routineHunting === false ? '否' : '',
-        participation: it.participation != null ? String(it.participation) : '',
-        assignments: Object.fromEntries((it.assignments ?? []).map((a: any) => [String(a.memberId), a.planDates ?? ''])),
-      })),
-    )
-    setOpen(true)
-  }
-
-  const onPickGroup = (v: string) => {
-    setGroupId(v)
-    if (v) void applyGroupSetup(v, true)
-    else { setMembers([]); setGroupName('') }
+  const openDetail = async (r: any) => {
+    try {
+      // 详情/编辑也需要「全部人员」做矩阵列（即使该计划里某些人没分配，也要显示其列）
+      const setup = await fetchSetup().catch(() => ({ members: [] }))
+      setAllMembers(Array.isArray(setup.members) ? setup.members.map((m: any) => ({ id: m.id, name: m.name })) : [])
+      setEditing(r)
+      setMode('view')
+      setWeekStart(fmtDate(r.weekStart))
+      setWeekEnd(fmtDate(r.weekEnd))
+      setStrategy(r.deliveryStrategy ?? '')
+      setItems(
+        (r.items ?? []).map((it: any): ItemRow => ({
+          _key: newKey(),
+          groupId: it.group?.id ?? it.groupId,
+          groupName: it.group?.name ?? '',
+          customerId: it.customerId != null ? String(it.customerId) : '',
+          customerName: it.customer?.shortName ?? '',
+          requirementId: it.requirementId != null ? String(it.requirementId) : '',
+          requirementName: it.requirement?.positionName ?? '',
+          progressNote: it.progressNote ?? '',
+          positionOpenDate: fmtDate(it.positionOpenDate),
+          routineHunting: it.routineHunting === true ? '是' : it.routineHunting === false ? '否' : '',
+          assignments: Object.fromEntries(
+            (it.assignments ?? []).map((a: any) => [String(a.memberId), parseDates(a.planDates)]),
+          ),
+        })),
+      )
+      setOpen(true)
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : '加载失败')
+    }
   }
 
   // 选「本周开始」后自动算「本周结束」= 开始 + 6 天（一周，如 6.1 → 6.7）
@@ -173,37 +171,32 @@ export default function WorkPlansPage() {
     setWeekEnd(`${d.getFullYear()}-${mm}-${dd}`)
   }
 
-  // 明细行操作
+  // 明细行操作（明细全自动生成、不可手动加/删行；仅可改进展/例行寻猎/组员日期）
   const setItem = (key: number, patch: Partial<ItemRow>) =>
     setItems((arr) => arr.map((it) => (it._key === key ? { ...it, ...patch } : it)))
-  const setAssign = (key: number, memberId: number, v: string) =>
-    setItems((arr) => arr.map((it) => (it._key === key ? { ...it, assignments: { ...it.assignments, [memberId]: v } } : it)))
-  const addItem = () => setItems((arr) => [...arr, emptyItem()])
-  const removeItem = (key: number) => setItems((arr) => arr.filter((it) => it._key !== key))
+  const setAssign = (key: number, memberId: number, dates: string[]) =>
+    setItems((arr) => arr.map((it) => (it._key === key ? { ...it, assignments: { ...it.assignments, [memberId]: dates } } : it)))
 
-  // 岗位 createdAt 缓存：选岗位时「岗位开放时间」自动填为该岗位的创建时间（只读）
-  const reqCreatedAt = useRef<Record<string, string>>({})
-  const fetchRequirements = useCallback(async (q: string) => {
-    const res = await fetch(`/api/requirements/options?q=${encodeURIComponent(q)}`)
-    if (!res.ok) return []
-    const json = await res.json()
-    return (json.data ?? []).map((x: any) => {
-      if (x.createdAt) reqCreatedAt.current[String(x.id)] = x.createdAt
-      return { value: String(x.id), label: x.positionName }
-    })
-  }, [])
-  const pickRequirement = (key: number, v: string) => {
-    const created = reqCreatedAt.current[v]
-    setItem(key, { requirementId: v, ...(created ? { positionOpenDate: fmtDate(created) } : {}) })
-  }
+  // 按组分页：tab 列表 = 明细出现过的组（去重，保序）
+  const tabGroups = useMemo(() => {
+    const seen = new Map<number, string>()
+    for (const it of items) if (!seen.has(it.groupId)) seen.set(it.groupId, it.groupName)
+    return Array.from(seen, ([groupId, groupName]) => ({ groupId, groupName }))
+  }, [items])
 
-  // 小计（前端计算，不入库）
+  // 当前生效 tab：activeTab 若不在当前组列表中（如刚打开新弹窗、切换计划），回退到第一个组
+  const effectiveTab =
+    activeTab != null && tabGroups.some((g) => g.groupId === activeTab) ? activeTab : (tabGroups[0]?.groupId ?? null)
+
+  const visibleItems = useMemo(() => items.filter((it) => it.groupId === effectiveTab), [items, effectiveTab])
+
+  // 当前组小计（前端计算，不入库）：参与度合计 + 各成员在本组的命中行数
   const subtotal = useMemo(() => {
-    const participation = items.reduce((s, it) => s + partCount(it), 0)
+    const participation = visibleItems.reduce((s, it) => s + partCount(it), 0)
     const perMember: Record<number, number> = {}
-    for (const m of members) perMember[m.id] = items.filter((it) => (it.assignments[m.id] ?? '').trim()).length
+    for (const m of allMembers) perMember[m.id] = visibleItems.filter((it) => (it.assignments[m.id] ?? []).length > 0).length
     return { participation, perMember }
-  }, [items, members])
+  }, [visibleItems, allMembers])
 
   const handleDelete = async (id: number) => {
     try {
@@ -217,15 +210,14 @@ export default function WorkPlansPage() {
   }
 
   const handleSubmit = async () => {
-    if (!groupId) return toast.error('请选择所属组')
     if (!weekStart || !weekEnd) return toast.error('请选择本周起止日期')
     setSubmitting(true)
     try {
       const payload = {
-        groupId: Number(groupId),
         weekStart, weekEnd,
         deliveryStrategy: strategy,
         items: items.map((it, i) => ({
+          groupId: it.groupId,
           customerId: it.customerId || null,
           requirementId: it.requirementId || null,
           progressNote: it.progressNote,
@@ -234,8 +226,8 @@ export default function WorkPlansPage() {
           participation: partCount(it), // 自动算：该行有日期的组员数
           sortOrder: i,
           assignments: Object.entries(it.assignments)
-            .filter(([, v]) => String(v).trim())
-            .map(([memberId, planDates]) => ({ memberId: Number(memberId), planDates })),
+            .filter(([, dates]) => Array.isArray(dates) && dates.length > 0)
+            .map(([memberId, dates]) => ({ memberId: Number(memberId), planDates: dates })),
         })),
       }
       const url = editing ? `/api/work-plans/${editing.id}` : '/api/work-plans'
@@ -255,32 +247,12 @@ export default function WorkPlansPage() {
     }
   }
 
-  const canWriteRow = (r: any) => isAdmin || (ledGroupId != null && r.groupId === ledGroupId)
-
-  // 「可回导」导出：扁平到每行一个明细行（组员分配＝「组员名=日期」多行），与 /api/work-plans/import 对应
-  const doExport = () => {
-    const cols = [
-      { header: '周计划id', getValue: (x: any) => x.plan.id },
-      { header: '明细id', getValue: (x: any) => x.item.id ?? '' },
-      { header: '组*', getValue: (x: any) => x.plan.group?.name ?? '' },
-      { header: '周开始*', getValue: (x: any) => fmtDate(x.plan.weekStart) },
-      { header: '周结束*', getValue: (x: any) => fmtDate(x.plan.weekEnd) },
-      { header: '交付策略', getValue: (x: any) => x.plan.deliveryStrategy ?? '' },
-      { header: '客户名称', getValue: (x: any) => x.item.customer?.shortName ?? '' },
-      { header: '岗位名称', getValue: (x: any) => x.item.requirement?.positionName ?? '' },
-      { header: '交付进展', getValue: (x: any) => x.item.progressNote ?? '' },
-      { header: '岗位开放时间', getValue: (x: any) => fmtDate(x.item.positionOpenDate) },
-      { header: '是否例行寻猎', getValue: (x: any) => (x.item.routineHunting === true ? '是' : x.item.routineHunting === false ? '否' : '') },
-      { header: '组员分配', getValue: (x: any) => (x.item.assignments ?? []).map((a: any) => `${a.member?.name ?? ''}=${a.planDates ?? ''}`).filter((s: string) => !s.startsWith('=') && !s.endsWith('=')).join('\n') },
-    ]
-    const flat = data.flatMap((plan: any) => (plan.items?.length ? plan.items.map((item: any) => ({ plan, item })) : [{ plan, item: {} }]))
-    void exportToExcel({ title: '工作计划', columns: cols, rows: flat })
-  }
-
+  const readOnly = mode === 'view'
   const columns: BoostColumn<any>[] = [
-    { key: 'group', title: '组', accessor: (r) => r.group?.name ?? '—', render: (v) => <span className="font-medium">{v}</span> },
-    { key: 'week', title: '本周', accessor: (r) => `${fmtDate(r.weekStart)} ~ ${fmtDate(r.weekEnd)}` },
-    { key: 'deliveryStrategy', title: '交付策略', render: (v) => v ? <EllipsisTooltip className="line-clamp-1 max-w-[280px]" content={v} /> : <span className="text-base-content/30">—</span> },
+    { key: 'week', title: '本周', accessor: (r) => `${fmtDate(r.weekStart)} ~ ${fmtDate(r.weekEnd)}`, render: (v) => <span className="font-medium">{v}</span> },
+    { key: 'deliveryStrategy', title: '交付策略', render: (v) => v ? <span className="line-clamp-1 max-w-[280px]">{v}</span> : <span className="text-base-content/30">—</span> },
+    { key: 'groupCount', title: '涉及组数', accessor: (r) => new Set((r.items ?? []).map((it: any) => it.group?.id ?? it.groupId)).size, filterType: 'number',
+      render: (v) => <span className="badge badge-ghost badge-sm">{v}</span> },
     { key: 'itemCount', title: '明细行数', accessor: (r) => r.items?.length ?? 0, filterType: 'number',
       render: (v) => <span className="badge badge-ghost badge-sm">{v}</span> },
     { key: 'createdBy', title: '创建人', accessor: (r) => r.createdBy?.name ?? '—' },
@@ -299,7 +271,7 @@ export default function WorkPlansPage() {
     <div>
       <div className="mb-4">
         <h1 className="text-xl font-bold text-base-content">工作计划</h1>
-        <p className="mt-0.5 text-sm text-base-content/50">各组每周「交付需求与计划管理表」（仅组长可维护本组，管理员可查看全部）</p>
+        <p className="mt-0.5 text-sm text-base-content/50">全公司每周「交付需求与计划管理表」：一周一条、涵盖全部组，岗位按组分页</p>
       </div>
 
       <BoostTable
@@ -310,17 +282,14 @@ export default function WorkPlansPage() {
         rowKey="id"
         onCreate={canCreate ? openCreate : undefined}
         createText="新增周计划"
-        onExport={doExport}
-        importResource={canCreate ? 'WORK_PLAN' : undefined}
-        importEndpoint="/api/work-plans/import"
         onRefresh={() => fetchData(true)}
-        searchPlaceholder="搜索组 / 交付策略 / 创建人…"
+        searchPlaceholder="搜索交付策略 / 创建人…"
         actions={(r) => (
           <div className="flex items-center gap-1">
             <button className="btn btn-ghost btn-xs gap-1 text-primary" onClick={() => openDetail(r)}>
               <Eye className="h-3.5 w-3.5" />详情
             </button>
-            {canWriteRow(r) && (
+            {canDelete && (
               <Popconfirm title="确认删除该周计划？（含全部明细行）" onConfirm={() => handleDelete(r.id)}>
                 <button className="btn btn-ghost btn-xs gap-1 text-error">
                   <Trash2 className="h-3.5 w-3.5" />删除
@@ -338,116 +307,116 @@ export default function WorkPlansPage() {
         onOk={handleSubmit}
         okText={editing ? '保存' : '创建'}
         confirmLoading={submitting}
-        readOnly={mode === 'view'}
-        onEdit={editing && canWriteRow(editing) ? () => setMode('edit') : undefined}
-        width={1180}
+        readOnly={readOnly}
+        onEdit={editing && canEdit ? () => setMode('edit') : undefined}
+        size="full"
       >
-        <div className="grid grid-cols-4 gap-4">
-          <Field label="所属组" required>
-            {isAdmin ? (
-              <SearchSelect
-                value={groupId}
-                onChange={onPickGroup}
-                fetchOptions={searchFetch('/api/groups/options', (g: any) => ({ value: String(g.id), label: g.name }))}
-                initialLabel={groupName}
-                placeholder="请选择组"
-              />
-            ) : (
-              <input className="input input-bordered w-full" value={groupName || '（我的组）'} disabled />
-            )}
-          </Field>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="本周开始" required>
-            <DatePicker className="input input-bordered w-full" value={weekStart} onChange={(v) => onWeekStart(v)} />
+            <input type="date" className="input input-bordered w-full" value={weekStart} onChange={(e) => onWeekStart(e.target.value)} />
           </Field>
           <Field label="本周结束" required>
-            <DatePicker className="input input-bordered w-full" value={weekEnd} onChange={(v) => setWeekEnd(v)} />
+            <input type="date" className="input input-bordered w-full" value={weekEnd} onChange={(e) => setWeekEnd(e.target.value)} />
           </Field>
-          <Field label="本周交付策略" className="col-span-4">
-            <textarea className="textarea textarea-bordered w-full" rows={2} value={strategy} onChange={(e) => setStrategy(e.target.value)} placeholder="如：第一梯队（画像清晰，薪资合适…）" />
+          <Field label="本周交付策略">
+            <textarea className="textarea textarea-bordered w-full [field-sizing:content]" rows={1} value={strategy} onChange={(e) => setStrategy(e.target.value)} placeholder="如：第一梯队（画像清晰，薪资合适…）" />
           </Field>
         </div>
 
-        {/* 明细行 + 组员日期矩阵 */}
+        {/* 按组分页：每个组一个 tab，页内＝该组明细行 × 全员日期矩阵 */}
         <div className="mt-4">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-semibold">本周计划明细（{items.length} 行）</span>
-            <button className="btn btn-outline btn-xs gap-1" onClick={addItem}><Plus className="h-3.5 w-3.5" />添加行</button>
-          </div>
-          <div className="min-h-[320px] max-h-[56vh] overflow-auto rounded-lg border border-base-300">
-            <table className="table table-xs">
-              <thead>
-                <tr>
-                  <th rowSpan={2} className="min-w-[160px]">客户名称</th>
-                  <th rowSpan={2} className="min-w-[160px]">岗位名称</th>
-                  <th rowSpan={2} className="min-w-[180px]">交付进展简述</th>
-                  <th rowSpan={2} className="min-w-[130px]">岗位开放时间</th>
-                  <th rowSpan={2} className="min-w-[90px]">例行寻猎</th>
-                  <th rowSpan={2} className="min-w-[90px]">本周参与度</th>
-                  {members.length > 0 && (
-                    <th colSpan={members.length} className="border-x border-base-300 bg-base-200 text-center">本周计划岗位（组员）</th>
-                  )}
-                  <th rowSpan={2} className="w-10"></th>
-                </tr>
-                <tr>
-                  {members.map((m) => <th key={m.id} className="min-w-[110px] bg-base-200">{m.name}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it) => (
-                  <tr key={it._key}>
-                    <td>
-                      <SearchSelect value={it.customerId} initialLabel={it.customerName}
-                        onChange={(v) => setItem(it._key, { customerId: v })}
-                        fetchOptions={searchFetch('/api/clients/options', (c: any) => ({ value: String(c.id), label: c.shortName ?? c.fullName }))}
-                        placeholder="选客户" />
-                    </td>
-                    <td>
-                      <SearchSelect value={it.requirementId} initialLabel={it.requirementName}
-                        onChange={(v) => pickRequirement(it._key, v)}
-                        fetchOptions={fetchRequirements}
-                        placeholder="选岗位" />
-                    </td>
-                    <td><input className="input input-bordered input-xs w-full" value={it.progressNote} onChange={(e) => setItem(it._key, { progressNote: e.target.value })} placeholder="如：1人谈薪中" /></td>
-                    <td><span className="input input-bordered input-xs flex w-full items-center bg-base-200 text-base-content/70" title="岗位开放时间＝所选岗位的创建时间，自动填充">{it.positionOpenDate || '—'}</span></td>
-                    <td>
-                      <select className="select select-bordered select-xs w-full" value={it.routineHunting} onChange={(e) => setItem(it._key, { routineHunting: e.target.value })}>
-                        <option value="">—</option><option value="是">是</option><option value="否">否</option>
-                      </select>
-                    </td>
-                    <td className="text-center font-medium" title="自动计算＝本行填了计划日期的组员数">{partCount(it)}</td>
-                    {members.map((m) => (
-                      <td key={m.id} className="bg-base-100">
-                        <input className="input input-bordered input-xs w-full" value={it.assignments[m.id] ?? ''}
-                          onChange={(e) => setAssign(it._key, m.id, e.target.value)} placeholder="如 6.1、6.3" />
-                      </td>
-                    ))}
-                    <td>
-                      <button className="btn btn-ghost btn-xs text-error" onClick={() => removeItem(it._key)} title="删除该行"><X className="h-3.5 w-3.5" /></button>
-                    </td>
-                  </tr>
+          {tabGroups.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-base-300 py-12 text-center text-sm text-base-content/40">
+              暂无明细。各组成员录入「在招」客户需求后，新增工作计划会自动按组生成明细行。
+            </div>
+          ) : (
+            <>
+              <div className="tabs tabs-boxed mb-2 w-fit max-w-full overflow-x-auto">
+                {tabGroups.map((g) => (
+                  <a
+                    key={g.groupId}
+                    className={`tab whitespace-nowrap ${effectiveTab === g.groupId ? 'tab-active' : ''}`}
+                    onClick={() => setActiveTab(g.groupId)}
+                  >
+                    {g.groupName}（{items.filter((it) => it.groupId === g.groupId).length}）
+                  </a>
                 ))}
-                {items.length === 0 && (
-                  <tr><td colSpan={7 + members.length} className="text-center text-base-content/40">暂无明细，点「添加行」</td></tr>
-                )}
-              </tbody>
-              {items.length > 0 && (
-                <tfoot>
-                  <tr className="font-medium">
-                    <td colSpan={5} className="text-right">小计</td>
-                    <td>{subtotal.participation}</td>
-                    {members.map((m) => <td key={m.id}>{subtotal.perMember[m.id] ?? 0}</td>)}
-                    <td></td>
-                  </tr>
-                </tfoot>
+              </div>
+              <div className="max-h-[60vh] overflow-auto rounded-lg border border-base-300">
+                <table className="table table-xs">
+                  <thead className="sticky top-0 z-10 bg-base-100">
+                    <tr>
+                      <th rowSpan={2} className="w-[6em] min-w-[6em]">客户名称</th>
+                      <th rowSpan={2} className="min-w-[140px]">岗位名称</th>
+                      <th rowSpan={2} className="min-w-[20rem]">交付进展简述</th>
+                      <th rowSpan={2} className="min-w-[120px]">岗位开放时间</th>
+                      <th rowSpan={2} className="min-w-[80px]">例行寻猎</th>
+                      <th rowSpan={2} className="min-w-[80px]">本周参与度</th>
+                      {allMembers.length > 0 && (
+                        <th colSpan={allMembers.length} className="border-x border-base-300 bg-base-200 text-center">本周计划岗位（组员）</th>
+                      )}
+                    </tr>
+                    <tr>
+                      {allMembers.map((m) => <th key={m.id} className="min-w-[8.5rem] bg-base-200">{m.name}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleItems.map((it) => (
+                      <tr key={it._key}>
+                        <td>
+                          <span className="block w-[6em] truncate font-medium" title={it.customerName}>{it.customerName || '—'}</span>
+                        </td>
+                        <td>
+                          <span className="block max-w-[200px] truncate" title={it.requirementName}>{it.requirementName || '—'}</span>
+                        </td>
+                        <td>
+                          <textarea
+                            className="textarea textarea-bordered textarea-xs w-full min-w-[20rem] [field-sizing:content]"
+                            rows={1}
+                            value={it.progressNote}
+                            onChange={(e) => setItem(it._key, { progressNote: e.target.value })}
+                            placeholder="如：1人谈薪中"
+                          />
+                        </td>
+                        <td>
+                          <span className="text-base-content/70" title="岗位开放时间＝所选岗位的创建时间">{it.positionOpenDate || '—'}</span>
+                        </td>
+                        <td>
+                          <select className="select select-bordered select-xs w-full" value={it.routineHunting} onChange={(e) => setItem(it._key, { routineHunting: e.target.value })}>
+                            <option value="">—</option><option value="是">是</option><option value="否">否</option>
+                          </select>
+                        </td>
+                        <td className="text-center font-medium" title="自动计算＝本行填了计划日期的组员数">{partCount(it)}</td>
+                        {allMembers.map((m) => (
+                          <td key={m.id} className="bg-base-100 align-top">
+                            <MultiDatePicker
+                              value={it.assignments[m.id] ?? []}
+                              onChange={(dates) => setAssign(it._key, m.id, dates)}
+                              readOnly={readOnly}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                    {visibleItems.length === 0 && (
+                      <tr><td colSpan={6 + allMembers.length} className="text-center text-base-content/40">该组本周无在招岗位明细</td></tr>
+                    )}
+                  </tbody>
+                  {visibleItems.length > 0 && (
+                    <tfoot>
+                      <tr className="font-medium">
+                        <td colSpan={5} className="text-right">小计</td>
+                        <td className="text-center">{subtotal.participation}</td>
+                        {allMembers.map((m) => <td key={m.id} className="text-center">{subtotal.perMember[m.id] ?? 0}</td>)}
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+              {allMembers.length === 0 && (
+                <p className="mt-1 text-xs text-warning">系统暂无用户，「本周计划岗位（组员）」列为空。</p>
               )}
-            </table>
-          </div>
-          {members.length === 0 && (
-            <p className="mt-1 text-xs text-warning">
-              {groupId
-                ? '该组暂无成员，「本周计划岗位（组员）」列为空——请先在「系统管理 → 组管理」为该组添加成员。'
-                : '请先在上方选择「所属组」，「本周计划岗位（组员）」列会按该组成员自动出现。'}
-            </p>
+            </>
           )}
         </div>
       </Modal>

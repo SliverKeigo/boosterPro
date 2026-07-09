@@ -63,14 +63,14 @@ enum OpportunityNature {
 }
 
 model Department {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.Text
-  users     User[]
-  groups    Group[]
+  id                  Int                        @id @default(autoincrement())
+  name                String                     @db.Text
+  users               User[]
+  groups              Group[]
   hiddenRulesAsSource DepartmentHiddenResource[] @relation("DeptHideSource")
   hiddenRulesAsTarget DepartmentHiddenResource[] @relation("DeptHideTarget")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt           DateTime                   @default(now()) @map("created_at")
+  updatedAt           DateTime                   @updatedAt @map("updated_at")
 
   @@map("departments")
 }
@@ -94,16 +94,16 @@ model DepartmentHiddenResource {
 
 // 组：挂在部门之下（部门 → 多个组）。组有组长(leaderId)与成员(User.groupId)。支撑工作计划「仅组长可新增」。
 model Group {
-  id           Int        @id @default(autoincrement())
-  name         String     @db.Text
-  department   Department @relation(fields: [departmentId], references: [id])
-  departmentId Int        @map("department_id")
-  leader       User?      @relation("GroupLeader", fields: [leaderId], references: [id])
-  leaderId     Int?       @map("leader_id")
-  members      User[]     @relation("GroupMembers")
-  workPlans    WorkPlan[]
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
+  id            Int            @id @default(autoincrement())
+  name          String         @db.Text
+  department    Department     @relation(fields: [departmentId], references: [id])
+  departmentId  Int            @map("department_id")
+  leader        User?          @relation("GroupLeader", fields: [leaderId], references: [id])
+  leaderId      Int?           @map("leader_id")
+  members       User[]         @relation("GroupMembers")
+  workPlanItems WorkPlanItem[]
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
 
   @@index([departmentId])
   @@map("groups")
@@ -121,50 +121,50 @@ model Role {
 }
 
 model User {
-  id                   Int                         @id @default(autoincrement())
-  name                 String                      @db.Text
-  username             String                      @unique @db.Text
-  email                String?                     @unique @db.Text
-  passwordHash         String?                     @map("password_hash") @db.Text
-  department           Department?                 @relation(fields: [departmentId], references: [id])
-  departmentId         Int?                        @map("department_id")
-  group                Group?                      @relation("GroupMembers", fields: [groupId], references: [id])
-  groupId              Int?                        @map("group_id")
-  ledGroups            Group[]                     @relation("GroupLeader")
-  role                 Role?                       @relation(fields: [roleId], references: [id])
-  roleId               Int?                        @map("role_id")
-  submittedCandidates  Candidate[]                 @relation("CandidateSubmitter")
-  submittedContacts    CustomerContact[]           @relation("CustomerContactSubmitter")
-  salesOpportunities   Opportunity[]               @relation("OpportunitySalesOwner")
-  contractSales        Contract[]                  @relation("ContractSalesOwner")
-  contractDeliveries   Contract[]                  @relation("ContractDeliveryOwner")
-  createdWorkPlans     WorkPlan[]                  @relation("WorkPlanCreatedBy")
-  planAssignments      WorkPlanAssignment[]
-  urgentRecords        RequirementUrgentRecord[]
-  knowledgeRecords     KnowledgeManagementRecord[]
-  knowledgeInternalLectures KnowledgeBase[]        @relation("KnowledgeInternalLecturer")
-  isAdmin              Boolean                     @default(false) @map("is_admin")
-  tokenVersion         Int                         @default(0) @map("token_version")
-  createdCandidates    Candidate[]                 @relation("CandidateCreatedBy")
-  createdRequirements  Requirement[]               @relation("RequirementCreatedBy")
-  createdSupplements   ClientSupplement[]          @relation("ClientSupplementCreatedBy")
-  createdCustomerContacts CustomerContact[]        @relation("CustomerContactCreatedBy")
-  createdTalents       TalentPool[]                @relation("TalentPoolCreatedBy")
-  createdOpportunities Opportunity[]               @relation("OpportunityCreatedBy")
-  createdCustomers     Customer[]                  @relation("CustomerCreatedBy")
-  createdContracts     Contract[]                  @relation("ContractCreatedBy")
-  createdKnowledge     KnowledgeBase[]             @relation("KnowledgeBaseCreatedBy")
-  updatedCandidates    Candidate[]                 @relation("CandidateUpdatedBy")
-  updatedRequirements  Requirement[]               @relation("RequirementUpdatedBy")
-  updatedSupplements   ClientSupplement[]          @relation("ClientSupplementUpdatedBy")
-  updatedCustomerContacts CustomerContact[]        @relation("CustomerContactUpdatedBy")
-  updatedTalents       TalentPool[]                @relation("TalentPoolUpdatedBy")
-  updatedOpportunities Opportunity[]               @relation("OpportunityUpdatedBy")
-  updatedCustomers     Customer[]                  @relation("CustomerUpdatedBy")
-  updatedContracts     Contract[]                  @relation("ContractUpdatedBy")
-  updatedKnowledge     KnowledgeBase[]             @relation("KnowledgeBaseUpdatedBy")
-  createdAt            DateTime                    @default(now()) @map("created_at")
-  updatedAt            DateTime                    @updatedAt @map("updated_at")
+  id                        Int                         @id @default(autoincrement())
+  name                      String                      @db.Text
+  username                  String                      @unique @db.Text
+  email                     String?                     @unique @db.Text
+  passwordHash              String?                     @map("password_hash") @db.Text
+  department                Department?                 @relation(fields: [departmentId], references: [id])
+  departmentId              Int?                        @map("department_id")
+  group                     Group?                      @relation("GroupMembers", fields: [groupId], references: [id])
+  groupId                   Int?                        @map("group_id")
+  ledGroups                 Group[]                     @relation("GroupLeader")
+  role                      Role?                       @relation(fields: [roleId], references: [id])
+  roleId                    Int?                        @map("role_id")
+  submittedCandidates       Candidate[]                 @relation("CandidateSubmitter")
+  submittedContacts         CustomerContact[]           @relation("CustomerContactSubmitter")
+  salesOpportunities        Opportunity[]               @relation("OpportunitySalesOwner")
+  contractSales             Contract[]                  @relation("ContractSalesOwner")
+  contractDeliveries        Contract[]                  @relation("ContractDeliveryOwner")
+  createdWorkPlans          WorkPlan[]                  @relation("WorkPlanCreatedBy")
+  planAssignments           WorkPlanAssignment[]
+  urgentRecords             RequirementUrgentRecord[]
+  knowledgeRecords          KnowledgeManagementRecord[]
+  knowledgeInternalLectures KnowledgeBase[]             @relation("KnowledgeInternalLecturer")
+  isAdmin                   Boolean                     @default(false) @map("is_admin")
+  tokenVersion              Int                         @default(0) @map("token_version")
+  createdCandidates         Candidate[]                 @relation("CandidateCreatedBy")
+  createdRequirements       Requirement[]               @relation("RequirementCreatedBy")
+  createdSupplements        ClientSupplement[]          @relation("ClientSupplementCreatedBy")
+  createdCustomerContacts   CustomerContact[]           @relation("CustomerContactCreatedBy")
+  createdTalents            TalentPool[]                @relation("TalentPoolCreatedBy")
+  createdOpportunities      Opportunity[]               @relation("OpportunityCreatedBy")
+  createdCustomers          Customer[]                  @relation("CustomerCreatedBy")
+  createdContracts          Contract[]                  @relation("ContractCreatedBy")
+  createdKnowledge          KnowledgeBase[]             @relation("KnowledgeBaseCreatedBy")
+  updatedCandidates         Candidate[]                 @relation("CandidateUpdatedBy")
+  updatedRequirements       Requirement[]               @relation("RequirementUpdatedBy")
+  updatedSupplements        ClientSupplement[]          @relation("ClientSupplementUpdatedBy")
+  updatedCustomerContacts   CustomerContact[]           @relation("CustomerContactUpdatedBy")
+  updatedTalents            TalentPool[]                @relation("TalentPoolUpdatedBy")
+  updatedOpportunities      Opportunity[]               @relation("OpportunityUpdatedBy")
+  updatedCustomers          Customer[]                  @relation("CustomerUpdatedBy")
+  updatedContracts          Contract[]                  @relation("ContractUpdatedBy")
+  updatedKnowledge          KnowledgeBase[]             @relation("KnowledgeBaseUpdatedBy")
+  createdAt                 DateTime                    @default(now()) @map("created_at")
+  updatedAt                 DateTime                    @updatedAt @map("updated_at")
 
   @@map("users")
 }
@@ -182,7 +182,7 @@ model Customer {
   benchmarkCompanies String?                 @map("benchmark_companies") @db.Text
   // 简道云「定位」是移动端定位组件(存位置文字)，非经纬度数字——原 locationLat/Lng 系臆测建模、三库从未有数据，已废弃(库中旧列保留不删)
   location           String?                 @db.Text
-  attachmentUrl  String[] @map("attachment_url")
+  attachmentUrl      String[]                @map("attachment_url")
   officeAddresses    CustomerOfficeAddress[]
   supplements        ClientSupplement[]
   customerContacts   CustomerContact[]
@@ -221,7 +221,7 @@ model ClientSupplement {
   openingSpeech         String?                     @map("opening_speech") @db.Text
   companyCultureWelfare String?                     @map("company_culture_welfare") @db.Text
   notes                 String?                     @db.Text
-  attachmentUrl  String[] @map("attachment_url")
+  attachmentUrl         String[]                    @map("attachment_url")
   demandUpdates         SupplementDemandUpdate[]
   customerProfiles      SupplementCustomerProfile[]
   createdAt             DateTime                    @default(now()) @map("created_at")
@@ -249,13 +249,13 @@ model SupplementDemandUpdate {
 }
 
 model SupplementCustomerProfile {
-  id           Int              @id @default(autoincrement())
-  supplement   ClientSupplement @relation(fields: [supplementId], references: [id], onDelete: Cascade)
-  supplementId Int              @map("supplement_id")
-  specialty    String?          @db.Text
-  description  String?          @db.Text
-  attachmentUrl  String[] @map("attachment_url")
-  createdAt    DateTime         @default(now()) @map("created_at")
+  id            Int              @id @default(autoincrement())
+  supplement    ClientSupplement @relation(fields: [supplementId], references: [id], onDelete: Cascade)
+  supplementId  Int              @map("supplement_id")
+  specialty     String?          @db.Text
+  description   String?          @db.Text
+  attachmentUrl String[]         @map("attachment_url")
+  createdAt     DateTime         @default(now()) @map("created_at")
 
   @@map("supplement_customer_profiles")
 }
@@ -319,7 +319,7 @@ model Requirement {
   projectExperience    String?                      @map("project_experience") @db.Text
   closeReason          String?                      @map("close_reason") @db.Text
   notes                String?                      @db.Text
-  attachmentUrl  String[] @map("attachment_url")
+  attachmentUrl        String[]                     @map("attachment_url")
   latestUpdate         String?                      @map("latest_update") @db.Text
   industry             String?                      @db.Text
   bonusPoints          String?                      @map("bonus_points") @db.Text
@@ -344,13 +344,13 @@ model Requirement {
 }
 
 model RequirementPositionProfile {
-  id                Int         @id @default(autoincrement())
-  requirement       Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
-  requirementId     Int         @map("requirement_id")
-  knowledgeCategory String?     @map("knowledge_category") @db.Text
-  knowledgeAmount   String?     @map("knowledge_amount") @db.Text
-  consensusRequirement String?  @map("consensus_requirement") @db.Text
-  createdAt         DateTime    @default(now()) @map("created_at")
+  id                   Int         @id @default(autoincrement())
+  requirement          Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  requirementId        Int         @map("requirement_id")
+  knowledgeCategory    String?     @map("knowledge_category") @db.Text
+  knowledgeAmount      String?     @map("knowledge_amount") @db.Text
+  consensusRequirement String?     @map("consensus_requirement") @db.Text
+  createdAt            DateTime    @default(now()) @map("created_at")
 
   @@map("requirement_position_profiles")
 }
@@ -384,14 +384,14 @@ model Candidate {
   recruitmentChannel       String                            @map("recruitment_channel") @db.Text
   recommendationTime       DateTime?                         @map("recommendation_time")
   recommendationStatus     RecommendationStatus              @default(PENDING) @map("recommendation_status")
-  recommendationReportUrl  String[] @map("recommendation_report_url")
+  recommendationReportUrl  String[]                          @map("recommendation_report_url")
   recommendationReason     String?                           @map("recommendation_reason") @db.Text
   interviewProgress        String?                           @map("interview_progress") @db.Text
   failureReason            String?                           @map("failure_reason") @db.Text
   offerDate                DateTime?                         @map("offer_date") @db.Date
   offerOnboardDate         DateTime?                         @map("offer_onboard_date") @db.Date
-  offerFileUrl  String[] @map("offer_file_url")
-  backgroundCheckReportUrl  String[] @map("background_check_report_url")
+  offerFileUrl             String[]                          @map("offer_file_url")
+  backgroundCheckReportUrl String[]                          @map("background_check_report_url")
   actualOnboardDate        DateTime?                         @map("actual_onboard_date") @db.Date
   salaryPlan               String?                           @map("salary_plan") @db.Text
   guaranteePeriodEnd       DateTime?                         @map("guarantee_period_end") @db.Date
@@ -453,7 +453,7 @@ model TalentPool {
   positionLevel   String?     @map("position_level") @db.Text
   age             Int?
   tags            String[]
-  resumeUrl  String[] @map("resume_url")
+  resumeUrl       String[]    @map("resume_url")
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
@@ -482,7 +482,7 @@ model Opportunity {
   decisionMakerDescription String                @map("decision_maker_description") @db.Text
   salesOwner               User?                 @relation("OpportunitySalesOwner", fields: [salesOwnerId], references: [id])
   salesOwnerId             Int?                  @map("sales_owner_id")
-  attachmentUrl  String[] @map("attachment_url")
+  attachmentUrl            String[]              @map("attachment_url")
   progressRecords          OpportunityProgress[]
   createdAt                DateTime              @default(now()) @map("created_at")
   updatedAt                DateTime              @updatedAt @map("updated_at")
@@ -525,9 +525,9 @@ model Contract {
   salesOwnerId       Int?              @map("sales_owner_id")
   deliveryOwner      User?             @relation("ContractDeliveryOwner", fields: [deliveryOwnerId], references: [id])
   deliveryOwnerId    Int?              @map("delivery_owner_id")
-  contractFileUrl  String[] @map("contract_file_url")
+  contractFileUrl    String[]          @map("contract_file_url")
   invoiceInfoText    String?           @map("invoice_info_text") @db.Text
-  invoiceInfoFileUrl  String[] @map("invoice_info_file_url")
+  invoiceInfoFileUrl String[]          @map("invoice_info_file_url")
   notes              String?           @db.Text
   invoices           ContractInvoice[]
   createdAt          DateTime          @default(now()) @map("created_at")
@@ -545,17 +545,17 @@ model Contract {
 }
 
 model ContractInvoice {
-  id                 Int      @id @default(autoincrement())
-  contract           Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  contractId         Int      @map("contract_id")
+  id                 Int       @id @default(autoincrement())
+  contract           Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contractId         Int       @map("contract_id")
   invoiceType        String?   @map("invoice_type") @db.Text
   verificationResult String?   @map("verification_result") @db.Text
   amount             String?   @db.Text
   number             String?   @map("invoice_number") @db.Text
   code               String?   @map("invoice_code") @db.Text
   issueDate          DateTime? @map("issue_date") @db.Date
-  sourceFileUrl  String[] @map("source_file_url")
-  imageUrl  String[] @map("image_url")
+  sourceFileUrl      String[]  @map("source_file_url")
+  imageUrl           String[]  @map("image_url")
   createdAt          DateTime  @default(now()) @map("created_at")
 
   @@map("contract_invoices")
@@ -566,7 +566,7 @@ model KnowledgeBase {
   category           String                      @db.Text
   tags               String[]
   keywords           String                      @db.Text
-  fileUrl  String[] @map("file_url")
+  fileUrl            String[]                    @map("file_url")
   notes              String?                     @db.Text
   trainingOutline    String?                     @map("training_outline") @db.Text
   internalLecturer   User?                       @relation("KnowledgeInternalLecturer", fields: [internalLecturerId], references: [id])
@@ -587,15 +587,15 @@ model KnowledgeBase {
 }
 
 model KnowledgeManagementRecord {
-  id          Int           @id @default(autoincrement())
-  knowledge   KnowledgeBase @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
-  knowledgeId Int           @map("knowledge_id")
-  date        DateTime?     @db.Date
-  submitter   User?         @relation(fields: [submitterId], references: [id])
-  submitterId Int?          @map("submitter_id")
-  details     String?       @db.Text
-  reviewParticipants String? @map("review_participants") @db.Text
-  createdAt   DateTime      @default(now()) @map("created_at")
+  id                 Int           @id @default(autoincrement())
+  knowledge          KnowledgeBase @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+  knowledgeId        Int           @map("knowledge_id")
+  date               DateTime?     @db.Date
+  submitter          User?         @relation(fields: [submitterId], references: [id])
+  submitterId        Int?          @map("submitter_id")
+  details            String?       @db.Text
+  reviewParticipants String?       @map("review_participants") @db.Text
+  createdAt          DateTime      @default(now()) @map("created_at")
 
   @@map("knowledge_management_records")
 }
@@ -603,9 +603,7 @@ model KnowledgeManagementRecord {
 // 工作计划 = 某组×某周的「交付需求与计划管理表」。三层：周计划 → 明细行 → 组员分配矩阵。
 model WorkPlan {
   id               Int            @id @default(autoincrement())
-  group            Group          @relation(fields: [groupId], references: [id])
-  groupId          Int            @map("group_id")
-  weekStart        DateTime       @map("week_start") @db.Date // 周一
+  weekStart        DateTime       @unique @map("week_start") @db.Date // 周一（一周一条、全公司唯一）
   weekEnd          DateTime       @map("week_end") @db.Date // 周日
   deliveryStrategy String?        @map("delivery_strategy") @db.Text // 本周交付策略
   items            WorkPlanItem[]
@@ -614,7 +612,6 @@ model WorkPlan {
   createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt        DateTime       @updatedAt @map("updated_at")
 
-  @@index([groupId])
   @@index([createdById])
   @@map("work_plans")
 }
@@ -624,6 +621,8 @@ model WorkPlanItem {
   id               Int                  @id @default(autoincrement())
   workPlan         WorkPlan             @relation(fields: [workPlanId], references: [id], onDelete: Cascade)
   workPlanId       Int                  @map("work_plan_id")
+  group            Group                @relation(fields: [groupId], references: [id]) // 明细来源组（按组分页）
+  groupId          Int                  @map("group_id")
   customer         Customer?            @relation(fields: [customerId], references: [id])
   customerId       Int?                 @map("customer_id")
   requirement      Requirement?         @relation(fields: [requirementId], references: [id]) // 岗位
@@ -636,10 +635,11 @@ model WorkPlanItem {
   assignments      WorkPlanAssignment[]
 
   @@index([workPlanId])
+  @@index([groupId])
   @@map("work_plan_items")
 }
 
-// 组员分配矩阵：明细行 × 组员 → 该员工在该岗位的本周计划日期（自由文本，如 "6.1、6.3"）
+// 组员分配矩阵：明细行 × 组员 → 该员工在该岗位的本周计划日期（JSON 日期数组字符串，如 ["2026-06-01","2026-06-03"]；空不入库）
 model WorkPlanAssignment {
   id        Int          @id @default(autoincrement())
   item      WorkPlanItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
