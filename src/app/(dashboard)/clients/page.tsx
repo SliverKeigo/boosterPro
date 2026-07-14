@@ -19,10 +19,10 @@ import {
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
+import { fmtDateTime } from '@/lib/datetime'
 
 const RES = 'CUSTOMER'
 
-const fmtDateTime = (s?: string | null) => (s ? `${s.slice(0, 10)} ${s.slice(11, 16)}` : '—')
 const stripHtml = (v?: string | null) => (v ? v.replace(/<[^>]+>/g, '').slice(0, 40) : '—')
 
 const EMPTY_FORM: any = {

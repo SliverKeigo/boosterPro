@@ -20,6 +20,7 @@ import {
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
+import { fmtDate, fmtDateTime } from '@/lib/datetime'
 
 const RES = 'OPPORTUNITY'
 
@@ -34,8 +35,6 @@ const NATURE_BADGE: Record<string, string> = {
 }
 
 const opts = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }))
-const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
-const fmtDateTime = (s?: string | null) => (s ? `${s.slice(0, 10)} ${s.slice(11, 16)}` : '—')
 
 const EMPTY_FORM: any = {
   name: '',

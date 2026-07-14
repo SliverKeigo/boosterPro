@@ -23,6 +23,7 @@ import {
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
 import { refGet } from '@/lib/refCache'
+import { fmtDate, fmtDateTime } from '@/lib/datetime'
 
 const RES = 'CANDIDATE'
 
@@ -119,8 +120,6 @@ const FLOW_FIELD_LABELS: Record<string, string> = {
 }
 
 const opts = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }))
-const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
-const fmtDateTime = (s?: string | null) => (s ? String(s).slice(0, 16) : '')
 
 // 岗位"不再招聘"的状态：候选人选岗位时，岗位若仅含这些状态则不可选；
 // 只要还有任一其它（在招）状态即可选（OR 关系，配合需求侧多选状态）。
@@ -336,7 +335,7 @@ export default function CandidatesPage() {
     { key: 'positionName', title: '岗位名称', accessor: (r) => r.requirement?.positionName },
     { key: 'name', title: '候选人姓名', render: (v) => <span className="font-medium">{v}</span> },
     { key: 'recommendationTime', title: '推荐时间', accessor: (r) => r.recommendationTime, filterType: 'date',
-      render: (v) => <span className="text-base-content/60">{v ? String(v).slice(0, 16).replace('T', ' ') : '—'}</span> },
+      render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
     { key: 'recommendationStatus', title: '推荐状态', filterType: 'select', filterOptions: opts(STATUS_LABELS),
       render: (v) => <span className={`badge ${STATUS_BADGE[v] ?? 'badge-ghost'} badge-sm`}>{STATUS_LABELS[v] ?? v}</span> },
     { key: 'submitterName', title: '推荐人', accessor: (r) => r.submitter?.name },
@@ -407,7 +406,7 @@ export default function CandidatesPage() {
     { key: 'submitDepartmentId', title: '提交人部门 ID', defaultVisible: false },
     { key: 'submitterId', title: '提交人 ID', defaultVisible: false },
     { key: 'updatedAt', title: '更新时间', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
-    { key: 'createdAt', title: '创建时间', filterType: 'date', defaultVisible: false, render: (v) => <span className="text-base-content/60">{v ? String(v).slice(0, 16).replace('T', ' ') : '—'}</span> },
+    { key: 'createdAt', title: '创建时间', filterType: 'date', defaultVisible: false, render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
     { key: 'updatedByName', title: '修改人', accessor: (r) => r.updatedBy?.name ?? '—', filterType: 'text', defaultVisible: false },
   ]
 

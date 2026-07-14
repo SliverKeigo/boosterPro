@@ -22,6 +22,7 @@ import {
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
 import { refGet } from '@/lib/refCache'
+import { fmtDate, fmtDateTime } from '@/lib/datetime'
 
 const RES = 'REQUIREMENT'
 
@@ -39,8 +40,6 @@ const STATUS_BADGE: Record<string, string> = {
 }
 
 const opts = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }))
-const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
-const fmtDateTime = (s?: string | null) => (s ? `${s.slice(0, 10)} ${s.slice(11, 16)}` : '—')
 // 今天（本地时区 YYYY-MM-DD），用于「登记日期」默认值
 const todayLocal = () => {
   const now = new Date()

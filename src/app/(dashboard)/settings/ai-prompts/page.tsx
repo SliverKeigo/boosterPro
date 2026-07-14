@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Eye, RotateCcw, ShieldAlert } from 'lucide-react'
 import { BoostTable, type BoostColumn, Modal, Popconfirm, Field, useToast, EllipsisTooltip } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
+import { fmtDate } from '@/lib/datetime'
 
 const EMPTY_FORM: any = { key: '', name: '', content: '', description: '' }
 const clip = (s?: string) => (s ? (s.length > 40 ? s.slice(0, 40) + '…' : s) : '')
@@ -109,8 +110,8 @@ export default function AiPromptsPage() {
       render: (v) => <span className={`badge badge-sm ${v === '已自定义' ? 'badge-info' : 'badge-ghost'}`}>{v}</span> },
     { key: 'description', title: '说明', sortable: false, render: (v) => <span className="text-base-content/60">{clip(v)}</span> },
     { key: 'content', title: '提示词预览', sortable: false, defaultVisible: false, render: (v) => <EllipsisTooltip className="line-clamp-1 max-w-[320px] text-base-content/60" content={v}>{clip(v)}</EllipsisTooltip> },
-    { key: 'createdAt', title: '创建时间', filterType: 'date', render: (v) => (v ? String(v).slice(0, 10) : '—') },
-    { key: 'updatedAt', title: '更新时间', filterType: 'date', render: (v) => (v ? String(v).slice(0, 10) : '—') },
+    { key: 'createdAt', title: '创建时间', filterType: 'date', render: (v) => fmtDate(v) || '—' },
+    { key: 'updatedAt', title: '更新时间', filterType: 'date', render: (v) => fmtDate(v) || '—' },
   ]
 
   return (

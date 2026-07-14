@@ -22,10 +22,10 @@ import {
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
 import { refGet } from '@/lib/refCache'
+import { fmtDate } from '@/lib/datetime'
 
 const RES = 'KNOWLEDGE'
 
-const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
 // 富文本字段去 HTML 标签后截断显示
 const stripHtml = (v?: string | null) => (v ? v.replace(/<[^>]+>/g, '').slice(0, 40) : '—')
 

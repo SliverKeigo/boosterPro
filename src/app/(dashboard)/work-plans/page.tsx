@@ -13,8 +13,8 @@ import {
   useToast,
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
+import { fmtDate } from '@/lib/datetime'
 
-const fmtDate = (s?: string | null) => (s ? String(s).slice(0, 10) : '')
 let _keySeq = 1
 const newKey = () => _keySeq++
 

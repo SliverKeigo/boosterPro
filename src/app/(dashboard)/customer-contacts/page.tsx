@@ -17,10 +17,9 @@ import {
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { refGet } from '@/lib/refCache'
+import { fmtDateTime } from '@/lib/datetime'
 
 const RES = 'CUSTOMER_CONTACT'
-
-const fmtDateTime = (s?: string | null) => (s ? `${s.slice(0, 10)} ${s.slice(11, 16)}` : '—')
 
 const EMPTY_FORM: any = {
   title: '', customerId: '', submitterId: '', submitDepartmentId: '',

@@ -5,10 +5,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { ShieldAlert } from 'lucide-react'
 import { BoostTable, type BoostColumn, useToast, EllipsisTooltip } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
+import { fmtDateTime } from '@/lib/datetime'
 
 const RES = 'SYS_USER' // 移交日志归用户管理查看权限
-
-const fmtDateTime = (s?: string | null) => (s ? `${String(s).slice(0, 10)} ${String(s).slice(11, 16)}` : '—')
 
 // 各业务表移交条数明细（moved JSON）→ 中文摘要，仅列出有移交的表
 const MOVED_LABELS: Record<string, string> = {

@@ -16,6 +16,7 @@ import {
 import { BoostTable, type BoostColumn, SearchSelect, searchFetch, DatePicker, useToast } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
+import { fmtDate } from '@/lib/datetime'
 // 推荐状态中文 label 复用 enums.ts 单一事实源（勿另写一份）
 import { RECOMMENDATION_STATUS_LABELS, RECOMMENDATION_STATUS_OPTIONS } from '@/lib/enums'
 
@@ -369,7 +370,7 @@ export default function CandidateRecommendationReportPage() {
         title: '推荐日期',
         accessor: (r) => r.recommendationTime,
         filterType: 'date',
-        render: (v) => (v ? String(v).slice(0, 10) : '—'),
+        render: (v) => fmtDate(v) || '—',
       },
       { key: 'submitterName', title: '推荐人', accessor: (r) => r.submitter?.name ?? '—' },
       { key: 'customerName', title: '客户简称', accessor: (r) => r.customer?.shortName ?? '—' },

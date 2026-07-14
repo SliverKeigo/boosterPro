@@ -21,10 +21,9 @@ import {
 } from '@/components/ui'
 import { useMyPermissions } from '@/lib/usePermissions'
 import { useDict } from '@/lib/useDict'
+import { fmtDate } from '@/lib/datetime'
 
 const RES = 'CONTRACT'
-
-const fmtDate = (s?: string | null) => (s ? s.slice(0, 10) : '')
 
 const EMPTY_FORM: any = {
   customerId: '',
