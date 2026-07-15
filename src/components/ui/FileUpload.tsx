@@ -1,8 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Upload, FileText, Download, X, Loader2, Eye } from 'lucide-react'
-import { FilePreview } from './FilePreview'
+import { Upload, FileText, Download, X, Loader2, ExternalLink } from 'lucide-react'
 
 interface FileUploadProps {
   /** 已上传文件的 URL（/api/files/xxx），或旧的文本内容 */
@@ -16,7 +15,7 @@ function fileNameFromUrl(url: string): string {
   return raw.replace(/^\d+-[a-z0-9]+-/, '')
 }
 
-// Office 文档类型 → 对应的本机 Office 协议与显示名（点击直接调起本机程序打开）
+// Office 文档类型 → 对应的本机 Office 协议与显示名（浏览器渲染不了 Office，点击直接调起本机程序）
 const OFFICE: Record<string, { scheme: string; label: string }> = {
   doc: { scheme: 'ms-word', label: 'Word' },
   docx: { scheme: 'ms-word', label: 'Word' },
@@ -30,11 +29,9 @@ export function FileUpload({ value, onChange, accept }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
-  const [previewOpen, setPreviewOpen] = useState(false)
 
   const isUploaded = !!value && value.startsWith('/api/files/')
   const fileName = isUploaded ? fileNameFromUrl(value!) : ''
-  // Office 文件点「预览」直接调起本机 Office（Word/Excel/PowerPoint），不走网页预览
   const ext = fileName.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] || ''
   const office = OFFICE[ext]
 
@@ -54,77 +51,78 @@ export function FileUpload({ value, onChange, accept }: FileUploadProps) {
   }
 
   if (isUploaded) {
-    // 注意：只读(详情)态下，外层 Modal 会把内容包进 fieldset[disabled] + pointer-events-none，
-    // 会让 <button> 失效、并拦截点击。预览触发器故意用 <a>/role=button 的可点击元素，
-    // 并显式加 pointer-events-auto + stopPropagation 以豁免外层禁用，确保详情态附件可点开预览。
-    const openPreview = (e: React.SyntheticEvent) => {
+    // 打开附件的两条路（不再用内嵌弹窗预览）：
+    // ① Office(doc/xls/ppt)：浏览器渲染不了，用 ms-* 协议调起本机 Office。
+    // ② 其余：新标签页打开，交给浏览器原生渲染——/api/files 已按格式给
+    //    inline（图片 / PDF / txt → 浏览器直接预览、可缩放翻页）或 attachment
+    //    （svg 防 XSS、zip 等未知格式 → 自动下载、交本机程序打开，同 Office 的道理），
+    //    故前端无需再判断格式。
+    const openOffice = (e: React.SyntheticEvent) => {
       e.preventDefault()
       e.stopPropagation()
-      if (office) {
-        // Office 文档直接用本机 Office 打开（绝对 URL + 文件名编码；ofe=编辑打开）。
-        // 需 Windows + 桌面版 Office；Mac 版 Office 不拉 http 远程文档。
-        const storedName = decodeURIComponent((value!.split('?')[0] || '').split('/').pop() || '')
-        window.location.href = `${office.scheme}:ofe|u|${window.location.origin}/api/files/${encodeURIComponent(storedName)}`
-        return
-      }
-      setPreviewOpen(true)
+      // 绝对 URL + 文件名编码；ofe=编辑打开。需 Windows + 桌面版 Office；Mac 版 Office 不拉 http 远程文档。
+      const storedName = decodeURIComponent((value!.split('?')[0] || '').split('/').pop() || '')
+      window.location.href = `${office.scheme}:ofe|u|${window.location.origin}/api/files/${encodeURIComponent(storedName)}`
     }
+
+    // 注意：只读(详情)态下，外层 Modal 会把内容包进 fieldset[disabled] + pointer-events-none，
+    // 会让 <button> 失效、并拦截点击。触发器故意用 <a> + 显式 pointer-events-auto + stopPropagation
+    // 豁免外层禁用，确保详情态附件仍可点开。
+    const openProps: React.ComponentProps<'a'> = office
+      ? {
+          role: 'button',
+          tabIndex: 0,
+          onClick: openOffice,
+          onKeyDown: (e) => {
+            if (e.key === 'Enter' || e.key === ' ') openOffice(e)
+          },
+        }
+      : {
+          href: value,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          onClick: (e) => e.stopPropagation(),
+        }
+    const openLabel = office ? `用 ${office.label} 打开` : '新标签页打开'
+
     return (
-      <>
-        <div className="flex items-center gap-2 rounded-lg border border-base-300 bg-base-100 px-3 py-2">
-          <FileText className="h-4 w-4 shrink-0 text-primary" />
-          <a
-            role="button"
-            tabIndex={0}
-            onClick={openPreview}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') openPreview(e)
-            }}
-            className="flex-1 cursor-pointer truncate text-sm text-base-content hover:text-primary hover:underline [pointer-events:auto]"
-            title={office ? `用 ${office.label} 打开：${fileName}` : `预览：${fileName}`}
-          >
-            {fileName}
-          </a>
-          <a
-            role="button"
-            tabIndex={0}
-            onClick={openPreview}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') openPreview(e)
-            }}
-            className="btn btn-ghost btn-xs [pointer-events:auto]"
-            aria-label={office ? `用 ${office.label} 打开` : '预览'}
-            title={office ? `用 ${office.label} 打开` : '预览'}
-          >
-            {office ? <FileText className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-          </a>
-          <a
-            href={`${value}?download=1`}
-            download
-            onClick={(e) => e.stopPropagation()}
-            className="btn btn-ghost btn-xs [pointer-events:auto]"
-            aria-label="下载"
-            title="下载"
-          >
-            <Download className="h-3.5 w-3.5" />
-          </a>
-          <button
-            type="button"
-            onClick={() => onChange('')}
-            className="btn btn-ghost btn-xs text-error"
-            aria-label="移除"
-            title="移除"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-        <FilePreview
-          open={previewOpen}
-          url={value!}
-          fileName={fileName}
-          onClose={() => setPreviewOpen(false)}
-        />
-      </>
+      <div className="flex items-center gap-2 rounded-lg border border-base-300 bg-base-100 px-3 py-2">
+        <FileText className="h-4 w-4 shrink-0 text-primary" />
+        <a
+          {...openProps}
+          className="flex-1 cursor-pointer truncate text-sm text-base-content hover:text-primary hover:underline [pointer-events:auto]"
+          title={`${openLabel}：${fileName}`}
+        >
+          {fileName}
+        </a>
+        <a
+          {...openProps}
+          className="btn btn-ghost btn-xs [pointer-events:auto]"
+          aria-label={openLabel}
+          title={openLabel}
+        >
+          {office ? <FileText className="h-3.5 w-3.5" /> : <ExternalLink className="h-3.5 w-3.5" />}
+        </a>
+        <a
+          href={`${value}?download=1`}
+          download
+          onClick={(e) => e.stopPropagation()}
+          className="btn btn-ghost btn-xs [pointer-events:auto]"
+          aria-label="下载"
+          title="下载"
+        >
+          <Download className="h-3.5 w-3.5" />
+        </a>
+        <button
+          type="button"
+          onClick={() => onChange('')}
+          className="btn btn-ghost btn-xs text-error"
+          aria-label="移除"
+          title="移除"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
     )
   }
 
