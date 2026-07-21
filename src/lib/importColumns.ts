@@ -79,7 +79,7 @@ export const IMPORT_COLUMNS: Record<string, RoundTripColumn[]> = {
     { header: '备注', getValue: (r) => r.notes ?? '' },
     { header: '候选人标签', getValue: (r) => joinTags(r.tags) },
     { header: '保证期沟通记录（日期 | 内容）', getValue: (r) => subRows(r.guaranteeCommunications, (x) => [fmtDate(x.date), x.content]) },
-    { header: '风险管理（日期 | 风险描述）', getValue: (r) => subRows(r.riskEvents, (x) => [fmtDate(x.date), x.riskDescription]) },
+    { header: '风险管理（日期 | 风险识别 | 风险管控与应对）', getValue: (r) => subRows(r.riskEvents, (x) => [fmtDate(x.date), x.riskDescription, x.riskResponse]) },
   ],
 
   CUSTOMER: [

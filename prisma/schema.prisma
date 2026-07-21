@@ -434,7 +434,8 @@ model CandidateRiskEvent {
   candidate       Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   candidateId     Int       @map("candidate_id")
   date            DateTime? @db.Date
-  riskDescription String?   @map("risk_description") @db.Text
+  riskDescription String?   @map("risk_description") @db.Text // 风险识别
+  riskResponse    String?   @map("risk_response") @db.Text // 风险管控与应对
   createdAt       DateTime  @default(now()) @map("created_at")
 
   @@map("candidate_risk_events")

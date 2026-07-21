@@ -162,7 +162,7 @@ export const CONFIGS: Record<string, ImportResource> = {
     ],
     subtables: [
       { header: '保证期沟通记录（日期 | 内容）', relationField: 'guaranteeCommunications', fields: [{ key: 'date', type: 'date' }, { key: 'content' }] },
-      { header: '风险管理（日期 | 风险描述）', relationField: 'riskEvents', fields: [{ key: 'date', type: 'date' }, { key: 'riskDescription' }] },
+      { header: '风险管理（日期 | 风险识别 | 风险管控与应对）', relationField: 'riskEvents', fields: [{ key: 'date', type: 'date' }, { key: 'riskDescription' }, { key: 'riskResponse' }] },
     ],
   },
 

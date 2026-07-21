@@ -216,14 +216,13 @@ const CANDIDATE: JodooModule = {
       relationField: 'riskEvents', match: '风险识别',
       build: async (g) => {
         const id = g('风险识别').trim(), mc = g('风险管控/应对').trim(), dt = g('日期').trim()
-        const desc = [id, mc].filter(Boolean).join(' / ')
-        if (!desc && !dt) return null
-        return { date: subDate(dt), riskDescription: desc || null }
+        if (!id && !mc && !dt) return null
+        return { date: subDate(dt), riskDescription: id || null, riskResponse: mc || null }
       },
       jsonHeader: '风险事件JSON',
       fromJson: async (o: any) => {
-        if (!o?.date && !o?.riskDescription) return null
-        return { date: subDate(o.date), riskDescription: o.riskDescription || null }
+        if (!o?.date && !o?.riskDescription && !o?.riskResponse) return null
+        return { date: subDate(o.date), riskDescription: o.riskDescription || null, riskResponse: o.riskResponse || null }
       },
     },
   ],

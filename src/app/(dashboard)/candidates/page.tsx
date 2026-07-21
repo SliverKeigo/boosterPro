@@ -247,6 +247,7 @@ export default function CandidatesPage() {
       riskEvents: (r.riskEvents ?? []).map((x: any) => ({
         date: fmtDate(x.date),
         riskDescription: x.riskDescription ?? '',
+        riskResponse: x.riskResponse ?? '',
       })),
     })
     setOpen(true)
@@ -399,6 +400,7 @@ export default function CandidatesPage() {
           columns={[
             { key: 'date', title: '日期', render: (v) => fmtDate(v) },
             { key: 'riskDescription', title: '风险识别' },
+            { key: 'riskResponse', title: '风险管控与应对' },
           ]} />
       ) },
     { key: 'customerId', title: '客户 ID', defaultVisible: false },
@@ -658,6 +660,7 @@ export default function CandidatesPage() {
             columns={[
               { key: 'date', title: '日期', type: 'date', width: 160 },
               { key: 'riskDescription', title: '风险识别', type: 'textarea', width: 320 },
+              { key: 'riskResponse', title: '风险管控与应对', type: 'textarea', width: 320 },
             ]}
           />
         </div>

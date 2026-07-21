@@ -145,12 +145,11 @@ const DEFS: Partial<Record<ResourceKey, ExportDef>> = {
         ],
       },
       {
-        // riskDescription 在库里是「风险识别 / 风险管控应对」合并存的单字段；导出只产「风险识别」列(=整段)、
-        // 「风险管控/应对」留空，导入 build 的 [id, mc].join(' / ') 仍还原同值，往返一致。
+        // 风险识别 / 风险管控应对 各自独立字段，与导入端 build 一一对应，往返一致。
         groupHeader: '风险管理', getRows: (r) => r.riskEvents ?? [],
         fields: [
           { header: '风险识别', get: (e) => e.riskDescription },
-          { header: '风险管控/应对', get: () => '' },
+          { header: '风险管控/应对', get: (e) => e.riskResponse },
           { header: '日期', get: (e) => fmtDate(e.date) },
         ],
       },

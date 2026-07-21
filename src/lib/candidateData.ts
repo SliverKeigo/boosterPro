@@ -119,8 +119,8 @@ export function buildCandidateData(body: any, mode: 'create' | 'update') {
     .filter((r) => r.date || r.content)
     .map((r) => ({ date: r.date ? new Date(r.date) : null, content: r.content || null }))
   const re = (riskEvents as any[])
-    .filter((r) => r.date || r.riskDescription)
-    .map((r) => ({ date: r.date ? new Date(r.date) : null, riskDescription: r.riskDescription || null }))
+    .filter((r) => r.date || r.riskDescription || r.riskResponse)
+    .map((r) => ({ date: r.date ? new Date(r.date) : null, riskDescription: r.riskDescription || null, riskResponse: r.riskResponse || null }))
 
   // 白名单过滤掉多余键后，再附加子表嵌套写
   const out = pickScalars(data, CANDIDATE_SCALAR_FIELDS)
