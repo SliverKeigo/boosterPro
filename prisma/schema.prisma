@@ -324,7 +324,7 @@ model Requirement {
   industry             String?                      @db.Text
   bonusPoints          String?                      @map("bonus_points") @db.Text
   industryResources    String?                      @map("industry_resources") @db.Text
-  followDate           DateTime?                    @map("follow_date") @db.Date
+  followDate           DateTime?                    @map("follow_date") // 登记日期（精确到分钟）
   positionProfiles     RequirementPositionProfile[]
   urgentRecords        RequirementUrgentRecord[]
   candidates           Candidate[]

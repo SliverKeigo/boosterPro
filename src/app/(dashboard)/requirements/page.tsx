@@ -40,11 +40,18 @@ const STATUS_BADGE: Record<string, string> = {
 }
 
 const opts = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }))
-// 今天（本地时区 YYYY-MM-DD），用于「登记日期」默认值
-const todayLocal = () => {
+// 当前时刻（本地时区 YYYY-MM-DDTHH:mm），用于「登记日期」默认值——精确到分钟
+const nowLocal = () => {
   const now = new Date()
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
-  return now.toISOString().slice(0, 10)
+  return now.toISOString().slice(0, 16)
+}
+// 库里的时间戳(UTC ISO) → datetime-local 本地输入值 YYYY-MM-DDTHH:mm（编辑回显用）
+const toLocalInput = (v?: string | null) => {
+  if (!v) return ''
+  const d = new Date(v)
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+  return d.toISOString().slice(0, 16)
 }
 
 const EMPTY_FORM: any = {
@@ -134,8 +141,8 @@ export default function RequirementsPage() {
     setEditing(null)
     setMode('edit')
     loadUsers()
-    // 登记日期默认今天（本地时区 YYYY-MM-DD；仍可手动修改）
-    setForm({ ...EMPTY_FORM, followDate: todayLocal() })
+    // 登记日期默认当前时刻（本地时区，精确到分钟；仍可手动修改）
+    setForm({ ...EMPTY_FORM, followDate: nowLocal() })
     setOpen(true)
   }
 
@@ -155,7 +162,7 @@ export default function RequirementsPage() {
       ageRange: r.ageRange ?? '',
       genderRequirement: r.genderRequirement ?? '',
       deadline: fmtDate(r.deadline),
-      followDate: fmtDate(r.followDate),
+      followDate: toLocalInput(r.followDate),
       attachmentUrl: r.attachmentUrl ?? [],
       positionProfiles: (r.positionProfiles ?? []).map((x: any) => ({
         knowledgeCategory: x.knowledgeCategory ?? '',
@@ -250,7 +257,7 @@ export default function RequirementsPage() {
     { key: 'educationRequirement', title: '学历要求', defaultVisible: false },
     { key: 'languageRequirement', title: '语言要求', defaultVisible: false },
     { key: 'industry', title: '所属行业', defaultVisible: false },
-    { key: 'followDate', title: '登记日期', defaultVisible: false, filterType: 'date', render: (v) => fmtDate(v) || '—' },
+    { key: 'followDate', title: '登记日期', defaultVisible: false, filterType: 'date', render: (v) => <span className="text-base-content/60">{fmtDateTime(v)}</span> },
     { key: 'jobDescription', title: '岗位 JD', defaultVisible: false },
     { key: 'bonusPoints', title: '加分项', defaultVisible: false },
     { key: 'industryResources', title: '行业与资源', defaultVisible: false },
@@ -353,8 +360,8 @@ export default function RequirementsPage() {
         confirmLoading={submitting}
         readOnly={mode === 'view'}
         onEdit={can(RES, 'EDIT') && canEditRow(RES, editing) ? () => {
-          // 进入编辑：登记日期自动同步为今天（仍可手动改）
-          setForm((f: any) => ({ ...f, followDate: todayLocal() }))
+          // 进入编辑：登记日期自动同步为当前时刻（到分钟；仍可手动改）
+          setForm((f: any) => ({ ...f, followDate: nowLocal() }))
           setMode('edit')
         } : undefined}
         width={780}
@@ -548,7 +555,7 @@ export default function RequirementsPage() {
             <input className="input input-bordered w-full" value={form.industry} onChange={(e) => setField('industry', e.target.value)} placeholder="请选择" />
           </Field>
           <Field label="登记日期" required>
-            <DatePicker className="input input-bordered w-full" value={form.followDate} onChange={(v) => setField('followDate', v)} />
+            <input type="datetime-local" className="input input-bordered w-full" value={form.followDate} onChange={(e) => setField('followDate', e.target.value)} />
           </Field>
         </div>
       </Modal>
