@@ -359,11 +359,7 @@ export default function RequirementsPage() {
         okText={editing ? '保存' : '创建'}
         confirmLoading={submitting}
         readOnly={mode === 'view'}
-        onEdit={can(RES, 'EDIT') && canEditRow(RES, editing) ? () => {
-          // 进入编辑：登记日期自动同步为当前时刻（到分钟；仍可手动改）
-          setForm((f: any) => ({ ...f, followDate: nowLocal() }))
-          setMode('edit')
-        } : undefined}
+        onEdit={can(RES, 'EDIT') && canEditRow(RES, editing) ? () => setMode('edit') : undefined}
         width={780}
       >
         <div className="grid grid-cols-2 gap-4">
