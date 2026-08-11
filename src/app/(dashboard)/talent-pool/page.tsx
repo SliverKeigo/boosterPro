@@ -87,6 +87,7 @@ export default function TalentPoolPage() {
 
   const handleSubmit = async () => {
     if (!form.name?.trim()) return toast.error('请填写人才姓名')
+    if (!form.birthYear) return toast.error('请选择出生年份')
     if (!form.currentPosition?.trim()) return toast.error('请填写当前职位')
     if (!form.resumeUrl?.length) return toast.error('请上传简历及相关资料')
     setSubmitting(true)
@@ -193,7 +194,7 @@ export default function TalentPoolPage() {
           <Field label="人才姓名" required>
             <input className="input input-bordered w-full" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="请输入" />
           </Field>
-          <Field label="出生年份">
+          <Field label="出生年份" required>
             <YearSelect value={form.birthYear} onChange={(v) => setField('birthYear', v)} placeholder="请选择年份" />
           </Field>
           {/* 最高学历 / 性别 */}
