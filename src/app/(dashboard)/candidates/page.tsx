@@ -549,14 +549,21 @@ export default function CandidatesPage() {
               value={String(form.requirementId ?? '')}
               disabled={!form.customerId}
               placeholder={form.customerId ? '请选择岗位' : '请先选择客户'}
-              options={requirements
-                .filter(
+              options={(() => {
+                const list = requirements.filter(
                   (r) =>
                     String(r.customerId) === String(form.customerId) &&
                     (!form.recruitmentParty || r.recruiter === form.recruitmentParty) &&
                     isRecruitingReq(r),
                 )
-                .map((r) => ({ value: String(r.id), label: r.positionName }))}
+                // 编辑回显兜底：当前已选岗位即使已「关闭/暂停」(被 isRecruitingReq 滤掉)，也补进选项，
+                // 避免岗位名称回显成空（「简历挂起」等候选人的岗位多已关闭）；新增时 requirementId 为空、不受影响。
+                const cur = form.requirementId
+                  ? requirements.find((r) => String(r.id) === String(form.requirementId))
+                  : null
+                if (cur && !list.some((r) => String(r.id) === String(cur.id))) list.unshift(cur)
+                return list.map((r) => ({ value: String(r.id), label: r.positionName }))
+              })()}
               onChange={(v) => setField('requirementId', v)}
             />
           </Field>
