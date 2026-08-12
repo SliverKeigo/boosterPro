@@ -11,7 +11,7 @@ on:
     branches: [main]           # 推到 main 自动构建
 
 permissions:
-  contents: read
+  contents: write   # 发布 Release 需要写权限（滚动 'latest'，供生产机直接 wget）
 
 jobs:
   build:
@@ -60,3 +60,16 @@ jobs:
           name: boosterpro-dist
           path: boosterpro-dist.tgz
           retention-days: 14
+
+      # 发布到滚动 Release「latest」：生产机可直接 wget 固定 URL 拉取，绕开开发机上行
+      # （本机 scp 上传 277MB 太慢）。固定下载地址：
+      #   https://github.com/SliverKeigo/boosterPro/releases/download/latest/boosterpro-dist.tgz
+      - name: Publish to rolling Release 'latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create latest boosterpro-dist.tgz \
+            --target "$GITHUB_SHA" \
+            --title "Latest build ${GITHUB_SHA:0:7}" \
+            --notes "Auto-built from ${GITHUB_SHA} at $(date -u +%FT%TZ)"
